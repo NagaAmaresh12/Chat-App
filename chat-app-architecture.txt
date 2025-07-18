@@ -1,0 +1,398 @@
+
+chat-app-microservices/
+├── README.md
+├── .env.example
+├── .gitignore
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
+├── Makefile
+├── package.json
+├── lerna.json
+├── nx.json
+├── kubernetes/
+│   ├── namespace.yaml
+│   ├── configmaps/
+│   ├── secrets/
+│   ├── services/
+│   ├── deployments/
+│   ├── ingress/
+│   └── monitoring/
+├── scripts/
+│   ├── start.sh
+│   ├── stop.sh
+│   ├── deploy.sh
+│   ├── migrate.sh
+│   └── setup.sh
+├── docs/
+│   ├── API.md
+│   ├── DEPLOYMENT.md
+│   ├── ARCHITECTURE.md
+│   └── CONTRIBUTING.md
+├── shared/
+│   ├── package.json
+│   ├── src/
+│   │   ├── types/
+│   │   │   ├── user.types.ts
+│   │   │   ├── chat.types.ts
+│   │   │   ├── message.types.ts
+│   │   │   └── index.ts
+│   │   ├── constants/
+│   │   │   ├── events.ts
+│   │   │   ├── errors.ts
+│   │   │   └── index.ts
+│   │   ├── utils/
+│   │   │   ├── validation.ts
+│   │   │   ├── encryption.ts
+│   │   │   ├── pagination.ts
+│   │   │   └── response.ts
+│   │   ├── middleware/
+│   │   │   ├── cors.ts
+│   │   │   ├── helmet.ts
+│   │   │   ├── logger.ts
+│   │   │   └── errorHandler.ts
+│   │   └── database/
+│   │       ├── connection.ts
+│   │       ├── models/
+│   │       │   ├── user.model.ts
+│   │       │   ├── chat.model.ts
+│   │       │   ├── message.model.ts
+│   │       │   └── index.ts
+│   │       └── repositories/
+│   │           ├── base.repository.ts
+│   │           ├── user.repository.ts
+│   │           ├── chat.repository.ts
+│   │           └── message.repository.ts
+│   ├── Dockerfile
+│   └── tsconfig.json
+├── services/
+│   ├── auth-service/
+│   │   ├── package.json
+│   │   ├── Dockerfile
+│   │   ├── Dockerfile.dev
+│   │   ├── .env.example
+│   │   ├── src/
+│   │   │   ├── app.ts
+│   │   │   ├── server.ts
+│   │   │   ├── config/
+│   │   │   │   ├── database.ts
+│   │   │   │   ├── redis.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── controllers/
+│   │   │   │   ├── auth.controller.ts
+│   │   │   │   └── user.controller.ts
+│   │   │   ├── services/
+│   │   │   │   ├── auth.service.ts
+│   │   │   │   ├── user.service.ts
+│   │   │   │   ├── jwt.service.ts
+│   │   │   │   └── encryption.service.ts
+│   │   │   ├── middleware/
+│   │   │   │   ├── auth.middleware.ts
+│   │   │   │   ├── validation.middleware.ts
+│   │   │   │   └── rateLimit.middleware.ts
+│   │   │   ├── routes/
+│   │   │   │   ├── auth.routes.ts
+│   │   │   │   ├── user.routes.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── validators/
+│   │   │   │   ├── auth.validator.ts
+│   │   │   │   └── user.validator.ts
+│   │   │   ├── events/
+│   │   │   │   ├── publishers/
+│   │   │   │   │   ├── user-created.publisher.ts
+│   │   │   │   │   └── user-updated.publisher.ts
+│   │   │   │   └── subscribers/
+│   │   │   │       └── user-events.subscriber.ts
+│   │   │   ├── utils/
+│   │   │   │   ├── logger.ts
+│   │   │   │   ├── response.ts
+│   │   │   │   └── validation.ts
+│   │   │   └── tests/
+│   │   │       ├── unit/
+│   │   │       ├── integration/
+│   │   │       └── e2e/
+│   │   ├── tsconfig.json
+│   │   ├── jest.config.js
+│   │   └── nodemon.json
+│   ├── chat-service/
+│   │   ├── package.json
+│   │   ├── Dockerfile
+│   │   ├── Dockerfile.dev
+│   │   ├── .env.example
+│   │   ├── src/
+│   │   │   ├── app.ts
+│   │   │   ├── server.ts
+│   │   │   ├── config/
+│   │   │   │   ├── database.ts
+│   │   │   │   ├── redis.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── controllers/
+│   │   │   │   ├── chat.controller.ts
+│   │   │   │   └── group.controller.ts
+│   │   │   ├── services/
+│   │   │   │   ├── chat.service.ts
+│   │   │   │   ├── group.service.ts
+│   │   │   │   └── participant.service.ts
+│   │   │   ├── middleware/
+│   │   │   │   ├── auth.middleware.ts
+│   │   │   │   ├── chat-member.middleware.ts
+│   │   │   │   └── group-admin.middleware.ts
+│   │   │   ├── routes/
+│   │   │   │   ├── chat.routes.ts
+│   │   │   │   ├── group.routes.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── validators/
+│   │   │   │   ├── chat.validator.ts
+│   │   │   │   └── group.validator.ts
+│   │   │   ├── events/
+│   │   │   │   ├── publishers/
+│   │   │   │   │   ├── chat-created.publisher.ts
+│   │   │   │   │   └── chat-updated.publisher.ts
+│   │   │   │   └── subscribers/
+│   │   │   │       └── chat-events.subscriber.ts
+│   │   │   ├── utils/
+│   │   │   │   ├── logger.ts
+│   │   │   │   ├── response.ts
+│   │   │   │   └── validation.ts
+│   │   │   └── tests/
+│   │   │       ├── unit/
+│   │   │       ├── integration/
+│   │   │       └── e2e/
+│   │   ├── tsconfig.json
+│   │   ├── jest.config.js
+│   │   └── nodemon.json
+│   ├── message-service/
+│   │   ├── package.json
+│   │   ├── Dockerfile
+│   │   ├── Dockerfile.dev
+│   │   ├── .env.example
+│   │   ├── src/
+│   │   │   ├── app.ts
+│   │   │   ├── server.ts
+│   │   │   ├── config/
+│   │   │   │   ├── database.ts
+│   │   │   │   ├── redis.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── controllers/
+│   │   │   │   ├── message.controller.ts
+│   │   │   │   ├── reaction.controller.ts
+│   │   │   │   └── receipt.controller.ts
+│   │   │   ├── services/
+│   │   │   │   ├── message.service.ts
+│   │   │   │   ├── reaction.service.ts
+│   │   │   │   ├── receipt.service.ts
+│   │   │   │   └── encryption.service.ts
+│   │   │   ├── middleware/
+│   │   │   │   ├── auth.middleware.ts
+│   │   │   │   └── message-access.middleware.ts
+│   │   │   ├── routes/
+│   │   │   │   ├── message.routes.ts
+│   │   │   │   ├── reaction.routes.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── validators/
+│   │   │   │   └── message.validator.ts
+│   │   │   ├── events/
+│   │   │   │   ├── publishers/
+│   │   │   │   │   ├── message-sent.publisher.ts
+│   │   │   │   │   └── message-read.publisher.ts
+│   │   │   │   └── subscribers/
+│   │   │   │       └── message-events.subscriber.ts
+│   │   │   ├── utils/
+│   │   │   │   ├── logger.ts
+│   │   │   │   ├── response.ts
+│   │   │   │   └── validation.ts
+│   │   │   └── tests/
+│   │   │       ├── unit/
+│   │   │       ├── integration/
+│   │   │       └── e2e/
+│   │   ├── tsconfig.json
+│   │   ├── jest.config.js
+│   │   └── nodemon.json
+│   ├── media-service/
+│   │   ├── package.json
+│   │   ├── Dockerfile
+│   │   ├── Dockerfile.dev
+│   │   ├── .env.example
+│   │   ├── src/
+│   │   │   ├── app.ts
+│   │   │   ├── server.ts
+│   │   │   ├── config/
+│   │   │   │   ├── database.ts
+│   │   │   │   ├── storage.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── controllers/
+│   │   │   │   ├── media.controller.ts
+│   │   │   │   └── upload.controller.ts
+│   │   │   ├── services/
+│   │   │   │   ├── media.service.ts
+│   │   │   │   ├── upload.service.ts
+│   │   │   │   ├── image.service.ts
+│   │   │   │   └── video.service.ts
+│   │   │   ├── middleware/
+│   │   │   │   ├── auth.middleware.ts
+│   │   │   │   ├── upload.middleware.ts
+│   │   │   │   └── file-validation.middleware.ts
+│   │   │   ├── routes/
+│   │   │   │   ├── media.routes.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── validators/
+│   │   │   │   └── media.validator.ts
+│   │   │   ├── events/
+│   │   │   │   ├── publishers/
+│   │   │   │   │   └── media-uploaded.publisher.ts
+│   │   │   │   └── subscribers/
+│   │   │   │       └── media-events.subscriber.ts
+│   │   │   ├── utils/
+│   │   │   │   ├── logger.ts
+│   │   │   │   ├── response.ts
+│   │   │   │   └── file-processor.ts
+│   │   │   └── tests/
+│   │   │       ├── unit/
+│   │   │       ├── integration/
+│   │   │       └── e2e/
+│   │   ├── uploads/
+│   │   │   ├── images/
+│   │   │   ├── videos/
+│   │   │   ├── documents/
+│   │   │   └── thumbnails/
+│   │   ├── tsconfig.json
+│   │   ├── jest.config.js
+│   │   └── nodemon.json
+│   ├── notification-service/
+│   │   ├── package.json
+│   │   ├── Dockerfile
+│   │   ├── Dockerfile.dev
+│   │   ├── .env.example
+│   │   ├── src/
+│   │   │   ├── app.ts
+│   │   │   ├── server.ts
+│   │   │   ├── config/
+│   │   │   │   ├── database.ts
+│   │   │   │   ├── firebase.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── controllers/
+│   │   │   │   ├── notification.controller.ts
+│   │   │   │   └── push.controller.ts
+│   │   │   ├── services/
+│   │   │   │   ├── notification.service.ts
+│   │   │   │   ├── push.service.ts
+│   │   │   │   ├── email.service.ts
+│   │   │   │   └── sms.service.ts
+│   │   │   ├── middleware/
+│   │   │   │   └── auth.middleware.ts
+│   │   │   ├── routes/
+│   │   │   │   ├── notification.routes.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── validators/
+│   │   │   │   └── notification.validator.ts
+│   │   │   ├── events/
+│   │   │   │   ├── publishers/
+│   │   │   │   │   └── notification-sent.publisher.ts
+│   │   │   │   └── subscribers/
+│   │   │   │       ├── message-events.subscriber.ts
+│   │   │   │       └── user-events.subscriber.ts
+│   │   │   ├── templates/
+│   │   │   │   ├── email/
+│   │   │   │   │   ├── message-notification.html
+│   │   │   │   │   └── group-invite.html
+│   │   │   │   └── push/
+│   │   │   │       ├── message.json
+│   │   │   │       └── group-invite.json
+│   │   │   ├── utils/
+│   │   │   │   ├── logger.ts
+│   │   │   │   ├── response.ts
+│   │   │   │   └── template.ts
+│   │   │   └── tests/
+│   │   │       ├── unit/
+│   │   │       ├── integration/
+│   │   │       └── e2e/
+│   │   ├── tsconfig.json
+│   │   ├── jest.config.js
+│   │   └── nodemon.json
+//elastic search can be implemented here!!  
+│   └── realtime-service/
+│       ├── package.json
+│       ├── Dockerfile
+│       ├── Dockerfile.dev
+│       ├── .env.example
+│       ├── src/
+│       │   ├── app.ts
+│       │   ├── server.ts
+│       │   ├── config/
+│       │   │   ├── database.ts
+│       │   │   ├── redis.ts
+│       │   │   └── index.ts
+│       │   ├── controllers/
+│       │   │   ├── socket.controller.ts
+│       │   │   └── typing.controller.ts
+│       │   ├── services/
+│       │   │   ├── socket.service.ts
+│       │   │   ├── typing.service.ts
+│       │   │   ├── presence.service.ts
+│       │   │   └── room.service.ts
+│       │   ├── middleware/
+│       │   │   ├── socket-auth.middleware.ts
+│       │   │   └── rate-limit.middleware.ts
+│       │   ├── handlers/
+│       │   │   ├── connection.handler.ts
+│       │   │   ├── message.handler.ts
+│       │   │   ├── typing.handler.ts
+│       │   │   └── presence.handler.ts
+│       │   ├── events/
+│       │   │   ├── publishers/
+│       │   │   │   ├── user-online.publisher.ts
+│       │   │   │   └── message-delivered.publisher.ts
+│       │   │   └── subscribers/
+│       │   │       ├── message-events.subscriber.ts
+│       │   │       └── chat-events.subscriber.ts
+│       │   ├── utils/
+│       │   │   ├── logger.ts
+│       │   │   ├── response.ts
+│       │   │   └── socket.ts
+│       │   └── tests/
+│       │       ├── unit/
+│       │       ├── integration/
+│       │       └── e2e/
+│       ├── tsconfig.json
+│       ├── jest.config.js
+│       └── nodemon.json
+├── gateway/
+│   ├── package.json
+│   ├── Dockerfile
+│   ├── Dockerfile.dev
+│   ├── .env.example
+│   ├── src/
+│   │   ├── app.ts
+│   │   ├── server.ts
+│   │   ├── config/
+│   │   │   ├── services.ts
+│   │   │   ├── routes.ts
+│   │   │   └── index.ts
+│   │   ├── middleware/
+│   │   │   ├── auth.middleware.ts
+│   │   │   ├── cors.middleware.ts
+│   │   │   ├── rate-limit.middleware.ts
+│   │   │   └── proxy.middleware.ts
+│   │   ├── routes/
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── chat.routes.ts
+│   │   │   ├── message.routes.ts
+│   │   │   ├── media.routes.ts
+│   │   │   ├── notification.routes.ts
+│   │   │   ├── search.routes.ts
+│   │   │   └── index.ts
+│   │   ├── services/
+│   │   │   ├── proxy.service.ts
+│   │   │   ├── auth.service.ts
+│   │   │   └── health.service.ts
+│   │   ├── utils/
+│   │   │   ├── logger.ts
+│   │   │   ├── response.ts
+│   │   │   └── service-discovery.ts
+│   │   └── tests/
+│   │       ├── unit/
+│   │       ├── integration/
+│   │       └── e2e/
+│   ├── tsconfig.json
+│   ├── jest.config.js
+│   └── nodemon.json
