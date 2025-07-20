@@ -3,15 +3,16 @@
   "type": "module",
   "private": true,
   "scripts": {
-  "clean": "rm -rf dist",
-  "build": "tsc",
-  "start": "bunx nodemon",
-  "dev": "concurrently \"tsc --watch\" \"bunx nodemon\""
-},
+    "clean": "rm -rf dist",
+    "build": "tsc",
+    "start": "bunx nodemon",
+    "dev": "concurrently \"tsc --watch\" \"bunx nodemon\""
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/dotenv": "^8.2.3",
     "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.97",
     "@types/morgan": "^1.9.10",
     "@types/winston": "^2.4.4",
@@ -20,12 +21,13 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "@types/bcrypt": "^5.0.2",
+    "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",
     "morgan": "^1.10.1",
     "winston": "^3.17.0"

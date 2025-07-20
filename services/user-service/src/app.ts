@@ -6,6 +6,8 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 import { connectDB } from "./config/db.js";
 import morgan from "morgan";
 import { logger } from "./utils/logger.js";
+import authRoutes from "./routes/auth.route.js";
+import userRoutes from "./routes/user.route.js";
 const app = express();
 
 //config
@@ -17,11 +19,18 @@ app.get("/", (req, res) => {
   });
 });
 
+// user-service (3000)
+app.get("/health", (req, res) => {
+  res.json({ message: "Health check OK" });
+});
 //middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-//Error Hanlder
-app.use(errorHandler);
+
+//routes
+app.use("/auth", authRoutes);
+app.use("/users", userRoutes);
+
 // Use morgan to log HTTP requests to winston
 app.use(
   morgan("combined", {
@@ -31,10 +40,7 @@ app.use(
   })
 );
 
-app.get("/health", (req, res) => {
-  res.json({
-    message: "Successfully get the request",
-    success: true,
-  });
-});
+//Error Hanlder
+app.use(errorHandler);
+
 export { app };
