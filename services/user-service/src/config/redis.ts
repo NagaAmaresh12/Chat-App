@@ -30,7 +30,7 @@ export const connectToRedis = async () => {
 export const setRedisValue = async (
   key: string,
   value: string,
-  expiryInSeconds: number = 20
+  expiryInSeconds: number = 60
 ) => {
   await redisClient.setEx(key, expiryInSeconds, value);
 };

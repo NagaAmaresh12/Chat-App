@@ -4,6 +4,9 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js"; // assuming you have a User model
 import { isValid } from "utils/validation.js";
 import { AppError } from "utils/ApiError.js";
+import { generateOTP } from "utils/otp.js";
+import { setRedisValue } from "config/redis.js";
+import { publishToMailQueue } from "config/rabbitMQ.js";
 // import { generateOTP, verifyStoredOTP, storeOTP } from "../utils/otp.util.js";
 
 // Environment variables
@@ -11,31 +14,40 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 const TOKEN_EXPIRY = "1h";
 
 export const login = async (req: Request, res: Response) => {
-  const { email ,OTPLenth} = req.body;
-  if(!isValid(email)){
-    return sendError(res,"Invalid Credentials",400);
+  const { email, OTPLenth } = req.body;
+  if (!isValid(email)) {
+    return sendError(res, "Invalid Credentials", 400);
   }
-
 
   // Generate & store OTP
   const otp = generateOTP(OTPLenth);
-  await storeOTP(email, otp); // store in DB or Redis
+  const otpExipry = 300;
+  const redisKey = `otp=${email}`;
+  await setRedisValue(redisKey, otp, otpExipry);
 
-  Send OTP to user (mocked or real email)
-  await sendOtpEmail(email, otp);
+  const QueueMessageOTP = {
+    to: email,
+    subject: "Your One-Time Password (OTP) for Verification",
+    text: `Your OTP is ${otp}. This OTP is valid till ${
+      otpExipry ? otpExipry : 60
+    } mins `,
+  };
+  const queueName = "MailQueue";
+  // Send OTP to user (mocked or real email)
+  await publishToMailQueue(QueueMessageOTP, queueName);
 
-  return sendSuccess(res, "OTP sent successfully", null, 200);
+  return sendSuccess(res, null, "OTP sent successfully", 200);
 };
 
 export const verifyOTP = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
-    if(!isValid(email) || !isValid(otp)){
-    return sendError(res,"Invalid Credentials",400);
+  if (!isValid(email) || !isValid(otp)) {
+    return sendError(res, "Invalid Credentials", 400);
   }
-  const isExistUser = await User.findOne({email});
+  const isExistUser = await User.findOne({ email });
 
-  if(!isExistUser){
-    return sendError(res, "User Does not Exists",400);
+  if (!isExistUser) {
+    return sendError(res, "User Does not Exists", 400);
   }
   // const isValid = await verifyStoredOTP(email, otp);
   if (!isValid) return sendError(res, "Invalid or expired OTP", 400);
