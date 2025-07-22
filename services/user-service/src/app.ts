@@ -5,7 +5,7 @@ import express from "express";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { connectDB } from "./config/db.js";
 import morgan from "morgan";
-import { logger } from "./utils/logger.js";
+import { logger } from "../../notification-service/src/utils/logger.js";
 import authRoutes from "./routes/auth.route.js";
 // import userRoutes from "./routes/user.route.js";
 import { connectToRedis } from "config/redis.js";

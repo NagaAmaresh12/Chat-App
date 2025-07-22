@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { sign, verify } from "jsonwebtoken";
-import { isValid } from "../utils/validation";
-import { sendError } from "../utils/response";
+import { isValid } from "../../../notification-service/src/utils/validation";
+import { sendError } from "../../../notification-service/src/utils/response";
 import { User } from "../models/user.model.js";
 
 const JWT_SECRET = process.env.JWT_SECRET!;

@@ -1,6 +1,6 @@
 import { Channel, connect } from "amqplib";
-import { AppError } from "../utils/ApiError.js";
-import { isValid } from "../utils/validation.js";
+import { AppError } from "../../../notification-service/src/utils/ApiError.js";
+import { isValid } from "../../../notification-service/src/utils/validation.js";
 
 interface IMailMessage {
   to: string;

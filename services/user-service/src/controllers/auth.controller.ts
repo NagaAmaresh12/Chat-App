@@ -1,104 +1,191 @@
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "utils/response";
+import { User } from "../models/user.model";
+import { isValid } from "utils/validation";
+import { AppError } from "utils/ApiError";
+import { generateOTP } from "utils/otp";
+import { getRedisValue, setRedisValue } from "config/redis";
+import { publishToMailQueue } from "config/rabbitMQ";
+import { verifyStoredOTP, storeOTP } from "utils/otp.util"; // Optional
 import jwt from "jsonwebtoken";
-import { User } from "../models/user.model.js"; // assuming you have a User model
-import { isValid } from "utils/validation.js";
-import { AppError } from "utils/ApiError.js";
-import { generateOTP } from "utils/otp.js";
-import { setRedisValue } from "config/redis.js";
-import { publishToMailQueue } from "config/rabbitMQ.js";
-// import { generateOTP, verifyStoredOTP, storeOTP } from "../utils/otp.util.js";
 
-// Environment variables
-const JWT_SECRET = process.env.JWT_SECRET!;
-const TOKEN_EXPIRY = "1h";
+// Constants
+const JWT_SECRET = process.env.JWT_SECRET as string;
+const TOKEN_EXPIRY_MS = 1000 * 60 * 60; // 1 hour
+const DEFAULT_OTP_EXPIRY_SECONDS = 300; // 5 minutes
 
+interface AuthRequest extends Request {
+  user?: any;
+}
+
+// -----------------------------
+// LOGIN - Generate OTP
+// -----------------------------
 export const login = async (req: Request, res: Response) => {
-  const { email, OTPLenth } = req.body;
-  if (!isValid(email)) {
-    return sendError(res, "Invalid Credentials", 400);
+  try {
+    const { email, OTPLength = 4 } = req.body;
+
+    if (!isValid(email)) {
+      return sendError(res, "Invalid email provided", 400);
+    }
+
+    const redisKey = `otp=${email}`;
+    const existingOTP = await getRedisValue(redisKey);
+
+    if (existingOTP) {
+      return sendError(res, "Too many requests. Try again later.", 429);
+    }
+
+    const otp = generateOTP(Number(OTPLength));
+    await setRedisValue(redisKey, otp, DEFAULT_OTP_EXPIRY_SECONDS);
+
+    const message = {
+      to: email,
+      subject: "Your One-Time Password (OTP) for Verification",
+      text: `Your OTP is ${otp}. It is valid for ${
+        DEFAULT_OTP_EXPIRY_SECONDS / 60
+      } minutes.`,
+    };
+
+    await publishToMailQueue(message, "MailQueue");
+
+    return sendSuccess(res, null, "OTP sent successfully", 200);
+  } catch (error) {
+    return sendError(res, "Failed to generate OTP", 500, error);
   }
-
-  // Generate & store OTP
-  const otp = generateOTP(OTPLenth);
-  const otpExipry = 300;
-  const redisKey = `otp=${email}`;
-  await setRedisValue(redisKey, otp, otpExipry);
-
-  const QueueMessageOTP = {
-    to: email,
-    subject: "Your One-Time Password (OTP) for Verification",
-    text: `Your OTP is ${otp}. This OTP is valid till ${
-      otpExipry ? otpExipry : 60
-    } mins `,
-  };
-  const queueName = "MailQueue";
-  // Send OTP to user (mocked or real email)
-  await publishToMailQueue(QueueMessageOTP, queueName);
-
-  return sendSuccess(res, null, "OTP sent successfully", 200);
 };
 
+// -----------------------------
+// VERIFY OTP
+// -----------------------------
 export const verifyOTP = async (req: Request, res: Response) => {
-  const { email, otp } = req.body;
-  if (!isValid(email) || !isValid(otp)) {
-    return sendError(res, "Invalid Credentials", 400);
+  try {
+    const { email, otp } = req.body;
+
+    if (!isValid(email) || !isValid(otp)) {
+      return sendError(res, "Email and OTP are required", 400);
+    }
+
+    const redisKey = `otp=${email}`;
+    const storedOTP = await getRedisValue(redisKey);
+
+    if (!storedOTP) {
+      return sendError(res, "OTP has expired or not found", 400);
+    }
+
+    if (otp !== storedOTP) {
+      return sendError(res, "Incorrect OTP", 400);
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({ email });
+    }
+
+    const { accessToken, refreshToken } = await user.generateTokens();
+    user.refreshToken = {
+      token: refreshToken,
+      createdAt: new Date(),
+    };
+    await user.save();
+
+    res.cookie("accessToken", accessToken, {
+      maxAge: TOKEN_EXPIRY_MS,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    const userResponse = {
+      id: user._id,
+      name: user.username,
+      email: user.email,
+      accessToken,
+    };
+
+    return sendSuccess(res, userResponse, "Login successful", 200);
+  } catch (error) {
+    return sendError(res, "Failed to verify OTP", 500, error);
   }
-  const isExistUser = await User.findOne({ email });
-
-  if (!isExistUser) {
-    return sendError(res, "User Does not Exists", 400);
-  }
-  // const isValid = await verifyStoredOTP(email, otp);
-  if (!isValid) return sendError(res, "Invalid or expired OTP", 400);
-
-  // Check if user exists, else create
-  let user = await User.findOne({ email });
-  if (!user) user = await User.create({ email });
-
-  // Generate token
-  const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
-    expiresIn: TOKEN_EXPIRY,
-  });
-
-  return sendSuccess(res, "OTP verified", { token, user }, 200);
 };
 
-export const me = async (req: Request, res: Response) => {
+// -----------------------------
+// ME - Get Authenticated User
+// -----------------------------
+export const me = (req: AuthRequest, res: Response) => {
   const user = req.user;
-  sendSuccess(res, "User is logged in", user, 200);
+  if (!user) return sendError(res, "User not found in request", 400);
+
+  const userData = {
+    id: user._id,
+    name: user.username,
+    email: user.email,
+    accessToken: user.accessToken,
+  };
+
+  return sendSuccess(res, userData, "User is authenticated", 200);
 };
 
-export const logout = async (req: Request, res: Response) => {
-  // If using JWT in header, nothing to invalidate — frontend should delete token
-  // If using refresh token, invalidate it here
-  sendSuccess(res, "Logged out successfully", null, 200);
+// -----------------------------
+// LOGOUT
+// -----------------------------
+export const logout = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return sendError(res, "User not found", 404);
+    }
+
+    user.refreshToken = { token: "", createdAt: new Date() };
+    await user.save();
+
+    res.clearCookie("accessToken");
+
+    return sendSuccess(res, null, "Logout successful", 200);
+  } catch (error) {
+    return sendError(res, "Logout failed", 500, error);
+  }
 };
 
+// -----------------------------
+// FORGET PASSWORD
+// -----------------------------
 export const forgetPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
-
   const user = await User.findOne({ email });
+
   if (!user) return sendError(res, "User not found", 404);
 
   const otp = generateOTP();
-  await storeOTP(email, otp);
-  await sendOtpEmail(email, otp);
+  await storeOTP(email, otp); // store in redis
+  await publishToMailQueue(
+    {
+      to: email,
+      subject: "Reset Password OTP",
+      text: `Your password reset OTP is ${otp}`,
+    },
+    "MailQueue"
+  );
 
-  sendSuccess(res, "OTP sent to email for password reset", null, 200);
+  return sendSuccess(res, null, "OTP sent to email", 200);
 };
 
+// -----------------------------
+// RESET PASSWORD
+// -----------------------------
 export const resetPassword = async (req: Request, res: Response) => {
   const { email, otp, newPassword } = req.body;
 
-  const isValid = await verifyStoredOTP(email, otp);
-  if (!isValid) return sendError(res, "Invalid or expired OTP", 400);
+  const isOtpValid = await verifyStoredOTP(email, otp);
+  if (!isOtpValid) return sendError(res, "Invalid or expired OTP", 400);
 
   const user = await User.findOne({ email });
   if (!user) return sendError(res, "User not found", 404);
 
-  user.password = newPassword; // hash if needed
+  user.password = newPassword; // Make sure password hashing is handled in user model
   await user.save();
 
-  sendSuccess(res, "Password reset successfully", null, 200);
+  return sendSuccess(res, null, "Password reset successfully", 200);
 };

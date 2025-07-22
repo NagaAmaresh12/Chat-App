@@ -1,9 +1,9 @@
 import { createClient } from "redis";
 import dotenv from "dotenv";
 dotenv?.config();
-import { isValid } from "../utils/validation";
-import { sendError } from "../utils/response.js";
-import { AppError } from "../utils/ApiError.js";
+import { isValid } from "../../../notification-service/src/utils/validation";
+import { sendError } from "../../../notification-service/src/utils/response.js";
+import { AppError } from "../../../notification-service/src/utils/ApiError.js";
 
 const REDIS_URL =
   "rediss://default:AcZOAAIjcDE2YWZmMDc1OTYzOTU0MjlhYmVjODc4Y2YxODRhNDlkYXAxMA@loyal-magpie-50766.upstash.io:6379";
