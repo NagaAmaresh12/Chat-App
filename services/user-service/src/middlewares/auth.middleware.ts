@@ -58,17 +58,18 @@ export const authenticate = async (
       if (!user) return sendError(res, "User not found", 404);
 
       // Generate new tokens
-      const { newAccessToken, newRefreshToken } = generateTokens({
-        id: user._id,
-        email: user.email,
-      });
+      const { accessToken, refreshToken: newRefreshToken } =
+        user.generateTokens();
 
       // Save refresh token to DB (example assumes field exists)
-      user.refreshToken = newRefreshToken;
+      user.refreshToken = {
+        token: newRefreshToken,
+        createdAt: new Date(),
+      };
       await user.save();
 
       // Set tokens in cookies
-      res.cookie("accessToken", newAccessToken, {
+      res.cookie("accessToken", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",

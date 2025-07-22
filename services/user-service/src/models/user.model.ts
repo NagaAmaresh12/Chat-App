@@ -1,13 +1,68 @@
-import { Schema, Document, model } from "mongoose";
-import { sign, verify } from "jsonwebtoken";
-import { compare } from "bcrypt";
+import { Schema, model, Document, Model } from "mongoose";
+import { sign } from "jsonwebtoken";
 
-// ==================== USER SCHEMA ====================
-const userSchema = new Schema(
+// ==================== INTERFACES ====================
+
+interface FavouriteUser {
+  user: Schema.Types.ObjectId;
+  addedAt: Date;
+  nickname?: string;
+}
+
+interface PrivacySettings {
+  lastSeen: "everyone" | "favourite" | "nobody";
+  profilePhoto: "everyone" | "favourite" | "nobody";
+  status: "everyone" | "favourite" | "nobody";
+}
+
+interface NotificationSettings {
+  messageNotifications: boolean;
+  groupNotifications: boolean;
+  sound: boolean;
+}
+
+interface UserSettings {
+  privacy: PrivacySettings;
+  notifications: NotificationSettings;
+  theme: "light" | "dark" | "system";
+}
+
+interface RefreshToken {
+  token: string;
+  createdAt: Date;
+}
+
+export interface IUser extends Document {
+  email: string;
+  username: string;
+  displayName: string;
+  bio?: string;
+  avatar?: string;
+  isOnline: boolean;
+  lastSeen: Date;
+  isVerified: boolean;
+  blockedUsers: Schema.Types.ObjectId[];
+  favourite: FavouriteUser[];
+  settings: UserSettings;
+  refreshToken: RefreshToken;
+
+  generateTokens(): {
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresIn: number;
+    refreshTokenExpiresIn: number;
+  };
+
+  updateOnlineStatus(isOnline: boolean): Promise<IUser>;
+}
+
+// ==================== SCHEMA ====================
+
+const userSchema = new Schema<IUser>(
   {
     email: {
       type: String,
-      require: true,
+      required: true,
       index: true,
       match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
       trim: true,
@@ -17,10 +72,10 @@ const userSchema = new Schema(
       type: String,
       required: true,
       minlength: 2,
-      unique: true,
       maxlength: 50,
-      index: true,
       trim: true,
+      unique: true,
+      index: true,
     },
     displayName: {
       type: String,
@@ -33,7 +88,7 @@ const userSchema = new Schema(
       default: "",
     },
     avatar: {
-      type: String, // URL to profile picture
+      type: String,
       default: "",
     },
     isOnline: {
@@ -107,8 +162,7 @@ const userSchema = new Schema(
         default: "system",
       },
     },
-
-    refreshTokens: {
+    refreshToken: {
       token: String,
       createdAt: {
         type: Date,
@@ -124,30 +178,26 @@ const userSchema = new Schema(
   }
 );
 
-// Indexes for User model
+// ==================== INDEXES ====================
 userSchema.index({ username: 1 }, { unique: true });
 userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ username: 1 });
 userSchema.index({ isOnline: 1, lastSeen: -1 });
 userSchema.index({ "favourite.user": 1 });
 userSchema.index({ createdAt: -1 });
 
-// User Methods
+// ==================== METHODS ====================
 userSchema.methods.generateTokens = function () {
   const user = this;
 
-  // Generate Access Token (15 minutes)
   const accessToken = sign(
     {
       userId: user._id,
-      phoneNumber: user.phoneNumber,
       username: user.username,
     },
     process.env.JWT_ACCESS_SECRET!,
     { expiresIn: "15m" }
   );
 
-  // Generate Refresh Token (7 days)
   const refreshToken = sign(
     {
       userId: user._id,
@@ -160,8 +210,8 @@ userSchema.methods.generateTokens = function () {
   return {
     accessToken,
     refreshToken,
-    accessTokenExpiresIn: 15 * 60 * 1000, // 15 minutes in milliseconds
-    refreshTokenExpiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    accessTokenExpiresIn: 15 * 60 * 1000,
+    refreshTokenExpiresIn: 7 * 24 * 60 * 60 * 1000,
   };
 };
 
@@ -171,4 +221,5 @@ userSchema.methods.updateOnlineStatus = function (isOnline: boolean) {
   return this.save();
 };
 
-const User = model("User", userSchema);
+// ==================== MODEL ====================
+export const User: Model<IUser> = model<IUser>("User", userSchema);

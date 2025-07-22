@@ -9,6 +9,6 @@ export const isUsernameValid = (username: string): boolean => {
   return usernameRegex.test(username);
 };
 
-export const isValid = (variable: string): boolean => {
+export const isValid = (variable: string | number): boolean => {
   return variable !== undefined && variable !== null;
 };

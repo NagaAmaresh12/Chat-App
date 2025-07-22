@@ -1,5 +1,34 @@
-import { Schema, Document, model } from "mongoose";
-const mediaSchema = new Schema(
+import mongoose, { Schema, Document, model } from "mongoose";
+
+interface Dimensions {
+  width: number;
+  height: number;
+}
+
+interface Metadata {
+  duration?: number;
+  dimensions?: Dimensions;
+  compression?: string;
+}
+
+export interface MediaDocument extends Document {
+  messageId: mongoose.Types.ObjectId;
+  uploadedBy: mongoose.Types.ObjectId;
+  filename: string;
+  originalName?: string;
+  mimeType?: string;
+  size?: number;
+  url: string;
+  thumbnailUrl?: string;
+  cloudinaryPublicId?: string;
+  metadata?: Metadata;
+  isTemporary: boolean;
+  expiresAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const mediaSchema = new Schema<MediaDocument>(
   {
     messageId: {
       type: Schema.Types.ObjectId,
@@ -26,7 +55,7 @@ const mediaSchema = new Schema(
     thumbnailUrl: String,
     cloudinaryPublicId: String,
     metadata: {
-      duration: Number, // for audio/video
+      duration: Number,
       dimensions: {
         width: Number,
         height: Number,
@@ -44,8 +73,9 @@ const mediaSchema = new Schema(
   }
 );
 
-// Indexes for Media model
+// Indexes
 mediaSchema.index({ messageId: 1 });
 mediaSchema.index({ uploadedBy: 1, createdAt: -1 });
 mediaSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-const Media = mongoose.model("Media", mediaSchema);
+
+export const Media = model<MediaDocument>("Media", mediaSchema);

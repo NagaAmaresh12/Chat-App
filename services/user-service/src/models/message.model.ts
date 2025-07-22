@@ -1,5 +1,81 @@
-import { Schema, Document, model } from "mongoose";
-const messageSchema = new Schema(
+import { Schema, model, Document, Types, Model } from "mongoose";
+
+type MessageType =
+  | "text"
+  | "image"
+  | "video"
+  | "audio"
+  | "document"
+  | "location"
+  | "contact";
+
+type DeliveryStatusType = "sent" | "delivered" | "read";
+
+type SystemMessageType =
+  | "user_joined"
+  | "user_left"
+  | "group_created"
+  | "group_name_changed"
+  | "user_added"
+  | "user_removed";
+
+interface MediaContent {
+  url?: string;
+  filename?: string;
+  size?: number;
+  mimeType?: string;
+  duration?: number;
+  thumbnail?: string;
+  dimensions?: {
+    width: number;
+    height: number;
+  };
+}
+
+interface DeliveryStatus {
+  user: Types.ObjectId;
+  status: DeliveryStatusType;
+  timestamp: Date;
+}
+
+interface Reaction {
+  user: Types.ObjectId;
+  emoji: string;
+  createdAt: Date;
+}
+
+interface ForwardedFrom {
+  originalMessageId?: Types.ObjectId;
+  originalSender?: Types.ObjectId;
+}
+
+export interface IMessage extends Document {
+  chatId: Types.ObjectId;
+  senderId: Types.ObjectId;
+  messageType: MessageType;
+  content: {
+    text?: string;
+    media?: MediaContent;
+  };
+  replyTo?: Types.ObjectId;
+  forwardedFrom?: ForwardedFrom;
+  deliveryStatus: DeliveryStatus[];
+  editedAt?: Date;
+  deletedAt?: Date;
+  deletedFor: Types.ObjectId[];
+  reactions: Reaction[];
+  mentions: Types.ObjectId[];
+  isSystemMessage: boolean;
+  systemMessageType?: SystemMessageType;
+  createdAt: Date;
+  updatedAt: Date;
+
+  markAsDelivered(userId: Types.ObjectId): Promise<IMessage>;
+  markAsRead(userId: Types.ObjectId): Promise<IMessage>;
+  addReaction(userId: Types.ObjectId, emoji: string): Promise<IMessage>;
+}
+
+const messageSchema = new Schema<IMessage>(
   {
     chatId: {
       type: Schema.Types.ObjectId,
@@ -28,50 +104,28 @@ const messageSchema = new Schema(
       index: true,
     },
     content: {
-      text: String,
+      text: { type: String },
       media: {
         url: String,
         filename: String,
         size: Number,
         mimeType: String,
-        duration: Number, // for audio/video
-        thumbnail: String, // for video/image
+        duration: Number,
+        thumbnail: String,
         dimensions: {
           width: Number,
           height: Number,
         },
       },
-      //   location: {
-      //     latitude: Number,
-      //     longitude: Number,
-      //     address: String,
-      //   },
-      //   contact: {
-      //     name: String,
-      //     phoneNumber: String,
-      //     avatar: String,
-      //   },
     },
-    replyTo: {
-      type: Schema.Types.ObjectId,
-      ref: "Message",
-    },
+    replyTo: { type: Schema.Types.ObjectId, ref: "Message" },
     forwardedFrom: {
-      originalMessageId: {
-        type: Schema.Types.ObjectId,
-        ref: "Message",
-      },
-      originalSender: {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
+      originalMessageId: { type: Schema.Types.ObjectId, ref: "Message" },
+      originalSender: { type: Schema.Types.ObjectId, ref: "User" },
     },
     deliveryStatus: [
       {
-        user: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-        },
+        user: { type: Schema.Types.ObjectId, ref: "User" },
         status: {
           type: String,
           enum: ["sent", "delivered", "read"],
@@ -85,18 +139,10 @@ const messageSchema = new Schema(
     ],
     editedAt: Date,
     deletedAt: Date,
-    deletedFor: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+    deletedFor: [{ type: Schema.Types.ObjectId, ref: "User" }],
     reactions: [
       {
-        user: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-        },
+        user: { type: Schema.Types.ObjectId, ref: "User" },
         emoji: String,
         createdAt: {
           type: Date,
@@ -104,12 +150,7 @@ const messageSchema = new Schema(
         },
       },
     ],
-    mentions: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+    mentions: [{ type: Schema.Types.ObjectId, ref: "User" }],
     isSystemMessage: {
       type: Boolean,
       default: false,
@@ -126,12 +167,10 @@ const messageSchema = new Schema(
       ],
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Indexes for Message model
+// Indexes
 messageSchema.index({ chatId: 1, createdAt: -1 });
 messageSchema.index({ senderId: 1, createdAt: -1 });
 messageSchema.index({ chatId: 1, messageType: 1 });
@@ -139,46 +178,50 @@ messageSchema.index({ "deliveryStatus.user": 1, "deliveryStatus.status": 1 });
 messageSchema.index({ mentions: 1 });
 messageSchema.index({ createdAt: -1 });
 
-// Message Methods
-messageSchema.methods.markAsDelivered = function (userId) {
+// Methods
+messageSchema.methods.markAsDelivered = async function (
+  userId: Types.ObjectId
+) {
   const delivery = this.deliveryStatus.find(
-    (d) => d.user.toString() === userId.toString()
+    (d: any) => d.user.toString() === userId.toString()
   );
   if (delivery && delivery.status === "sent") {
     delivery.status = "delivered";
     delivery.timestamp = new Date();
     return this.save();
   }
-  return Promise.resolve(this);
+  return this;
 };
 
-messageSchema.methods.markAsRead = function (userId) {
+messageSchema.methods.markAsRead = async function (userId: Types.ObjectId) {
   const delivery = this.deliveryStatus.find(
-    (d) => d.user.toString() === userId.toString()
+    (d: any) => d.user.toString() === userId.toString()
   );
   if (delivery && delivery.status !== "read") {
     delivery.status = "read";
     delivery.timestamp = new Date();
     return this.save();
   }
-  return Promise.resolve(this);
+  return this;
 };
 
-messageSchema.methods.addReaction = function (userId, emoji) {
+messageSchema.methods.addReaction = async function (
+  userId: Types.ObjectId,
+  emoji: string
+) {
   const existingReaction = this.reactions.find(
-    (r) => r.user.toString() === userId.toString()
+    (r: any) => r.user.toString() === userId.toString()
   );
-
   if (existingReaction) {
     existingReaction.emoji = emoji;
     existingReaction.createdAt = new Date();
   } else {
-    this.reactions.push({
-      user: userId,
-      emoji: emoji,
-    });
+    this.reactions.push({ user: userId, emoji, createdAt: new Date() });
   }
-
   return this.save();
 };
-const Message = model("Message", messageSchema);
+
+export const Message: Model<IMessage> = model<IMessage>(
+  "Message",
+  messageSchema
+);

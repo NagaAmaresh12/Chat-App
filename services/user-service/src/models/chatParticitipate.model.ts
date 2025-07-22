@@ -1,6 +1,21 @@
-// ==================== CHAT PARTICIPANT SCHEMA ====================
-import { Schema, Document, model } from "mongoose";
-const chatParticipantSchema = new Schema(
+import { Schema, Document, model, Types } from "mongoose";
+
+export interface IChatParticipant extends Document {
+  chatId: Types.ObjectId;
+  userId: Types.ObjectId;
+  unreadCount?: number;
+  lastReadMessageId?: Types.ObjectId;
+  isMuted?: boolean;
+  muteUntil?: Date;
+  isArchived?: boolean;
+  isPinned?: boolean;
+  pinnedAt?: Date;
+  customNotificationSound?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+const chatParticipantSchema = new Schema<IChatParticipant>(
   {
     chatId: {
       type: Schema.Types.ObjectId,
@@ -41,9 +56,12 @@ const chatParticipantSchema = new Schema(
   }
 );
 
-// Indexes for ChatParticipant model
+// Indexes
 chatParticipantSchema.index({ chatId: 1, userId: 1 }, { unique: true });
 chatParticipantSchema.index({ userId: 1, unreadCount: 1 });
 chatParticipantSchema.index({ userId: 1, isPinned: -1, updatedAt: -1 });
 
-export const ChatParticipant = model("ChatParticipant", chatParticipantSchema);
+export const ChatParticipant = model<IChatParticipant>(
+  "ChatParticipant",
+  chatParticipantSchema
+);

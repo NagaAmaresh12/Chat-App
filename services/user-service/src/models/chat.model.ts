@@ -1,5 +1,49 @@
-import { Schema, Document, model } from "mongoose";
-const chatSchema = new Schema(
+import mongoose, { Schema, Document, Model, Types } from "mongoose";
+
+// Participant sub-document interface
+interface Participant {
+  user: Types.ObjectId;
+  role: "member" | "admin" | "owner";
+  joinedAt?: Date;
+  leftAt?: Date;
+  isActive?: boolean;
+}
+
+// Group settings interface
+interface GroupSettings {
+  whoCanAddMembers: "everyone" | "admins";
+  whoCanEditGroupInfo: "everyone" | "admins";
+  whoCanSendMessages: "everyone" | "admins";
+}
+
+// Pinned user info
+interface PinnedUser {
+  user: Types.ObjectId;
+  pinnedAt?: Date;
+}
+
+// Main Chat Document interface
+export interface IChat extends Document {
+  type: "private" | "group";
+  participants: Participant[];
+  groupName?: string;
+  groupDescription?: string;
+  groupAvatar?: string;
+  groupSettings?: GroupSettings;
+  lastMessage?: Types.ObjectId;
+  lastActivity?: Date;
+  isArchived?: boolean;
+  isPinned?: PinnedUser[];
+
+  addParticipant(
+    userId: Types.ObjectId,
+    role?: Participant["role"]
+  ): Promise<IChat | false>;
+  removeParticipant(userId: Types.ObjectId): Promise<IChat>;
+}
+
+// Schema Definition
+const chatSchema = new Schema<IChat>(
   {
     type: {
       type: String,
@@ -30,11 +74,10 @@ const chatSchema = new Schema(
         },
       },
     ],
-    // Group specific fields
     groupName: {
       type: String,
       maxlength: 100,
-      required: function () {
+      required: function (this: IChat) {
         return this.type === "group";
       },
     },
@@ -86,36 +129,39 @@ const chatSchema = new Schema(
       },
     ],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Indexes for Chat model
+// Indexes
 chatSchema.index({ "participants.user": 1, type: 1 });
 chatSchema.index({ lastActivity: -1 });
 chatSchema.index({ type: 1, lastActivity: -1 });
 chatSchema.index({ "participants.user": 1, "participants.isActive": 1 });
 
 // Chat Methods
-chatSchema.methods.addParticipant = function (userId, role = "member") {
-  const existingParticipant = this.participants.find(
+chatSchema.methods.addParticipant = async function (
+  this: IChat,
+  userId: Types.ObjectId,
+  role: Participant["role"] = "member"
+): Promise<IChat | false> {
+  const existing = this.participants.find(
     (p) => p.user.toString() === userId.toString() && p.isActive
   );
 
-  if (existingParticipant) {
-    return false; // User already in chat
-  }
+  if (existing) return false;
 
   this.participants.push({
     user: userId,
-    role: role,
+    role,
   });
 
-  return this.save();
+  return await this.save();
 };
 
-chatSchema.methods.removeParticipant = function (userId) {
+chatSchema.methods.removeParticipant = async function (
+  this: IChat,
+  userId: Types.ObjectId
+): Promise<IChat> {
   const participant = this.participants.find(
     (p) => p.user.toString() === userId.toString() && p.isActive
   );
@@ -125,6 +171,8 @@ chatSchema.methods.removeParticipant = function (userId) {
     participant.leftAt = new Date();
   }
 
-  return this.save();
+  return await this.save();
 };
-const Chat = mongoose.model("Chat", chatSchema);
+
+// Export model
+export const Chat: Model<IChat> = mongoose.model<IChat>("Chat", chatSchema);
