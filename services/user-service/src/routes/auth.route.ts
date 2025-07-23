@@ -9,12 +9,7 @@ import {
 } from "../controllers/auth.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { validateBody } from "../middlewares/validation.middleware.js";
-import {
-  loginSchema,
-  verifyOtpSchema,
-  resetPasswordSchema,
-  forgotPasswordSchema,
-} from "../utils/joi.validate.js";
+import { loginSchema, verifyOtpSchema } from "../utils/joi.validate.js";
 
 const router = Router();
 
@@ -23,18 +18,6 @@ router.post("/login", validateBody(loginSchema), login);
 
 // Step 2: Verify OTP (login/registration)
 router.post("/verify-otp", validateBody(verifyOtpSchema), verifyOTP);
-
-// Forget & Reset password (optional in OTP flow)
-// router.post(
-//   "/forgot-password",
-//   validateBody(forgotPasswordSchema),
-//   forgetPassword
-// );
-// router.post(
-//   "/reset-password",
-//   validateBody(resetPasswordSchema),
-//   resetPassword
-// );
 
 // Logout + session check
 router.post("/logout", authenticate, logout);

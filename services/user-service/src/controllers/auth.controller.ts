@@ -160,42 +160,107 @@ export const logout = async (req: AuthRequest, res: Response) => {
 };
 
 // -----------------------------
-// FORGET PASSWORD
+// FORGET PASSWORD = Generate OTP and send to email
 // // -----------------------------
-// export const forgetPassword = async (req: Request, res: Response) => {
-//   const { email } = req.body;
-//   const user = await User.findOne({ email });
+export const forgetPassword = async (req: Request, res: Response) => {
+  console.log("request comes in forget Password");
 
-//   if (!user) return sendError(res, "User not found", 404);
+  try {
+    const { email, OTPLength = 4 } = req.body;
 
-//   const otp = generateOTP();
-//   await storeOTP(email, otp); // store in redis
-//   await publishToMailQueue(
-//     {
-//       to: email,
-//       subject: "Reset Password OTP",
-//       text: `Your password reset OTP is ${otp}`,
-//     },
-//     "MailQueue"
-//   );
+    if (!isValid(email)) {
+      return sendError(res, "Invalid username or email provided", 400);
+    }
 
-//   return sendSuccess(res, null, "OTP sent to email", 200);
-// };
+    const isUserExist = await User.findOne({ email });
+    if (!isUserExist) {
+      return sendError(res, "User Does not Exists", 404);
+    }
+    const redisKey = `otp=${email}`;
+    const existingOTP = await getRedisValue(redisKey);
+
+    if (existingOTP) {
+      return sendError(res, "Too many requests. Try again later.", 429);
+    }
+
+    const otp = generateOTP(Number(OTPLength));
+    logger.info(`Generated OTP :${otp}`);
+    await setRedisValue(redisKey, otp, DEFAULT_OTP_EXPIRY_SECONDS);
+
+    const message = {
+      to: email,
+      subject: "Your One-Time Password (OTP) for Verification",
+      text: `Your OTP is ${otp}. It is valid for ${
+        DEFAULT_OTP_EXPIRY_SECONDS / 60
+      } minutes.`,
+    };
+
+    const isPublished: boolean = await publishToMailQueue(message, "MailQueue");
+    if (!isPublished) {
+      throw new AppError(
+        "Failed to Publish the message in MailQueue @user-service"
+      );
+    }
+    // return sendSuccess(res, null, "OTP sent successfully", 200);
+    return res.json({
+      message: "Message send to mail successfully",
+      success: true,
+    });
+  } catch (error) {
+    return sendError(res, "Failed to generate OTP", 500, error);
+  }
+};
 
 // // -----------------------------
 // // RESET PASSWORD
 // // -----------------------------
-// export const resetPassword = async (req: Request, res: Response) => {
-//   const { email, otp, newPassword } = req.body;
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, otp } = req.body;
 
-//   const isOtpValid = await verifyStoredOTP(email, otp);
-//   if (!isOtpValid) return sendError(res, "Invalid or expired OTP", 400);
+    if (!isValid(email) || !isValid(otp)) {
+      return sendError(res, "Email and OTP are required", 400);
+    }
 
-//   const user = await User.findOne({ email });
-//   if (!user) return sendError(res, "User not found", 404);
+    const redisKey = `otp=${email}`;
+    const storedOTP = await getRedisValue(redisKey);
 
-//   user.password = newPassword; // Make sure password hashing is handled in user model
-//   await user.save();
+    if (!storedOTP) {
+      return sendError(res, "OTP has expired or not found", 400);
+    }
 
-//   return sendSuccess(res, null, "Password reset successfully", 200);
-// };
+    if (otp !== storedOTP) {
+      return sendError(res, "Incorrect OTP", 400);
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      return sendError(res, "User does not exists", 404);
+    }
+
+    const { accessToken, refreshToken } = user.generateTokens();
+    user.refreshToken = {
+      token: refreshToken,
+      createdAt: new Date(),
+    };
+    await user.save();
+
+    res.cookie("accessToken", accessToken, {
+      maxAge: TOKEN_EXPIRY_MS,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    const userResponse = {
+      id: user._id,
+      name: user.username,
+      email: user.email,
+      accessToken,
+    };
+
+    return sendSuccess(res, userResponse, "Reseted Password  successful", 200);
+  } catch (error) {
+    return sendError(res, "Failed to verify OTP", 500, error);
+  }
+};
