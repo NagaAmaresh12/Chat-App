@@ -1,15 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import { sign, verify } from "jsonwebtoken";
-import { isValid } from "../../../notification-service/src/utils/validation";
-import { sendError } from "../../../notification-service/src/utils/response";
+import jwt from "jsonwebtoken";
+import { isValid } from "../utils/validation.js";
+import { sendError } from "../utils/response.js";
 import { User } from "../models/user.model.js";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
 
 export const generateTokens = (payload: { id: string; email: string }) => {
-  const newAccessToken = sign(payload, JWT_SECRET, { expiresIn: "15m" });
-  const newRefreshToken = sign(payload, JWT_REFRESH_SECRET, {
+  const newAccessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
+  const newRefreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
     expiresIn: "7d",
   });
 
@@ -30,7 +30,7 @@ export const authenticate = async (
     // If access token is present and valid
     if (isValid(accessToken)) {
       try {
-        const decoded: any = verify(accessToken, JWT_SECRET);
+        const decoded: any = jwt.verify(accessToken, JWT_SECRET);
         const user = await User.findOne({
           _id: decoded.id,
           email: decoded.email,
@@ -50,7 +50,7 @@ export const authenticate = async (
       return sendError(res, "Invalid Refresh Token", 401);
 
     try {
-      const decoded: any = verify(refreshToken, JWT_REFRESH_SECRET);
+      const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
       const user = await User.findOne({
         _id: decoded.id,
         email: decoded.email,

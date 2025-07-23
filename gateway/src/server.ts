@@ -1,7 +1,10 @@
 import { app } from "./app.js";
 import { logger } from "./utils/logger.js";
-import dotenv from "dotenv";
-dotenv.config();
+import { config } from "dotenv";
+
+config({
+  override: true,
+});
 
 const PORT = process.env.PORT!;
 

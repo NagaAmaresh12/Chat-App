@@ -1,6 +1,8 @@
 import cors from "cors";
 import { config } from "dotenv";
-config();
+config({
+  override: true,
+});
 import { AppError } from "../utils/ApiError.js";
 import { isValid } from "../utils/validation.js";
 

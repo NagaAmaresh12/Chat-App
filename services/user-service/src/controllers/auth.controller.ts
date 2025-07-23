@@ -1,13 +1,12 @@
 import { Request, Response } from "express";
-import { sendSuccess, sendError } from "utils/response";
-import { User } from "../models/user.model";
-import { isValid } from "utils/validation";
-import { AppError } from "utils/ApiError";
-import { generateOTP } from "utils/otp";
-import { getRedisValue, setRedisValue } from "config/redis";
-import { publishToMailQueue } from "config/rabbitMQ";
-import { verifyStoredOTP, storeOTP } from "utils/otp.util"; // Optional
-import jwt from "jsonwebtoken";
+import { sendSuccess, sendError } from "../utils/response.js";
+import { User } from "../models/user.model.js";
+import { isValid } from "../utils/validation.js";
+import { AppError } from "../utils/ApiError.js";
+import { generateOTP } from "../utils/otp.js";
+import { getRedisValue, setRedisValue } from "../config/redis.js";
+import { publishToMailQueue } from "../config/rabbitMQ.js";
+import { logger } from "../utils/logger.js";
 
 // Constants
 const JWT_SECRET = process.env.JWT_SECRET as string;
@@ -22,11 +21,13 @@ interface AuthRequest extends Request {
 // LOGIN - Generate OTP
 // -----------------------------
 export const login = async (req: Request, res: Response) => {
-  try {
-    const { email, OTPLength = 4 } = req.body;
+  console.log("request comes in login");
 
-    if (!isValid(email)) {
-      return sendError(res, "Invalid email provided", 400);
+  try {
+    const { email, OTPLength = 4, username } = req.body;
+
+    if (!isValid(email) || !isValid(username)) {
+      return sendError(res, "Invalid username or email provided", 400);
     }
 
     const redisKey = `otp=${email}`;
@@ -37,6 +38,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const otp = generateOTP(Number(OTPLength));
+    logger.info(`Generated OTP :${otp}`);
     await setRedisValue(redisKey, otp, DEFAULT_OTP_EXPIRY_SECONDS);
 
     const message = {
@@ -49,7 +51,11 @@ export const login = async (req: Request, res: Response) => {
 
     await publishToMailQueue(message, "MailQueue");
 
-    return sendSuccess(res, null, "OTP sent successfully", 200);
+    // return sendSuccess(res, null, "OTP sent successfully", 200);
+    return res.json({
+      message: "Message send to mail successfully",
+      success: true,
+    });
   } catch (error) {
     return sendError(res, "Failed to generate OTP", 500, error);
   }
@@ -151,41 +157,41 @@ export const logout = async (req: AuthRequest, res: Response) => {
 
 // -----------------------------
 // FORGET PASSWORD
-// -----------------------------
-export const forgetPassword = async (req: Request, res: Response) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
+// // -----------------------------
+// export const forgetPassword = async (req: Request, res: Response) => {
+//   const { email } = req.body;
+//   const user = await User.findOne({ email });
 
-  if (!user) return sendError(res, "User not found", 404);
+//   if (!user) return sendError(res, "User not found", 404);
 
-  const otp = generateOTP();
-  await storeOTP(email, otp); // store in redis
-  await publishToMailQueue(
-    {
-      to: email,
-      subject: "Reset Password OTP",
-      text: `Your password reset OTP is ${otp}`,
-    },
-    "MailQueue"
-  );
+//   const otp = generateOTP();
+//   await storeOTP(email, otp); // store in redis
+//   await publishToMailQueue(
+//     {
+//       to: email,
+//       subject: "Reset Password OTP",
+//       text: `Your password reset OTP is ${otp}`,
+//     },
+//     "MailQueue"
+//   );
 
-  return sendSuccess(res, null, "OTP sent to email", 200);
-};
+//   return sendSuccess(res, null, "OTP sent to email", 200);
+// };
 
-// -----------------------------
-// RESET PASSWORD
-// -----------------------------
-export const resetPassword = async (req: Request, res: Response) => {
-  const { email, otp, newPassword } = req.body;
+// // -----------------------------
+// // RESET PASSWORD
+// // -----------------------------
+// export const resetPassword = async (req: Request, res: Response) => {
+//   const { email, otp, newPassword } = req.body;
 
-  const isOtpValid = await verifyStoredOTP(email, otp);
-  if (!isOtpValid) return sendError(res, "Invalid or expired OTP", 400);
+//   const isOtpValid = await verifyStoredOTP(email, otp);
+//   if (!isOtpValid) return sendError(res, "Invalid or expired OTP", 400);
 
-  const user = await User.findOne({ email });
-  if (!user) return sendError(res, "User not found", 404);
+//   const user = await User.findOne({ email });
+//   if (!user) return sendError(res, "User not found", 404);
 
-  user.password = newPassword; // Make sure password hashing is handled in user model
-  await user.save();
+//   user.password = newPassword; // Make sure password hashing is handled in user model
+//   await user.save();
 
-  return sendSuccess(res, null, "Password reset successfully", 200);
-};
+//   return sendSuccess(res, null, "Password reset successfully", 200);
+// };

@@ -7,7 +7,9 @@ import routes from "./routes/index.js";
 import { logger } from "./utils/logger.js";
 import { helmetMiddleware } from "./middlewares/helmet.js";
 
-config();
+config({
+  override: true,
+});
 const app = express();
 //middlewares
 app.use(express.json());

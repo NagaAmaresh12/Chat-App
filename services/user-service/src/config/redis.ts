@@ -1,12 +1,16 @@
-import { createClient } from "redis";
-import dotenv from "dotenv";
-dotenv?.config();
-import { isValid } from "../../../notification-service/src/utils/validation";
-import { sendError } from "../../../notification-service/src/utils/response.js";
-import { AppError } from "../../../notification-service/src/utils/ApiError.js";
+import { createClient, RESP_TYPES } from "redis";
+import { config } from "dotenv";
+config({
+  override: true,
+});
+import { isValid } from "../utils/validation.js";
+import { sendError } from "../utils/response.js";
+import { AppError } from "../utils/ApiError.js";
 
-const REDIS_URL =
-  "rediss://default:AcZOAAIjcDE2YWZmMDc1OTYzOTU0MjlhYmVjODc4Y2YxODRhNDlkYXAxMA@loyal-magpie-50766.upstash.io:6379";
+const REDIS_URL = process.env.REDIS_URL;
+if (!REDIS_URL) {
+  throw new AppError("Invalide Redis Url in User service", 500);
+}
 export const redisClient = createClient({
   url: REDIS_URL,
 });
@@ -15,7 +19,7 @@ export const connectToRedis = async () => {
   console.log("redis-url", REDIS_URL);
 
   if (!isValid(REDIS_URL!)) {
-    throw new AppError("Invalid REDIS_URL in USER-SERVICE");
+    throw new AppError("Invalid REDIS_URL in USER-SERVICE", 500);
   }
   try {
     await redisClient.connect();

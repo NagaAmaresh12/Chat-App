@@ -5,6 +5,10 @@ export const loginSchema = Joi.object({
     "string.email": "Please enter a valid email address.",
     "any.required": "Email is required.",
   }),
+  username: Joi.string().required().messages({
+    "string.username": "Please enter a valid username.",
+    "any.required": "username is required.",
+  }),
 });
 
 export const verifyOtpSchema = Joi.object({

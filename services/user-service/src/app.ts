@@ -1,11 +1,13 @@
 // app.ts
 import { config } from "dotenv";
-config();
+config({
+  override: true,
+});
 import express from "express";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { connectDB } from "./config/db.js";
 import morgan from "morgan";
-import { logger } from "../../notification-service/src/utils/logger.js";
+import { logger } from "./utils/logger.js";
 import authRoutes from "./routes/auth.route.js";
 // import userRoutes from "./routes/user.route.js";
 import { connectToRedis } from "config/redis.js";
@@ -16,7 +18,7 @@ connectDB();
 // connectToRedis();
 
 // user-service (3000)
-app.get("/", (req, res) => {
+app.get("/hi", (req, res) => {
   res.json({
     message: "User Service is Working Fine",
   });
@@ -30,7 +32,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 //routes
-// app.use("/auth", authRoutes);
+app.use("/auth", authRoutes);
 // app.use("/users", userRoutes);
 
 // Use morgan to log HTTP requests to winston

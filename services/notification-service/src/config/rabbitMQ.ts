@@ -3,7 +3,9 @@ import { createTransport } from "nodemailer";
 import { AppError } from "../utils/ApiError.js";
 import { isValid } from "../utils/validation.js";
 import { config } from "dotenv";
-config();
+config({
+  override: true,
+});
 interface IMailMessage {
   to: string;
   subject: string;

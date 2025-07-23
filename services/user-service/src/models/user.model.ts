@@ -1,5 +1,5 @@
 import { Schema, model, Document, Model } from "mongoose";
-import { sign } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 // ==================== INTERFACES ====================
 
@@ -63,10 +63,10 @@ const userSchema = new Schema<IUser>(
     email: {
       type: String,
       required: true,
-      index: true,
       match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
       trim: true,
       unique: true,
+      index: true,
     },
     username: {
       type: String,
@@ -179,8 +179,7 @@ const userSchema = new Schema<IUser>(
 );
 
 // ==================== INDEXES ====================
-userSchema.index({ username: 1 }, { unique: true });
-userSchema.index({ email: 1 }, { unique: true });
+
 userSchema.index({ isOnline: 1, lastSeen: -1 });
 userSchema.index({ "favourite.user": 1 });
 userSchema.index({ createdAt: -1 });
@@ -189,7 +188,7 @@ userSchema.index({ createdAt: -1 });
 userSchema.methods.generateTokens = function () {
   const user = this;
 
-  const accessToken = sign(
+  const accessToken = jwt.sign(
     {
       userId: user._id,
       username: user.username,
@@ -198,7 +197,7 @@ userSchema.methods.generateTokens = function () {
     { expiresIn: "15m" }
   );
 
-  const refreshToken = sign(
+  const refreshToken = jwt.sign(
     {
       userId: user._id,
       tokenType: "refresh",

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { isValid } from "../../../notification-service/src/utils/validation.js";
-import { AppError } from "../../../notification-service/src/utils/ApiError.js";
-import { logger } from "../../../notification-service/src/utils/logger.js";
+import { isValid } from "../utils/validation.js";
+import { AppError } from "../utils/ApiError.js";
+import { logger } from "../utils/logger.js";
 
 export const connectDB = async (): Promise<void> => {
   const MONGO_URL = process.env.MONGO_URL;

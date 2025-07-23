@@ -1,6 +1,6 @@
 import { Channel, connect } from "amqplib";
-import { AppError } from "../../../notification-service/src/utils/ApiError.js";
-import { isValid } from "../../../notification-service/src/utils/validation.js";
+import { AppError } from "../utils/ApiError.js";
+import { isValid } from "../utils/validation.js";
 
 interface IMailMessage {
   to: string;
@@ -9,7 +9,7 @@ interface IMailMessage {
 }
 
 const protocol = process.env.PROTOCOL as string;
-const port = Number(process.env.PORT) as number;
+const port = Number(process.env.RABBITMQ_PORT) as number;
 const hostname = process.env.HOSTNAME as string;
 const username = process.env.USERNAME as string;
 const password = process.env.PASSWORD as string;
