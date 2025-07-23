@@ -12,8 +12,7 @@ config({
 });
 const app = express();
 //middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+//should not use express.json() and express.urlencoded({extended:true}) , to send post request
 // app.use(helmetMiddleware);
 app.use(cors);
 // app.use(ratelimiter);

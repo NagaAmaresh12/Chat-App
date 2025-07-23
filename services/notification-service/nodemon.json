@@ -1,0 +1,6 @@
+{
+  "watch": ["src"],
+  "ignore": ["dist"],
+  "ext": "ts,js,json",
+  "exec": "bun run dist/server.js"
+}

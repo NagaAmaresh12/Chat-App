@@ -19,9 +19,7 @@ import {
 const router = Router();
 
 // Step 1: Send OTP to email
-router.post("/login", (req, res) => {
-  res.send("login endpoint is working fine");
-});
+router.post("/login", validateBody(loginSchema), login);
 
 // Step 2: Verify OTP (login/registration)
 router.post("/verify-otp", validateBody(verifyOtpSchema), verifyOTP);

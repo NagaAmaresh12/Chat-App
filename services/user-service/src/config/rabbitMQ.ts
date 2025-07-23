@@ -48,14 +48,20 @@ export const publishToMailQueue = async (
   }
 
   const mailMessageBuffer = Buffer.from(JSON.stringify(message)); // ✅ Correct
+  if (!mailMessageBuffer) {
+    throw new AppError("Failed to Get mailMessageBuffer", 500);
+  }
+  try {
+    await channel.assertQueue(QueueName, {
+      durable: true,
+    });
 
-  await channel.assertQueue(QueueName, {
-    durable: true,
-  });
+    channel.sendToQueue(QueueName, mailMessageBuffer, {
+      persistent: true,
+    });
 
-  channel.sendToQueue(QueueName, mailMessageBuffer, {
-    persistent: true,
-  });
-
-  return true;
+    return true;
+  } catch (error) {
+    return false;
+  }
 };

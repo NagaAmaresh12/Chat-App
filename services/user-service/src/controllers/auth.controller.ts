@@ -49,8 +49,12 @@ export const login = async (req: Request, res: Response) => {
       } minutes.`,
     };
 
-    await publishToMailQueue(message, "MailQueue");
-
+    const isPublished: boolean = await publishToMailQueue(message, "MailQueue");
+    if (!isPublished) {
+      throw new AppError(
+        "Failed to Publish the message in MailQueue @user-service"
+      );
+    }
     // return sendSuccess(res, null, "OTP sent successfully", 200);
     return res.json({
       message: "Message send to mail successfully",
