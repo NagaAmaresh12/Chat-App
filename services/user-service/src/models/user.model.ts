@@ -1,5 +1,6 @@
 import { Schema, model, Document, Model } from "mongoose";
 import jwt from "jsonwebtoken";
+import { Types } from "joi";
 
 // ==================== INTERFACES ====================
 
@@ -103,12 +104,15 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
-    blockedUsers: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+    blockedUsers: {
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: "User",
+        },
+      ],
+      default: null,
+    },
     favourite: [
       {
         user: {
@@ -178,6 +182,7 @@ const userSchema = new Schema<IUser>(
 
 // ==================== INDEXES ====================
 
+userSchema.index({ _id: 1 });
 userSchema.index({ isOnline: 1, lastSeen: -1 });
 userSchema.index({ "favourite.user": 1 });
 userSchema.index({ createdAt: -1 });

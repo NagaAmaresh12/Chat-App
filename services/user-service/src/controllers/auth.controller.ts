@@ -13,7 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 const TOKEN_EXPIRY_MS = 1000 * 60 * 60; // 1 hour
 const DEFAULT_OTP_EXPIRY_SECONDS = 300; // 5 minutes
 
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
   user?: any;
 }
 
