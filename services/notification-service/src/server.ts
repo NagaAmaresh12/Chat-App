@@ -4,6 +4,7 @@ import { config } from "dotenv";
 import { AppError } from "./utils/ApiError.js";
 
 config();
+
 const PORT = process.env.PORT;
 if (!PORT) {
   throw new AppError("Invalid Port at Notification Service");

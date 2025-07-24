@@ -11,6 +11,7 @@
   "devDependencies": {
     "@types/amqplib": "^0.10.7",
     "@types/bun": "latest",
+    "@types/config": "^3.3.5",
     "@types/dotenv": "^8.2.3",
     "@types/express": "^5.0.3",
     "@types/joi": "^17.2.3",
@@ -28,6 +29,7 @@
     "@types/cors": "^2.8.19",
     "amqplib": "^0.10.8",
     "bcrypt": "^6.0.0",
+    "config": "^4.1.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",

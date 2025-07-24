@@ -70,7 +70,6 @@ const userSchema = new Schema<IUser>(
     },
     username: {
       type: String,
-      required: true,
       minlength: 2,
       maxlength: 50,
       trim: true,
@@ -79,7 +78,6 @@ const userSchema = new Schema<IUser>(
     },
     displayName: {
       type: String,
-      required: true,
       maxlength: 100,
     },
     bio: {
@@ -190,7 +188,8 @@ userSchema.methods.generateTokens = function () {
 
   const accessToken = jwt.sign(
     {
-      userId: user._id,
+      userId: this._id,
+      email: this.email,
       username: user.username,
     },
     process.env.JWT_ACCESS_SECRET!,
@@ -199,7 +198,8 @@ userSchema.methods.generateTokens = function () {
 
   const refreshToken = jwt.sign(
     {
-      userId: user._id,
+      userId: this._id,
+      email: this.email,
       tokenType: "refresh",
     },
     process.env.JWT_REFRESH_SECRET!,

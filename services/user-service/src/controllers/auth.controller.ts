@@ -25,6 +25,10 @@ export const login = async (req: Request, res: Response) => {
 
   try {
     const { email, OTPLength = 4, username } = req.body;
+    console.log({
+      email,
+      username,
+    });
 
     if (!isValid(email) || !isValid(username)) {
       return sendError(res, "Invalid username or email provided", 400);
@@ -36,6 +40,7 @@ export const login = async (req: Request, res: Response) => {
     if (existingOTP) {
       return sendError(res, "Too many requests. Try again later.", 429);
     }
+    console.log("Generating OTP started");
 
     const otp = generateOTP(Number(OTPLength));
     logger.info(`Generated OTP :${otp}`);
@@ -48,8 +53,13 @@ export const login = async (req: Request, res: Response) => {
         DEFAULT_OTP_EXPIRY_SECONDS / 60
       } minutes.`,
     };
+    console.log("Message", message);
 
     const isPublished: boolean = await publishToMailQueue(message, "MailQueue");
+    console.log({
+      isPublished,
+    });
+
     if (!isPublished) {
       throw new AppError(
         "Failed to Publish the message in MailQueue @user-service"
@@ -70,7 +80,12 @@ export const login = async (req: Request, res: Response) => {
 // -----------------------------
 export const verifyOTP = async (req: Request, res: Response) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp, username } = req.body;
+    console.log({
+      email,
+      otp,
+      username,
+    });
 
     if (!isValid(email) || !isValid(otp)) {
       return sendError(res, "Email and OTP are required", 400);
@@ -78,6 +93,9 @@ export const verifyOTP = async (req: Request, res: Response) => {
 
     const redisKey = `otp=${email}`;
     const storedOTP = await getRedisValue(redisKey);
+    console.log({
+      storedOTP,
+    });
 
     if (!storedOTP) {
       return sendError(res, "OTP has expired or not found", 400);
@@ -86,14 +104,15 @@ export const verifyOTP = async (req: Request, res: Response) => {
     if (otp !== storedOTP) {
       return sendError(res, "Incorrect OTP", 400);
     }
+    console.log("OTP's are MATCHED");
 
     let user = await User.findOne({ email });
 
     if (!user) {
-      user = await User.create({ email });
+      user = await User.create({ email, username });
     }
 
-    const { accessToken, refreshToken } = await user.generateTokens();
+    const { accessToken, refreshToken } = user.generateTokens();
     user.refreshToken = {
       token: refreshToken,
       createdAt: new Date(),

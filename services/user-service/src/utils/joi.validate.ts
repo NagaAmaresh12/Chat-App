@@ -16,8 +16,8 @@ export const verifyOtpSchema = Joi.object({
     "string.email": "Please enter a valid email address.",
     "any.required": "Email is required.",
   }),
-  otp: Joi.string().length(6).pattern(/^\d+$/).required().messages({
-    "string.length": "OTP must be 6 digits.",
+  otp: Joi.string().length(4).pattern(/^\d+$/).required().messages({
+    "string.length": "OTP must be 4 digits.",
     "string.pattern.base": "OTP must contain only numbers.",
     "any.required": "OTP is required.",
   }),

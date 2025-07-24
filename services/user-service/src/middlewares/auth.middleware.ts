@@ -1,20 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { isValid } from "../utils/validation.js";
 import { sendError } from "../utils/response.js";
 import { User } from "../models/user.model.js";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET!;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
-
-export const generateTokens = (payload: { id: string; email: string }) => {
-  const newAccessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "15m" });
-  const newRefreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
-    expiresIn: "7d",
-  });
-
-  return { newAccessToken, newRefreshToken };
-};
+console.log({
+  JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET,
+});
 
 export const authenticate = async (
   req: Request,
@@ -22,78 +17,95 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    let accessToken =
+    const accessToken =
       req.cookies?.accessToken || extractToken(req.headers.authorization);
-    let refreshToken =
-      req.cookies?.refreshToken || extractToken(req.headers["x-refresh-token"]);
+    console.log({
+      accessToken,
+    });
+    const refreshToken =
+      req.cookies?.refreshToken ||
+      extractToken(req.headers["x-refresh-token"] as string);
 
-    // If access token is present and valid
     if (isValid(accessToken)) {
+      console.log("accesstoken is valid");
+
       try {
-        const decoded: any = jwt.verify(accessToken, JWT_SECRET);
+        console.log("decoding accesstoken");
+
+        const decoded: any = jwt.verify(
+          accessToken,
+          JWT_ACCESS_SECRET
+        ) as JwtPayload;
+        console.log({
+          decoded,
+        });
+        console.log("Finding user in db");
+
+        const user = await User.findOne({
+          email: decoded.email,
+        });
+        console.log({
+          user,
+        });
+
+        if (!user) return sendError(res, "User not found", 404);
+        (req as any).user = user;
+        return next();
+      } catch (err) {
+        res.status(400).json({
+          message: "Invalid access token",
+        });
+        // Invalid or expired access token, fallback to refresh
+      }
+    } else if (!isValid(accessToken) && isValid(refreshToken)) {
+      try {
+        const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+        console.log("execution is in refreshtoken");
         const user = await User.findOne({
           _id: decoded.id,
           email: decoded.email,
         });
         if (!user) return sendError(res, "User not found", 404);
 
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+          user.generateTokens();
+
+        user.refreshToken = {
+          token: newRefreshToken,
+          createdAt: new Date(),
+        };
+        await user.save();
+
+        res.cookie("accessToken", newAccessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 15 * 60 * 1000,
+        });
+
+        res.cookie("refreshToken", newRefreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
         (req as any).user = user;
         return next();
       } catch (err) {
-        // Access token invalid or expired → fall through to refresh token
-        sendError(res, "TOKEN is Expired", 400);
+        return sendError(res, "Invalid or expired refresh token", 403);
       }
+    } else {
+      return sendError(res, "No Access Token and Refresh Token");
     }
 
-    // Handle with refresh token
-    if (!isValid(refreshToken))
-      return sendError(res, "Invalid Refresh Token", 401);
-
-    try {
-      const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-      const user = await User.findOne({
-        _id: decoded.id,
-        email: decoded.email,
-      });
-      if (!user) return sendError(res, "User not found", 404);
-
-      // Generate new tokens
-      const { accessToken, refreshToken: newRefreshToken } =
-        user.generateTokens();
-
-      // Save refresh token to DB (example assumes field exists)
-      user.refreshToken = {
-        token: newRefreshToken,
-        createdAt: new Date(),
-      };
-      await user.save();
-
-      // Set tokens in cookies
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 15 * 60 * 1000, // 15 minutes
-      });
-
-      res.cookie("refreshToken", newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
-      (req as any).user = user;
-      return next();
-    } catch (err) {
-      return sendError(res, "Invalid or expired refresh token", 403);
-    }
+    // Only reach here if accessToken is invalid/missing
   } catch (err) {
     return sendError(res, "Authentication failed", 500);
   }
 };
 
-// Utility to extract Bearer token
+// Extract Bearer token from header
 function extractToken(headerValue?: string | string[]): string | undefined {
   if (typeof headerValue === "string" && headerValue.startsWith("Bearer ")) {
     return headerValue.split(" ")[1];

@@ -10,12 +10,14 @@ import morgan from "morgan";
 import { logger } from "./utils/logger.js";
 import authRoutes from "./routes/auth.route.js";
 // import userRoutes from "./routes/user.route.js";
-import { connectToRedis } from "config/redis.js";
+import { connectToRedis } from "./config/redis.js";
+import { connectToRabbitMQ } from "./config/rabbitMQ.js";
 const app = express();
 
 //config
 connectDB();
-// connectToRedis();
+connectToRedis();
+connectToRabbitMQ();
 
 // user-service (3000)
 app.get("/hi", (req, res) => {
