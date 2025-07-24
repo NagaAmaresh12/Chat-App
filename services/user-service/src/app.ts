@@ -35,7 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 
 //routes
 app.use("/auth", authRoutes);
-app.use("/users", userRoutes);
+app.use("/people", userRoutes);
 
 // Use morgan to log HTTP requests to winston
 app.use(
