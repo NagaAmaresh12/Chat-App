@@ -5,13 +5,15 @@ config({
 });
 import express from "express";
 import { errorHandler } from "./middlewares/errorHandler.js";
-import { connectDB } from "./config/db.js";
 import morgan from "morgan";
 import { logger } from "./utils/logger.js";
 import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
-import { connectToRedis } from "./config/redis.js";
-import { connectToRabbitMQ } from "./config/rabbitMQ.js";
+import {
+  connectDB,
+  connectToRedis,
+  connectToRabbitMQ,
+} from "./config/index.js";
 const app = express();
 
 //config
