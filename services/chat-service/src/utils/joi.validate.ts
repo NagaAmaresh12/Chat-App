@@ -1,40 +1,21 @@
 import Joi from "joi";
+// schemas/singleChat.schema.ts
 
-export const loginSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    "string.email": "Please enter a valid email address.",
-    "any.required": "Email is required.",
-  }),
-  username: Joi.string().required().messages({
-    "string.username": "Please enter a valid username.",
-    "any.required": "username is required.",
-  }),
+export const singleChatSchema = Joi.object({
+  // senderId: Joi.string().required(), // or Joi.string().hex().length(24) for ObjectId
+  receiverId: Joi.string().required(), // same here
+  initialMessage: Joi.string().trim().min(1).max(1000).required(), // example field
 });
 
-export const verifyOtpSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    "string.email": "Please enter a valid email address.",
-    "any.required": "Email is required.",
-  }),
-  otp: Joi.string().length(4).pattern(/^\d+$/).required().messages({
-    "string.length": "OTP must be 4 digits.",
-    "string.pattern.base": "OTP must contain only numbers.",
-    "any.required": "OTP is required.",
-  }),
+export const userIDParamsSchema = Joi.object({
+  userID: Joi.string().length(24).required(),
 });
 
-export const forgotPasswordSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    "string.email": "Please enter a valid email address.",
-    "any.required": "Email is required.",
-  }),
+export const chatIDParamsSchema = Joi.object({
+  chatID: Joi.string().length(24).required(),
 });
 
-export const resetPasswordSchema = Joi.object({
-  email: Joi.string().email().required(),
-  otp: Joi.string().length(6).pattern(/^\d+$/).required(),
-  newPassword: Joi.string().min(6).required().messages({
-    "string.min": "Password must be at least 6 characters.",
-    "any.required": "New password is required.",
-  }),
+export const editChatSchema = Joi.object({
+  chatName: Joi.string().min(1).max(255).optional(),
+  isArchived: Joi.boolean().optional(),
 });

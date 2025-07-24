@@ -21,6 +21,10 @@ export const verifyOtpSchema = Joi.object({
     "string.pattern.base": "OTP must contain only numbers.",
     "any.required": "OTP is required.",
   }),
+  username: Joi.string().required().messages({
+    "string.username": "Please enter a valid username",
+    "any.required": "Username is Required",
+  }),
 });
 
 export const forgotPasswordSchema = Joi.object({

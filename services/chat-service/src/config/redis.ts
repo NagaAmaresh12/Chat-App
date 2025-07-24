@@ -5,7 +5,7 @@ config({
 });
 import { isValid } from "../utils/validation.js";
 import { sendError } from "../utils/response.js";
-import { AppError } from "../utils/ApiError.js";
+import { AppError } from "../utils/api.error.js";
 
 const REDIS_URL = process.env.REDIS_URL;
 if (!REDIS_URL) {
@@ -16,7 +16,7 @@ export const redisClient = createClient({
 });
 
 export const connectToRedis = async () => {
-  console.log("redis-url", REDIS_URL);
+  // console.log("redis-url", REDIS_URL);
 
   if (!isValid(REDIS_URL!)) {
     throw new AppError("Invalid REDIS_URL in USER-SERVICE", 500);

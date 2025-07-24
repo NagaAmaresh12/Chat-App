@@ -4,11 +4,12 @@ config({
   override: true,
 });
 import express from "express";
-import { errorHandler } from "./middlewares/errorHandler.js";
+import { errorHandler } from "./middlewares/error.handler.js";
 import morgan from "morgan";
 import { logger } from "./utils/logger.js";
 import authRoutes from "./routes/auth.route.js";
-import userRoutes from "./routes/user.route.js";
+import userRoutes from "./routes/people.route.js";
+import cookieParser from "cookie-parser";
 import {
   connectDB,
   connectToRedis,
@@ -29,12 +30,12 @@ app.get("/hi", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({ message: "Health check OK" });
+  res.json({ message: "User service is up and running" });
 });
 //middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use(cookieParser());
 //routes
 app.use("/auth", authRoutes);
 app.use("/people", userRoutes);

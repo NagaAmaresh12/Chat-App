@@ -1,7 +1,7 @@
 import { logger } from "./utils/logger.js";
 import { app } from "./app.js";
 import { config } from "dotenv";
-import { AppError } from "./utils/ApiError.js";
+import { AppError } from "./utils/api.error.js";
 
 config();
 

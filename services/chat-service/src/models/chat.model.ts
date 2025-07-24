@@ -48,8 +48,8 @@ const chatSchema = new Schema<IChat>(
     type: {
       type: String,
       enum: ["private", "group"],
-      required: true,
       index: true,
+      default: "private",
     },
     participants: [
       {

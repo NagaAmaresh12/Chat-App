@@ -16,9 +16,9 @@ if (
 }
 export const getServiceTarget = (serviceName: string) => {
   const services: Record<string, string> = {
-    "user-service": userService as string,
-    "chat-service": chatService as string,
-    "message-service": messageService as string,
+    "users-service": userService as string,
+    "chats-service": chatService as string,
+    "messages-service": messageService as string,
     "socket-service": socketService as string,
   };
   return services[serviceName] || "http://localhost:3000";

@@ -1,6 +1,6 @@
 import { Channel, connect } from "amqplib";
 import { createTransport } from "nodemailer";
-import { AppError } from "../utils/ApiError.js";
+import { AppError } from "../utils/api.error.js";
 import { isValid } from "../utils/validation.js";
 import { config } from "dotenv";
 

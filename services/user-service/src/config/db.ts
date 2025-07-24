@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { isValid } from "../utils/validation.js";
-import { AppError } from "../utils/ApiError.js";
+import { AppError } from "../utils/api.error.js";
 import { logger } from "../utils/logger.js";
 
 export const connectDB = async (): Promise<void> => {

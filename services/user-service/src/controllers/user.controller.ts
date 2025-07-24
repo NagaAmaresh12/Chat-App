@@ -34,15 +34,18 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
     const users = await User.find({}, "_id username email bio isOnline");
 
-    const allUsers: IUserSemi[] = users.map((user) => ({
-      _id: user?._id as string,
-      email: user?.email,
-      username: user?.username,
-      bio: user?.bio,
-      isOnline: user?.isOnline,
-    }));
+    // const allUsers: IUserSemi[] = users.map((user) => ({
+    //   _id: user?._id as string,
+    //   email: user?.email,
+    //   username: user?.username,
+    //   bio: user?.bio,
+    //   isOnline: user?.isOnline,
+    // }));
+    console.log({
+      users,
+    });
 
-    sendSuccess(res, allUsers, "Fetched All Users Successfully", 200);
+    sendSuccess(res, users, "Fetched All Users Successfully", 200);
   } catch (error) {
     sendError(res, "Failed to Fetch All Users", 500, error);
   }

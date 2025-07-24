@@ -1,5 +1,5 @@
 import { Channel, connect } from "amqplib";
-import { AppError } from "../utils/ApiError.js";
+import { AppError } from "../utils/api.error.js";
 import { isValid } from "../utils/validation.js";
 import { config } from "dotenv";
 config();
@@ -14,13 +14,6 @@ const port = Number(process.env.RABBITMQ_PORT) as number;
 const hostname = process.env.HOSTNAME as string;
 const username = process.env.USERNAME as string;
 const password = process.env.PASSWORD as string;
-console.log({
-  protocol,
-  port,
-  hostname,
-  username,
-  password,
-});
 
 if (
   !isValid(protocol) ||

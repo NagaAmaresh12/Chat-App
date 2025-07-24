@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response.js";
 import { User } from "../models/user.model.js";
 import { isValid } from "../utils/validation.js";
-import { AppError } from "../utils/ApiError.js";
+import { AppError } from "../utils/api.error.js";
 import { generateOTP } from "../utils/otp.js";
 import { getRedisValue, setRedisValue } from "../config/redis.js";
 import { publishToMailQueue } from "../config/rabbitMQ.js";
@@ -124,6 +124,11 @@ export const verifyOTP = async (req: Request, res: Response) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
     });
+    res.cookie("refresh", refreshToken, {
+      maxAge: TOKEN_EXPIRY_MS,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
 
     const userResponse = {
       id: user._id,
@@ -151,6 +156,10 @@ export const me = (req: AuthRequest, res: Response) => {
     email: user.email,
     accessToken: user.accessToken,
   };
+  // const userData = { ...user };
+  console.log({
+    userData,
+  });
 
   return sendSuccess(res, userData, "User is authenticated", 200);
 };
