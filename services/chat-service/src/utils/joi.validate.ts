@@ -1,21 +1,46 @@
+// singleChatSchema
 import Joi from "joi";
-// schemas/singleChat.schema.ts
-
 export const singleChatSchema = Joi.object({
-  // senderId: Joi.string().required(), // or Joi.string().hex().length(24) for ObjectId
-  receiverId: Joi.string().required(), // same here
-  initialMessage: Joi.string().trim().min(1).max(1000).required(), // example field
+  participantID: Joi.string().required(), // User you're chatting with
 });
 
-export const userIDParamsSchema = Joi.object({
-  userID: Joi.string().length(24).required(),
-});
-
+// chatIDParamsSchema
 export const chatIDParamsSchema = Joi.object({
-  chatID: Joi.string().length(24).required(),
+  chatID: Joi.string().hex().length(24).required(),
 });
 
+// editChatSchema
 export const editChatSchema = Joi.object({
-  chatName: Joi.string().min(1).max(255).optional(),
-  isArchived: Joi.boolean().optional(),
+  isArchived: Joi.boolean(),
+  isMuted: Joi.boolean(),
+  lastSeen: Joi.date(),
+});
+// deleteGroupSchema
+export const deleteGroupSchema = Joi.object({
+  isArchived: Joi.boolean(),
+  isMuted: Joi.boolean(),
+  lastSeen: Joi.date(),
+});
+
+// groupChatSchema
+export const groupChatSchema = Joi.object({
+  name: Joi.string().min(3).required(),
+  members: Joi.array().items(Joi.string().hex().length(24)).min(2).required(),
+  description: Joi.string().allow(""),
+});
+
+// editGroupSchema
+export const editGroupSchema = Joi.object({
+  name: Joi.string().min(3),
+  description: Joi.string(),
+});
+
+// addMemberSchema
+export const addMemberSchema = Joi.object({
+  userID: Joi.string().hex().length(24).required(),
+});
+
+// removeMemberSchema
+export const removeMemberSchema = Joi.object({
+  userID: Joi.string().hex().length(24).required(),
 });

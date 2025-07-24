@@ -1,9 +1,12 @@
 import { AppError } from "./api.error.js";
 import {
   singleChatSchema,
-  userIDParamsSchema,
+  groupChatSchema,
   chatIDParamsSchema,
   editChatSchema,
+  editGroupSchema,
+  addMemberSchema,
+  removeMemberSchema,
 } from "./joi.validate.js";
 import { logger } from "./logger.js";
 import { generateOTP } from "./otp.js";
@@ -12,8 +15,11 @@ import { isValid, isEmailValid, isUsernameValid } from "./validation.js";
 
 export {
   singleChatSchema,
+  groupChatSchema,
+  editGroupSchema,
+  removeMemberSchema,
+  addMemberSchema,
   AppError,
-  userIDParamsSchema,
   chatIDParamsSchema,
   editChatSchema,
   logger,

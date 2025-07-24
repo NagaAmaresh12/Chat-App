@@ -1,17 +1,78 @@
-// import { Router } from "express";
-// import {
-//   createNewGroupChat,
-//   getGroupChatsByUserID,
-//   getGroupChatByChatID,
-//   editGroupChatByChatID,
-//   deleteGroupChatByChatID,
-// } from "../controllers/group.controller.js";
+import { Router } from "express";
+import {
+  createNewGroupChat,
+  getGroupChatByChatID,
+  editGroupChatByChatID,
+  deleteGroupChatByChatID,
+  addMemberInGroupChat,
+  removeMemberInGroupChat,
+} from "../controllers/group.controller.js";
+import {
+  authenticate,
+  validateBody,
+  validateParams,
+} from "../middlewares/index.js";
+import {
+  chatIDParamsSchema,
+  groupChatSchema,
+  addMemberSchema,
+  editGroupSchema,
+  removeMemberSchema,
+} from "../utils/index.js";
 
-// const router = Router();
+const router = Router();
+router.post(
+  "/new",
+  authenticate,
+  validateBody(groupChatSchema),
+  createNewGroupChat
+);
 
-// router.get("/new", authenticate, createNewGroupChat);
-// router.get("/:userID", authenticate, getGroupChatsByUserID);
-// router.get("/:chatID", authenticate, getGroupChatByChatID);
-// router.delete("/delete/:chatID", authenticate, deleteGroupChatByChatID);
-// router.delete("/edit/:chatID", authenticate, editGroupChatByChatID);
-// export default router;
+router.get("/my-groups", authenticate, getGroupChatByChatID);
+
+router.get(
+  "/:chatID",
+  authenticate,
+  validateParams(chatIDParamsSchema),
+  getGroupChatByChatID
+);
+
+router.delete(
+  "/delete/:chatID",
+  authenticate,
+  validateParams(chatIDParamsSchema),
+  deleteGroupChatByChatID
+);
+
+router.put(
+  "/edit/:chatID",
+  authenticate,
+  validateParams(chatIDParamsSchema),
+  validateBody(editGroupSchema),
+  editGroupChatByChatID
+);
+router.delete(
+  "/delete/:chatID",
+  authenticate,
+  validateParams(chatIDParamsSchema),
+  //   validateBody(deleteGroupSchema),
+  deleteGroupChatByChatID
+);
+
+router.put(
+  "/add-member/:chatID",
+  authenticate,
+  validateParams(chatIDParamsSchema),
+  validateBody(addMemberSchema),
+  addMemberInGroupChat
+);
+
+router.delete(
+  "/remove-member/:chatID",
+  authenticate,
+  validateParams(chatIDParamsSchema),
+  validateBody(removeMemberSchema),
+  removeMemberInGroupChat
+);
+
+export default router;

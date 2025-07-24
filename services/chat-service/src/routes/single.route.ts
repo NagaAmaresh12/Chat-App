@@ -10,41 +10,41 @@ import { validateBody, validateParams } from "../middlewares/index.js";
 import { authenticate } from "../middlewares/index.js";
 import {
   singleChatSchema,
-  userIDParamsSchema,
   chatIDParamsSchema,
   editChatSchema,
 } from "../utils/index.js";
 
 const router = Router();
-
+// Create a 1-1 or group chat between users
 router.post(
   "/new",
   authenticate,
   validateBody(singleChatSchema),
   createNewSingleChat
 );
-router.get(
-  "/:userID",
-  authenticate,
-  validateParams(userIDParamsSchema),
-  getSingleChatsByUserID
-);
+
+router.get("/my-chats", authenticate, getSingleChatsByUserID); // Fetch all chats for the user
+
 router.get(
   "/:chatID",
   authenticate,
-  validateBody(chatIDParamsSchema),
+  validateParams(chatIDParamsSchema),
   getSingleChatByChatID
 );
+
 router.delete(
   "/delete/:chatID",
   authenticate,
-  validateBody(chatIDParamsSchema),
+  validateParams(chatIDParamsSchema),
   deleteSingleChatByChatID
 );
+
 router.patch(
   "/edit/:chatID",
   authenticate,
+  validateParams(chatIDParamsSchema),
   validateBody(editChatSchema),
   editSingleChatByChatID
 );
+
 export default router;
