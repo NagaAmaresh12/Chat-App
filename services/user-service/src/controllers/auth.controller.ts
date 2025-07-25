@@ -117,6 +117,7 @@ export const verifyOTP = async (req: Request, res: Response) => {
       token: refreshToken,
       createdAt: new Date(),
     };
+    user.isOnline = true;
     await user.save();
 
     res.cookie("accessToken", accessToken, {
@@ -177,6 +178,7 @@ export const logout = async (req: AuthRequest, res: Response) => {
     }
 
     user.refreshToken = { token: "", createdAt: new Date() };
+    user.isOnline = false;
     await user.save();
 
     res.clearCookie("accessToken");
