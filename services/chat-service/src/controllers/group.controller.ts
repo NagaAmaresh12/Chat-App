@@ -8,6 +8,7 @@ interface AuthRequest extends Request {
   user?: any;
 }
 const USER_SERVICE = process.env.USER_SERVICE!;
+
 export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
   const { name, members, description } = req.body;
   const creatorId = req.user._id;

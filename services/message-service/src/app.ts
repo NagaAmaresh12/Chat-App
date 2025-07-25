@@ -1,36 +1,32 @@
 import express from "express";
 import { config } from "dotenv";
-import morgan from "morgan";
-import { logger } from "./utils/index.js";
-import { errorHandler } from "./middlewares/index.js";
+import cookieParser from "cookie-parser";
 import {
   connectDB,
-  connectToRedis,
   connectToRabbitMQ,
+  connectToRedis,
 } from "./config/index.js";
-import privateChatRoutes from "./routes/private.route.js";
-// import groupChatRoutes from "./routes/group.route.js";
-import cookieParser from "cookie-parser";
+import { errorHandler } from "./middlewares/error.handler.js";
+import { logger } from "./utils/index.js";
+import morgan from "morgan";
 config();
 const app = express();
 //config
-
 connectDB();
 connectToRedis();
 connectToRabbitMQ();
-
 //middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-//routes
+// Use morgan to log HTTP requests to winston
+
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    message: "Chat service is up and running",
-  });
+  res.json({ message: "User service is up and running" });
 });
-app.use("/private", privateChatRoutes);
-// app.use("/groups", groupChatRoutes);
+//routes
+app.use();
+
 app.use(
   morgan("combined", {
     stream: {
@@ -38,6 +34,6 @@ app.use(
     },
   })
 );
-//Error Hanlder
+//Error Handling
 app.use(errorHandler);
 export { app };

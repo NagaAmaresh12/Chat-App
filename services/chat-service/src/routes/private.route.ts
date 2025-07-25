@@ -1,42 +1,42 @@
 import { Router } from "express";
 import {
-  createNewSingleChat,
-  getSingleChatsByUserID,
-  getSingleChatByChatID,
-  editSingleChatByChatID,
-  deleteSingleChatByChatID,
-} from "../controllers/single.controller.js";
+  createNewprivateChat,
+  getprivateChatsByUserID,
+  getprivateChatByChatID,
+  editprivateChatByChatID,
+  deleteprivateChatByChatID,
+} from "../controllers/private.controller.js";
 import { validateBody, validateParams } from "../middlewares/index.js";
 import { authenticate } from "../middlewares/index.js";
 import {
-  singleChatSchema,
+  privateChatSchema,
   chatIDParamsSchema,
   editChatSchema,
 } from "../utils/index.js";
 
 const router = Router();
-// Create a 1-1 or group chat between users
+// Creating a 1-1 or group chat between users
 router.post(
   "/new",
   authenticate,
-  validateBody(singleChatSchema),
-  createNewSingleChat
+  validateBody(privateChatSchema),
+  createNewprivateChat
 );
 
-router.get("/my-chats", authenticate, getSingleChatsByUserID); // Fetch all chats for the user
+router.get("/my-chats", authenticate, getprivateChatsByUserID); // Fetch all chats for the user i want to APpy pagination here
 
 router.get(
   "/:chatID",
   authenticate,
   validateParams(chatIDParamsSchema),
-  getSingleChatByChatID
+  getprivateChatByChatID
 );
 
 router.delete(
   "/delete/:chatID",
   authenticate,
   validateParams(chatIDParamsSchema),
-  deleteSingleChatByChatID
+  deleteprivateChatByChatID
 );
 
 router.patch(
@@ -44,7 +44,7 @@ router.patch(
   authenticate,
   validateParams(chatIDParamsSchema),
   validateBody(editChatSchema),
-  editSingleChatByChatID
+  editprivateChatByChatID
 );
 
 export default router;

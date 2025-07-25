@@ -1,14 +1,14 @@
 import axios from "axios";
 import { Request, Response } from "express";
 import { Chat } from "../models/chat.model.js";
-import { Schema } from "mongoose";
+import { Schema, Types } from "mongoose";
 import { isValid, sendError, sendSuccess } from "../utils/index.js";
 import { ChatParticipant } from "../models/chat.particitipate.model.js";
 export interface AuthRequest extends Request {
   user?: any;
 }
 const USER_SERVICE = process.env.USER_SERVICE!;
-export const createNewSingleChat = async (req: AuthRequest, res: Response) => {
+export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
   const { participantID } = req.body; // Changed from receiverId to match schema
   const senderId = req.user.id; // Changed from id to _id (MongoDB standard)
 
@@ -115,12 +115,12 @@ export const createNewSingleChat = async (req: AuthRequest, res: Response) => {
       200
     );
   } catch (error) {
-    console.error("Error creating single chat:", error);
+    console.error("Error creating private chat:", error);
     return sendError(res, "Failed to create chat", 500, error);
   }
 };
-
-export const getSingleChatsByUserID = async (
+//multiple chats By UserID
+export const getprivateChatsByUserID = async (
   req: AuthRequest,
   res: Response
 ) => {
@@ -154,23 +154,29 @@ export const getSingleChatsByUserID = async (
         lastReadMessageId: cp.lastReadMessageId,
       }));
 
-    return sendSuccess(res, "Single chats retrieved successfully", {
-      chats: validChats,
-      count: validChats.length,
-    });
+    return sendSuccess(
+      res,
+      {
+        chats: validChats,
+        count: validChats.length,
+      },
+      "private chats retrieved successfully",
+      200
+    );
   } catch (error) {
-    console.error("Error getting single chats:", error);
+    console.error("Error getting private chats:", error);
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };
-export const getSingleChatByChatID = async (
+//one chat BY ChatID
+export const getprivateChatByChatID = async (
   req: AuthRequest,
   res: Response
 ) => {
   const { chatID } = req.params;
   const userId = req.user.id;
 
-  if (!Types.ObjectId.isValid(chatID)) {
+  if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
   }
 
@@ -207,13 +213,13 @@ export const getSingleChatByChatID = async (
       },
     };
 
-    return sendSuccess(res, "Chat retrieved successfully", responseData);
+    return sendSuccess(res, responseData, "Chat retrieved successfully", 200);
   } catch (error) {
-    console.error("Error getting single chat:", error);
+    console.error("Error getting private chat:", error);
     return sendError(res, "Failed to retrieve chat", 500, error);
   }
 };
-export const editSingleChatByChatID = async (
+export const editprivateChatByChatID = async (
   req: AuthRequest,
   res: Response
 ) => {
@@ -221,7 +227,7 @@ export const editSingleChatByChatID = async (
   const { isArchived, isMuted, isPinned } = req.body;
   const userId = req.user.id;
 
-  if (!Types.ObjectId.isValid(chatID)) {
+  if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
   }
 
@@ -253,23 +259,28 @@ export const editSingleChatByChatID = async (
       { new: true, upsert: true }
     );
 
-    return sendSuccess(res, "Chat settings updated successfully", {
-      chatParticipant: updatedChatParticipant,
-    });
+    return sendSuccess(
+      res,
+      {
+        chatParticipant: updatedChatParticipant,
+      },
+      "Chat settings updated successfully",
+      200
+    );
   } catch (error) {
-    console.error("Error editing single chat:", error);
+    console.error("Error editing private chat:", error);
     return sendError(res, "Failed to update chat settings", 500, error);
   }
 };
 
-export const deleteSingleChatByChatID = async (
+export const deleteprivateChatByChatID = async (
   req: AuthRequest,
   res: Response
 ) => {
   const { chatID } = req.params;
   const userId = req.user.id;
 
-  if (!Types.ObjectId.isValid(chatID)) {
+  if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
   }
 
@@ -297,7 +308,7 @@ export const deleteSingleChatByChatID = async (
 
     return sendSuccess(res, "Chat deleted successfully");
   } catch (error) {
-    console.error("Error deleting single chat:", error);
+    console.error("Error deleting private chat:", error);
     return sendError(res, "Failed to delete chat", 500, error);
   }
 };
