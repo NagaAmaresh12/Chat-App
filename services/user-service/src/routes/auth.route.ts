@@ -16,7 +16,7 @@ const router = Router();
 // Step 1: Send OTP to email ✅[TEST WITH POSTMAN]
 router.post("/login", validateBody(loginSchema), login);
 
-// Step 2: Verify OTP (login/registration)
+// Step 2: Verify OTP (login/registration) ✅[TEST WITH POSTMAN]
 router.post("/verify-otp", validateBody(verifyOtpSchema), verifyOTP);
 
 // Logout + session check
