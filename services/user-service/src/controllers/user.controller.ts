@@ -51,11 +51,11 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
   }
 };
 export const getUserByID = async (req: AuthRequest, res: Response) => {
-  const { id, email } = req.user;
-  if (!isValid(id) || !isValid(email)) {
-    return sendError(res, "User is Not Authenticated.", 400);
+  const { userID } = req.params;
+  if (!isValid(userID!)) {
+    return sendError(res, "UserID is Not Valid.", 400);
   }
-  const user = await User.findById(id);
+  const user = await User.findById(userID);
   if (!user) {
     sendError(res, "User Does Not Exists", 400);
   }
@@ -85,7 +85,7 @@ export const getUserByID = async (req: AuthRequest, res: Response) => {
 };
 export const updateUserByID = async (req: AuthRequest, res: Response) => {
   const { userID } = req.params;
-  const { name, bio, profilePhoto } = req.body;
+  const { username, bio, profilePhoto } = req.body;
 
   if (!isValid(userID!)) {
     sendError(res, "Invalid UserId", 400);
@@ -94,7 +94,7 @@ export const updateUserByID = async (req: AuthRequest, res: Response) => {
   if (!user) {
     sendError(res, "User Does not Exists", 400);
   }
-  user && (user.username = name ? name : user?.username);
+  user && (user.username = username ? username : user?.username);
   user && (user.bio = bio ? bio : user?.bio);
   user &&
     (user.settings.privacy.profilePhoto = profilePhoto

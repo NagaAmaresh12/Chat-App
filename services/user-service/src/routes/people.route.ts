@@ -8,9 +8,10 @@ import {
 
 const router = Router();
 
-// Step 1: Send OTP to email
+// Step 1: Send OTP to email ✅[TEST WITH POSTMAN]
 router.get("/all", authenticate, getAllUsers);
-router.get("/:userID", authenticate, getUserByID);
-router.patch("/edit/:userID", authenticate, updateUserByID);
+
+router.get("/:userID", authenticate, getUserByID); //✅[TEST WITH POSTMAN]
+router.patch("/edit/:userID", authenticate, updateUserByID); // ✅[TEST WITH POSTMAN]
 
 export default router;
