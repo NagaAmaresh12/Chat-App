@@ -4,7 +4,11 @@ import { User } from "../models/user.model.js";
 import { isValid } from "../utils/validation.js";
 import { AppError } from "../utils/api.error.js";
 import { generateOTP } from "../utils/otp.js";
-import { getRedisValue, setRedisValue } from "../config/redis.js";
+import {
+  deleteRedisKey,
+  getRedisValue,
+  setRedisValue,
+} from "../config/redis.js";
 import { publishToMailQueue } from "../config/rabbitMQ.js";
 import { logger } from "../utils/logger.js";
 
@@ -125,7 +129,7 @@ export const verifyOTP = async (req: Request, res: Response) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
     });
-    res.cookie("refresh", refreshToken, {
+    res.cookie("refreshToken", refreshToken, {
       maxAge: TOKEN_EXPIRY_MS,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -182,7 +186,8 @@ export const logout = async (req: AuthRequest, res: Response) => {
     await user.save();
 
     res.clearCookie("accessToken");
-
+    const key = `otp=${user?.email}`;
+    await deleteRedisKey(key);
     return sendSuccess(res, null, "Logout successful", 200);
   } catch (error) {
     return sendError(res, "Logout failed", 500, error);

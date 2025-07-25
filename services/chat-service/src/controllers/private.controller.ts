@@ -4,24 +4,62 @@ import { Chat } from "../models/chat.model.js";
 import { Schema, Types } from "mongoose";
 import { isValid, sendError, sendSuccess } from "../utils/index.js";
 import { ChatParticipant } from "../models/chat.particitipate.model.js";
+
 export interface AuthRequest extends Request {
   user?: any;
 }
-const USER_SERVICE = process.env.USER_SERVICE!;
-export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
-  const { participantID } = req.body; // Changed from receiverId to match schema
-  const senderId = req.user.id; // Changed from id to _id (MongoDB standard)
 
-  console.log({
-    senderId,
-    participantID,
+const USER_SERVICE = process.env.USER_SERVICE!;
+
+// Helper function to fetch user details
+const fetchUserDetails = async (userIds: string[], token: string) => {
+  try {
+    // Batch endpoint would be more efficient
+    const userPromises = userIds.map((userId) =>
+      axios.get(`${USER_SERVICE}/people/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    );
+
+    const responses = await Promise.all(userPromises);
+    return responses.map((res) => res.data?.data).filter(Boolean);
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    return [];
+  }
+};
+
+// Helper function to populate chat with user details
+const populateChatWithUsers = async (chat: any, token: string) => {
+  const userIds = chat.participants.map((p: any) => p.user.toString());
+  const users = await fetchUserDetails(userIds, token);
+
+  // Map users back to participants
+  const populatedParticipants = chat.participants.map((participant: any) => {
+    const user = users.find((u) => u._id === participant.user.toString());
+    return {
+      ...participant.toObject(),
+      user: user || { _id: participant.user }, // Fallback if user not found
+    };
   });
+
+  return {
+    ...chat.toObject(),
+    participants: populatedParticipants,
+  };
+};
+
+export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
+  const { participantID } = req.body;
+  const senderId = req.user.id;
+  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+
+  console.log({ senderId, participantID });
 
   if (!isValid(senderId) || !isValid(participantID)) {
     return sendError(res, "Invalid inputs", 400);
   }
 
-  // Check if user is trying to create chat with themselves
   if (senderId.toString() === participantID.toString()) {
     return sendError(res, "Cannot create chat with yourself", 400);
   }
@@ -34,13 +72,7 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
     // Verify participant exists
     const { data } = await axios.get(
       `${USER_SERVICE}/people/${participantID}`,
-      {
-        headers: {
-          Authorization: `Bearer ${
-            req?.cookies?.accessToken || req?.cookies?.refreshToken
-          }`,
-        },
-      }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
     const participant = data?.data;
@@ -48,17 +80,19 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
       return sendError(res, "Participant does not exist", 400);
     }
 
-    // Check if chat already exists between these two users
+    // Check if chat already exists
     let existingChat = await Chat.findOne({
       type: "private",
       "participants.user": { $all: [senderId, participantID] },
       "participants.isActive": true,
-    }).populate("participants.user", "username displayName avatar");
+    });
 
     if (existingChat) {
+      // Populate with user details
+      const populatedChat = await populateChatWithUsers(existingChat, token);
       return sendSuccess(
         res,
-        { chat: existingChat },
+        { chat: populatedChat },
         "Chat already exists",
         200
       );
@@ -70,7 +104,7 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
       participants: [
         {
           user: senderId,
-          role: "member", // In private chats, both are members
+          role: "member",
           isActive: true,
         },
         {
@@ -82,7 +116,7 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
       lastActivity: new Date(),
     });
 
-    // Create ChatParticipant entries for both users
+    // Create ChatParticipant entries
     await ChatParticipant.create([
       {
         chatId: newChat._id,
@@ -100,17 +134,12 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
       },
     ]);
 
-    // Populate the created chat
-    const populatedChat = await Chat.findById(newChat._id).populate(
-      "participants.user",
-      "username displayName avatar isOnline lastSeen"
-    );
+    // Populate the created chat with user details
+    const populatedChat = await populateChatWithUsers(newChat, token);
 
     return sendSuccess(
       res,
-      {
-        chat: populatedChat,
-      },
+      { chat: populatedChat },
       "Chat created successfully",
       200
     );
@@ -119,40 +148,67 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
     return sendError(res, "Failed to create chat", 500, error);
   }
 };
-//multiple chats By UserID
+
 export const getprivateChatsByUserID = async (
   req: AuthRequest,
   res: Response
 ) => {
   const userId = req.user.id;
+  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   try {
-    // Get all private chats for the user with participant details
+    // Get all chat participants for the user
     const chatParticipants = await ChatParticipant.find({
       userId: userId,
-      isArchived: { $ne: true }, // Exclude archived chats
-    })
-      .populate({
-        path: "chatId",
-        match: { type: "private" },
-        populate: {
-          path: "participants.user",
-          select: "username displayName avatar isOnline lastSeen",
-        },
-      })
-      .sort({ isPinned: -1, updatedAt: -1 });
+      isArchived: { $ne: true },
+    }).sort({ isPinned: -1, updatedAt: -1 });
 
-    // Filter out null chatIds (from non-private chats)
+    // Get chat IDs
+    const chatIds = chatParticipants.map((cp) => cp.chatId);
+
+    // Get all chats
+    const chats = await Chat.find({
+      _id: { $in: chatIds },
+      type: "private",
+    });
+
+    // Collect all unique user IDs from all chats
+    const allUserIds = new Set<string>();
+    chats.forEach((chat) => {
+      chat.participants.forEach((p) => {
+        if (p.isActive) allUserIds.add(p.user.toString());
+      });
+    });
+
+    // Fetch all users in batch (more efficient)
+    const users = await fetchUserDetails(Array.from(allUserIds), token);
+    const userMap = new Map(users.map((u) => [u._id, u]));
+
+    // Map and populate chats
     const validChats = chatParticipants
-      .filter((cp) => cp.chatId !== null)
-      .map((cp) => ({
-        chat: cp.chatId,
-        unreadCount: cp.unreadCount,
-        isMuted: cp.isMuted,
-        isArchived: cp.isArchived,
-        isPinned: cp.isPinned,
-        lastReadMessageId: cp.lastReadMessageId,
-      }));
+      .map((cp) => {
+        const chat = chats?.find((c) => c._id == cp.chatId.toString());
+        if (!chat) return null;
+
+        // Populate participants
+        const populatedParticipants = chat.participants.map((p) => ({
+          ...p,
+          user: userMap.get(p.user.toString()) || { _id: p.user },
+        }));
+
+        return {
+          chat: {
+            ...chat.toObject(),
+            participants: populatedParticipants,
+          },
+          unreadCount: cp.unreadCount,
+          isMuted: cp.isMuted,
+          isArchived: cp.isArchived,
+          isPinned: cp.isPinned,
+          lastReadMessageId: cp.lastReadMessageId,
+        };
+      })
+      .filter(Boolean);
 
     return sendSuccess(
       res,
@@ -168,33 +224,34 @@ export const getprivateChatsByUserID = async (
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };
-//one chat BY ChatID
+
 export const getprivateChatByChatID = async (
   req: AuthRequest,
   res: Response
 ) => {
   const { chatID } = req.params;
   const userId = req.user.id;
+  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
   }
 
   try {
-    // Find the chat and verify user is a participant
+    // Find the chat
     const chat = await Chat.findOne({
       _id: chatID,
       type: "private",
       "participants.user": userId,
       "participants.isActive": true,
-    }).populate(
-      "participants.user",
-      "username displayName avatar isOnline lastSeen"
-    );
+    });
 
     if (!chat) {
       return sendError(res, "Chat not found or access denied", 404);
     }
+
+    // Populate with user details
+    const populatedChat = await populateChatWithUsers(chat, token);
 
     // Get user's chat participant info
     const chatParticipant = await ChatParticipant.findOne({
@@ -203,7 +260,7 @@ export const getprivateChatByChatID = async (
     });
 
     const responseData = {
-      chat,
+      chat: populatedChat,
       userChatInfo: {
         unreadCount: chatParticipant?.unreadCount || 0,
         isMuted: chatParticipant?.isMuted || false,
@@ -219,6 +276,7 @@ export const getprivateChatByChatID = async (
     return sendError(res, "Failed to retrieve chat", 500, error);
   }
 };
+
 export const editprivateChatByChatID = async (
   req: AuthRequest,
   res: Response
@@ -261,9 +319,7 @@ export const editprivateChatByChatID = async (
 
     return sendSuccess(
       res,
-      {
-        chatParticipant: updatedChatParticipant,
-      },
+      { chatParticipant: updatedChatParticipant },
       "Chat settings updated successfully",
       200
     );

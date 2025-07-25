@@ -9,7 +9,7 @@ import {
   connectToRabbitMQ,
 } from "./config/index.js";
 import privateChatRoutes from "./routes/private.route.js";
-// import groupChatRoutes from "./routes/group.route.js";
+import groupChatRoutes from "./routes/group.route.js";
 import cookieParser from "cookie-parser";
 config();
 const app = express();
@@ -30,7 +30,7 @@ app.get("/health", (req, res) => {
   });
 });
 app.use("/private", privateChatRoutes);
-// app.use("/groups", groupChatRoutes);
+app.use("/groups", groupChatRoutes);
 app.use(
   morgan("combined", {
     stream: {
