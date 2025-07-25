@@ -13,7 +13,7 @@ import { loginSchema, verifyOtpSchema } from "../utils/joi.validate.js";
 
 const router = Router();
 
-// Step 1: Send OTP to email
+// Step 1: Send OTP to email ✅[TEST WITH POSTMAN]
 router.post("/login", validateBody(loginSchema), login);
 
 // Step 2: Verify OTP (login/registration)
