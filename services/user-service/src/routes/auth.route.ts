@@ -19,7 +19,7 @@ router.post("/login", validateBody(loginSchema), login);
 // Step 2: Verify OTP (login/registration) ✅[TEST WITH POSTMAN]
 router.post("/verify-otp", validateBody(verifyOtpSchema), verifyOTP);
 
-// Logout + session check
+// Logout + session check  ✅[TEST WITH POSTMAN]
 router.post("/logout", authenticate, logout);
 router.get("/me", authenticate, me);
 
