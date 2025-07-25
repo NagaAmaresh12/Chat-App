@@ -21,6 +21,7 @@ router.post("/verify-otp", validateBody(verifyOtpSchema), verifyOTP);
 
 // Logout + session check  ✅[TEST WITH POSTMAN]
 router.post("/logout", authenticate, logout);
+//me  ✅[TEST WITH POSTMAN]
 router.get("/me", authenticate, me);
 
 export default router;
