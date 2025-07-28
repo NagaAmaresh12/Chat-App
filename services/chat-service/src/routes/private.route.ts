@@ -32,13 +32,6 @@ router.get(
   getprivateChatByChatID
 );
 
-router.delete(
-  "/delete/:chatID",
-  authenticate,
-  validateParams(chatIDParamsSchema),
-  deleteprivateChatByChatID
-);
-
 router.patch(
   "/edit/:chatID",
   authenticate,
@@ -47,4 +40,10 @@ router.patch(
   editprivateChatByChatID
 );
 
+router.delete(
+  "/delete/:chatID",
+  authenticate,
+  validateParams(chatIDParamsSchema),
+  deleteprivateChatByChatID
+);
 export default router;

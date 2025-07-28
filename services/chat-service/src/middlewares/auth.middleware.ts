@@ -25,13 +25,14 @@ export const authenticate = async (
 
     const accessToken =
       req.cookies?.accessToken || extractToken(req.headers.authorization);
-    console.log({
-      accessToken,
-    });
     const refreshToken =
       req.cookies?.refreshToken ||
       extractToken(req.headers["x-refresh-token"] as string);
 
+    console.log({
+      accessToken,
+      refreshToken,
+    });
     if (isValid(accessToken)) {
       console.log("accesstoken is valid");
 
@@ -39,9 +40,7 @@ export const authenticate = async (
         console.log("decoding accesstoken");
 
         console.log("Finding user in db");
-        const { data: healthData } = await axios.get(
-          "http://localhost:3000/health"
-        );
+        const { data: healthData } = await axios.get(`${USER_SERVICE}/health`);
         console.log("Chat service Request reached to User-service", {
           healthData,
         });
@@ -68,15 +67,42 @@ export const authenticate = async (
     } else if (!isValid(accessToken) && isValid(refreshToken)) {
       try {
         console.log("execution is in refreshtoken");
-        const { data } = await axios.get("/auth/me", {
-          headers: {
-            Authorization: `Bearer ${refreshToken}`,
-          },
-        });
+        const axiosResponse = await axios.get(
+          `${USER_SERVICE}/auth/me`,
+
+          {
+            headers: {
+              Authorization: `Bearer ${refreshToken}`,
+              message: "Access Token Expired",
+            },
+            withCredentials: true,
+          }
+        );
+        const { data } = axiosResponse;
+        const setCookieHeaders = axiosResponse.headers["set-cookie"];
+        console.log("Cookies received:", setCookieHeaders);
 
         console.log({
           userData: data?.data,
         });
+        if (setCookieHeaders) {
+          console.log(
+            "new accessToken and refreshToken set because accesstoken is expired"
+          );
+
+          const newAccessToken = setCookieHeaders?.[0]
+            ?.split(";")[0]
+            ?.split("=")[1];
+          const newRefreshToken = setCookieHeaders?.[1]
+            ?.split(";")[0]
+            ?.split("=")[1];
+          console.log("SetCookieHeaders", {
+            newAccessToken,
+            newRefreshToken,
+          });
+          res.cookie("accessToken", newAccessToken);
+          res.cookie("refreshToken", newRefreshToken);
+        }
         const user: any = data?.data;
         (req as any).user = user;
         return next();

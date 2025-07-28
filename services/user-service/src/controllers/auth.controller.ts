@@ -19,6 +19,12 @@ const DEFAULT_OTP_EXPIRY_SECONDS = 300; // 5 minutes
 
 export interface AuthRequest extends Request {
   user?: any;
+  accessToken?: any;
+  refreshToken?: any;
+}
+export interface AuthResponse extends Response {
+  accessToken?: any;
+  refreshToken?: any;
 }
 
 // -----------------------------
@@ -151,7 +157,7 @@ export const verifyOTP = async (req: Request, res: Response) => {
 // -----------------------------
 // ME - Get Authenticated User
 // -----------------------------
-export const me = (req: AuthRequest, res: Response) => {
+export const me = (req: AuthRequest, res: AuthResponse) => {
   const user = req.user;
   if (!user) return sendError(res, "User not found in request", 400);
 
@@ -159,12 +165,35 @@ export const me = (req: AuthRequest, res: Response) => {
     id: user._id,
     name: user.username,
     email: user.email,
-    accessToken: user.accessToken,
   };
-  // const userData = { ...user };
-  console.log({
-    userData,
-  });
+  console.log(
+    "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
+    {
+      accessToken: req?.accessToken,
+      refreshToken: req?.refreshToken,
+      userData,
+    }
+  );
+
+  if (req?.accessToken && req?.refreshToken) {
+    console.log(
+      "since new tokens generated and received from req. and setting both token in cookies in res......"
+    );
+
+    res.cookie("accessToken", req?.accessToken, {
+      httpOnly: true,
+      sameSite: "lax", // or "strict" in production
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie("refreshToken", req?.refreshToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+  }
 
   return sendSuccess(res, userData, "User is authenticated", 200);
 };
@@ -172,7 +201,7 @@ export const me = (req: AuthRequest, res: Response) => {
 // -----------------------------
 // LOGOUT
 // -----------------------------
-export const logout = async (req: AuthRequest, res: Response) => {
+export const logout = async (req: AuthRequest, res: AuthResponse) => {
   try {
     const userId = req.user?.id;
     const user = await User.findById(userId);
@@ -184,6 +213,10 @@ export const logout = async (req: AuthRequest, res: Response) => {
     user.refreshToken = { token: "", createdAt: new Date() };
     user.isOnline = false;
     await user.save();
+    console.log({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+    });
 
     res.clearCookie("accessToken");
     const key = `otp=${user?.email}`;
@@ -197,7 +230,7 @@ export const logout = async (req: AuthRequest, res: Response) => {
 // -----------------------------
 // FORGET PASSWORD = Generate OTP and send to email
 // // -----------------------------
-export const forgetPassword = async (req: Request, res: Response) => {
+export const forgetPassword = async (req: Request, res: AuthResponse) => {
   console.log("request comes in forget Password");
 
   try {
@@ -249,7 +282,7 @@ export const forgetPassword = async (req: Request, res: Response) => {
 // // -----------------------------
 // // RESET PASSWORD
 // // -----------------------------
-export const resetPassword = async (req: Request, res: Response) => {
+export const resetPassword = async (req: Request, res: AuthResponse) => {
   try {
     const { email, otp } = req.body;
 

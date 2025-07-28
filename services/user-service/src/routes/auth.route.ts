@@ -23,5 +23,6 @@ router.post("/verify-otp", validateBody(verifyOtpSchema), verifyOTP);
 router.post("/logout", authenticate, logout);
 //me  ✅[TEST WITH POSTMAN]
 router.get("/me", authenticate, me);
+//generate access token for other service
 
 export default router;

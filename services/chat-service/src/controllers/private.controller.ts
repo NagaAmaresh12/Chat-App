@@ -53,6 +53,9 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
   const { participantID } = req.body;
   const senderId = req.user.id;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  console.log("In createNewPrivateChat", {
+    token,
+  });
 
   console.log({ senderId, participantID });
 
@@ -341,6 +344,8 @@ export const deleteprivateChatByChatID = async (
   }
 
   try {
+    console.log("trying to delete chat.......");
+
     // Find the chat and verify user is a participant
     const chat = await Chat.findOne({
       _id: chatID,

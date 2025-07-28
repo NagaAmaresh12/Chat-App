@@ -55,7 +55,33 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
     console.log({
       users,
     });
+    console.log(
+      "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
+      {
+        accessToken: req?.accessToken,
+        refreshToken: req?.refreshToken,
+      }
+    );
 
+    if (req?.accessToken && req?.refreshToken) {
+      console.log(
+        "since new tokens generated and received from req. and setting both token in cookies in res"
+      );
+
+      res.cookie("accessToken", req?.accessToken, {
+        httpOnly: true,
+        sameSite: "lax", // or "strict" in production
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie("refreshToken", req?.refreshToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
     sendSuccess(res, users, "Fetched All Users Successfully", 200);
   } catch (error) {
     sendError(res, "Failed to Fetch All Users", 500, error);
@@ -110,7 +136,33 @@ export const getUserByID = async (req: AuthRequest, res: Response) => {
     },
   };
   console.log({ userData });
+  // console.log(
+  //   "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
+  //   {
+  //     accessToken: req?.accessToken,
+  //     refreshToken: req?.refreshToken,
+  //   }
+  // );
 
+  // if (req?.accessToken && req?.refreshToken) {
+  //   console.log(
+  //     "since new tokens generated and received from req. and setting both token in cookies in res"
+  //   );
+
+  //   res.cookie("accessToken", req?.accessToken, {
+  //     httpOnly: true,
+  //     sameSite: "lax", // or "strict" in production
+  //     secure: process.env.NODE_ENV === "production",
+  //     maxAge: 15 * 60 * 1000,
+  //   });
+
+  //   res.cookie("refreshToken", req?.refreshToken, {
+  //     httpOnly: true,
+  //     sameSite: "lax",
+  //     secure: process.env.NODE_ENV === "production",
+  //     maxAge: 7 * 24 * 60 * 60 * 1000,
+  //   });
+  // }
   sendSuccess(res, userData, "Fetched user Successfully", 200);
 };
 
@@ -141,7 +193,33 @@ export const getUsersByBatch = async (req: AuthRequest, res: Response) => {
       { _id: { $in: validUserIDs } },
       "username displayName avatar email" // select only the needed fields
     );
+    console.log(
+      "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
+      {
+        accessToken: req?.accessToken,
+        refreshToken: req?.refreshToken,
+      }
+    );
 
+    if (req?.accessToken && req?.refreshToken) {
+      console.log(
+        "since new tokens generated and received from req. and setting both token in cookies in res"
+      );
+
+      res.cookie("accessToken", req?.accessToken, {
+        httpOnly: true,
+        sameSite: "lax", // or "strict" in production
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie("refreshToken", req?.refreshToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
     return res.status(200).json({
       status: "success",
       count: users.length,
@@ -171,6 +249,32 @@ export const updateUserByID = async (req: AuthRequest, res: Response) => {
       : user?.settings.privacy.profilePhoto);
 
   await user?.save();
+  console.log(
+    "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
+    {
+      accessToken: req?.accessToken,
+      refreshToken: req?.refreshToken,
+    }
+  );
 
+  if (req?.accessToken && req?.refreshToken) {
+    console.log(
+      "since new tokens generated and received from req. and setting both token in cookies in res"
+    );
+
+    res.cookie("accessToken", req?.accessToken, {
+      httpOnly: true,
+      sameSite: "lax", // or "strict" in production
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie("refreshToken", req?.refreshToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+  }
   sendSuccess(res, user, "Edited User Details Successfully", 200);
 };

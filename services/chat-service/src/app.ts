@@ -2,7 +2,7 @@ import express from "express";
 import { config } from "dotenv";
 import morgan from "morgan";
 import { logger } from "./utils/index.js";
-import { errorHandler } from "./middlewares/index.js";
+import { authenticate, errorHandler } from "./middlewares/index.js";
 import {
   connectDB,
   connectToRedis,
@@ -24,7 +24,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 //routes
-app.get("/health", (req, res) => {
+app.get("/health", authenticate, (req, res) => {
   res.status(200).json({
     message: "Chat service is up and running",
   });
