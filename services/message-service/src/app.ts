@@ -1,6 +1,6 @@
 import express from "express";
 import { config } from "dotenv";
-// import cookieParser from "cookie-parser";
+import cookieParser from "cookie-parser";
 import {
   connectDB,
   connectToRabbitMQ,
@@ -13,12 +13,12 @@ config();
 const app = express();
 // //config
 connectDB();
-// connectToRedis();
-// // connectToRabbitMQ();
+connectToRedis();
+connectToRabbitMQ();
 // //middlewares
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
-// app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 // // Use morgan to log HTTP requests to winston
 
 // app.get("/health", (req, res) => {
