@@ -1,39 +1,39 @@
 import express from "express";
 import { config } from "dotenv";
-import cookieParser from "cookie-parser";
+// import cookieParser from "cookie-parser";
 import {
   connectDB,
   connectToRabbitMQ,
   connectToRedis,
 } from "./config/index.js";
-import { errorHandler } from "./middlewares/error.handler.js";
+// import { errorHandler } from "./middlewares/error.handler.js";
 import { logger } from "./utils/index.js";
 import morgan from "morgan";
 config();
 const app = express();
-//config
+// //config
 connectDB();
-connectToRedis();
-connectToRabbitMQ();
-//middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-// Use morgan to log HTTP requests to winston
+// connectToRedis();
+// // connectToRabbitMQ();
+// //middlewares
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
+// app.use(cookieParser());
+// // Use morgan to log HTTP requests to winston
 
-app.get("/health", (req, res) => {
-  res.json({ message: "User service is up and running" });
-});
-//routes
-app.use();
+// app.get("/health", (req, res) => {
+//   res.json({ message: "User service is up and running" });
+// });
+// //routes
+// app.use();
 
-app.use(
-  morgan("combined", {
-    stream: {
-      write: (message: any) => logger.info(message.trim()),
-    },
-  })
-);
-//Error Handling
-app.use(errorHandler);
+// app.use(
+//   morgan("combined", {
+//     stream: {
+//       write: (message: any) => logger.info(message.trim()),
+//     },
+//   })
+// );
+// //Error Handling
+// app.use(errorHandler);
 export { app };
