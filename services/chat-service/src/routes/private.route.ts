@@ -22,8 +22,8 @@ router.post(
   validateBody(privateChatSchema),
   createNewprivateChat
 );
-
 router.get("/my-chats", authenticate, getprivateChatsByUserID); // Fetch all chats for the user i want to APpy pagination here
+//✅tested
 
 router.get(
   "/:chatID",
