@@ -9,6 +9,7 @@ import {
 // import { errorHandler } from "./middlewares/error.handler.js";
 import { logger } from "./utils/index.js";
 import morgan from "morgan";
+import messageRoutes from "./routes/message.route.js";
 config();
 const app = express();
 // //config
@@ -21,19 +22,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 // // Use morgan to log HTTP requests to winston
 
-// app.get("/health", (req, res) => {
-//   res.json({ message: "User service is up and running" });
-// });
+app.get("/health", (req, res) => {
+  res.json({ message: "User service is up and running" });
+});
 // //routes
-// app.use();
+app.use("/msg/v1", messageRoutes);
 
-// app.use(
-//   morgan("combined", {
-//     stream: {
-//       write: (message: any) => logger.info(message.trim()),
-//     },
-//   })
-// );
+app.use(
+  morgan("combined", {
+    stream: {
+      write: (message: any) => logger.info(message.trim()),
+    },
+  })
+);
 // //Error Handling
 // app.use(errorHandler);
 export { app };
