@@ -29,7 +29,7 @@ router.get(
   "/:chatID",
   authenticate,
   validateParams(chatIDParamsSchema),
-  getprivateChatByChatID
+  getprivateChatByChatID //✅tested
 );
 
 router.patch(
