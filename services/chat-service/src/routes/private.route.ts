@@ -16,6 +16,7 @@ import {
 
 const router = Router();
 // Creating a 1-1 or group chat between users
+//✅tested
 router.post(
   "/new",
   authenticate,
