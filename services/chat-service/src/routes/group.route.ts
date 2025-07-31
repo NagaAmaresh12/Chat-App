@@ -6,6 +6,7 @@ import {
   deleteGroupChatByChatID,
   addMemberInGroupChat,
   removeMemberInGroupChat,
+  getMyGroupChats,
 } from "../controllers/group.controller.js";
 import {
   authenticate,
@@ -28,7 +29,7 @@ router.post(
   createNewGroupChat
 ); //✅tested
 
-router.get("/my-groups", authenticate, getGroupChatByChatID);
+router.get("/my-groups", authenticate, getMyGroupChats);
 
 router.get(
   "/:chatID",
