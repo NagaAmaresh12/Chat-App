@@ -58,7 +58,8 @@ router.delete(
   validateParams(chatIDParamsSchema),
   //   validateBody(deleteGroupSchema),
   deleteGroupChatByChatID
-);
+); //✅tested //setting isActive to false but keeping user data in group chat so,
+//  that particular chat will not be listed to that user
 
 router.put(
   "/add-member/:chatID",
@@ -66,7 +67,7 @@ router.put(
   validateParams(chatIDParamsSchema),
   validateBody(addMemberSchema),
   addMemberInGroupChat
-); //✅tested
+); //✅tested // this is possible to add a non-existing user in chat
 
 router.delete(
   "/remove-member/:chatID",
@@ -74,6 +75,6 @@ router.delete(
   validateParams(chatIDParamsSchema),
   validateBody(removeMemberSchema),
   removeMemberInGroupChat
-);
+); //setting isActive to false but keeping user data
 //✅tested
 export default router;
