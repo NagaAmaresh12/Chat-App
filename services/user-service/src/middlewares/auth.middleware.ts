@@ -109,6 +109,10 @@ export const authenticate = async (
         const user = await User.findById(decoded.userId);
 
         if (!user) return sendError(res, "User not found", 404);
+        console.log({
+          refreshToken,
+          userRefreshToken: user?.refreshToken?.token,
+        });
 
         if (refreshToken !== user.refreshToken?.token) {
           return sendError(
