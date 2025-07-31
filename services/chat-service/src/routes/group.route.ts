@@ -29,7 +29,7 @@ router.post(
   createNewGroupChat
 ); //✅tested
 
-router.get("/my-groups", authenticate, getMyGroupChats);
+router.get("/my-groups", authenticate, getMyGroupChats); //✅tested
 
 router.get(
   "/:chatID",
@@ -66,7 +66,7 @@ router.put(
   validateParams(chatIDParamsSchema),
   validateBody(addMemberSchema),
   addMemberInGroupChat
-);
+); //✅tested
 
 router.delete(
   "/remove-member/:chatID",
