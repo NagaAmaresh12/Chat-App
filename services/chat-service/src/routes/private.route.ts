@@ -5,6 +5,7 @@ import {
   getprivateChatByChatID,
   editprivateChatByChatID,
   deleteprivateChatByChatID,
+  // editLastMessageByChatID,
 } from "../controllers/private.controller.js";
 import { validateBody, validateParams } from "../middlewares/index.js";
 import { authenticate } from "../middlewares/index.js";
@@ -25,7 +26,12 @@ router.post(
 );
 router.get("/my-chats", authenticate, getprivateChatsByUserID); // Fetch all chats for the user i want to APpy pagination here
 //✅tested
-
+// router.patch(
+//   "/last-message/:chatID",
+//   authenticate,
+//   validateBody(),
+//   editLastMessageByChatID
+// );
 router.get(
   "/:chatID",
   authenticate,
