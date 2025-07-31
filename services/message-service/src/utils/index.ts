@@ -1,12 +1,15 @@
 import { AppError } from "./api.error.js";
 import {
-  privateChatSchema,
-  groupChatSchema,
-  chatIDParamsSchema,
-  editChatSchema,
-  editGroupSchema,
-  addMemberSchema,
-  removeMemberSchema,
+  createMessageSchema,
+  editMessageSchema,
+  replyMessageSchema,
+  forwardMessageSchema,
+  postReactionSchema,
+  getMessagesByChatSchema,
+  getMessageByIdSchema,
+  getMessageStatusSchema,
+  deleteMessageSchema,
+  getMessageThreadSchema,
 } from "./joi.validate.js";
 import { logger } from "./logger.js";
 import { generateOTP } from "./otp.js";
@@ -14,14 +17,16 @@ import { sendError, sendSuccess } from "./response.js";
 import { isValid, isEmailValid, isUsernameValid } from "./validation.js";
 
 export {
-  privateChatSchema,
-  groupChatSchema,
-  editGroupSchema,
-  removeMemberSchema,
-  addMemberSchema,
-  AppError,
-  chatIDParamsSchema,
-  editChatSchema,
+  createMessageSchema,
+  editMessageSchema,
+  replyMessageSchema,
+  forwardMessageSchema,
+  postReactionSchema,
+  getMessagesByChatSchema,
+  getMessageThreadSchema,
+  deleteMessageSchema,
+  getMessageByIdSchema,
+  getMessageStatusSchema,
   logger,
   generateOTP,
   sendError,

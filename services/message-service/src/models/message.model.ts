@@ -47,6 +47,7 @@ interface Reaction {
 interface ForwardedFrom {
   originalMessageId?: Types.ObjectId;
   originalSender?: Types.ObjectId;
+  forwardedCount?: number;
 }
 
 export interface IMessage extends Document {
@@ -73,6 +74,9 @@ export interface IMessage extends Document {
   markAsDelivered(userId: Types.ObjectId): Promise<IMessage>;
   markAsRead(userId: Types.ObjectId): Promise<IMessage>;
   addReaction(userId: Types.ObjectId, emoji: string): Promise<IMessage>;
+  removeReaction(userId: Types.ObjectId): Promise<IMessage>;
+  softDelete(userId: Types.ObjectId): Promise<IMessage>;
+  isDeletedForUser(userId: Types.ObjectId): boolean;
 }
 
 const messageSchema = new Schema<IMessage>(
@@ -122,10 +126,11 @@ const messageSchema = new Schema<IMessage>(
     forwardedFrom: {
       originalMessageId: { type: Schema.Types.ObjectId, ref: "Message" },
       originalSender: { type: Schema.Types.ObjectId, ref: "User" },
+      forwardedCount: { type: Number, default: 1 },
     },
     deliveryStatus: [
       {
-        user: { type: Schema.Types.ObjectId, ref: "User" },
+        user: { type: Schema.Types.ObjectId, ref: "User", required: true },
         status: {
           type: String,
           enum: ["sent", "delivered", "read"],
@@ -142,8 +147,8 @@ const messageSchema = new Schema<IMessage>(
     deletedFor: [{ type: Schema.Types.ObjectId, ref: "User" }],
     reactions: [
       {
-        user: { type: Schema.Types.ObjectId, ref: "User" },
-        emoji: String,
+        user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        emoji: { type: String, required: true },
         createdAt: {
           type: Date,
           default: Date.now,
@@ -167,16 +172,27 @@ const messageSchema = new Schema<IMessage>(
       ],
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
-// Indexes
+// Indexes for better performance
 messageSchema.index({ chatId: 1, createdAt: -1 });
 messageSchema.index({ senderId: 1, createdAt: -1 });
 messageSchema.index({ chatId: 1, messageType: 1 });
 messageSchema.index({ "deliveryStatus.user": 1, "deliveryStatus.status": 1 });
 messageSchema.index({ mentions: 1 });
 messageSchema.index({ createdAt: -1 });
+messageSchema.index({ replyTo: 1 });
+messageSchema.index({ "forwardedFrom.originalMessageId": 1 });
+
+// Virtual for checking if message is deleted
+messageSchema.virtual("isDeleted").get(function () {
+  return this.deletedAt != null;
+});
 
 // Methods
 messageSchema.methods.markAsDelivered = async function (
@@ -220,6 +236,53 @@ messageSchema.methods.addReaction = async function (
   }
   return this.save();
 };
+
+messageSchema.methods.removeReaction = async function (userId: Types.ObjectId) {
+  this.reactions = this.reactions.filter(
+    (r: any) => r.user.toString() !== userId.toString()
+  );
+  return this.save();
+};
+
+messageSchema.methods.softDelete = async function (userId: Types.ObjectId) {
+  if (!this.deletedFor.includes(userId)) {
+    this.deletedFor.push(userId);
+  }
+  return this.save();
+};
+
+messageSchema.methods.isDeletedForUser = function (
+  userId: Types.ObjectId
+): boolean {
+  return this.deletedFor.some(
+    (id: Types.ObjectId) => id.toString() === userId.toString()
+  );
+};
+
+// Pre-save middleware to validate content based on message type
+messageSchema.pre("save", function (next) {
+  if (
+    this.messageType === "text" &&
+    !this.content.text &&
+    !this.isSystemMessage
+  ) {
+    return next(new Error("Text message must have text content"));
+  }
+
+  if (
+    this.messageType !== "text" &&
+    !this.content.media?.url &&
+    !this.isSystemMessage
+  ) {
+    return next(new Error("Media message must have media content"));
+  }
+
+  if (this.isSystemMessage && !this.systemMessageType) {
+    return next(new Error("System message must have systemMessageType"));
+  }
+
+  next();
+});
 
 export const Message: Model<IMessage> = model<IMessage>(
   "Message",

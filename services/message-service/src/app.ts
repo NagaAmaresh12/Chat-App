@@ -22,8 +22,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 // // Use morgan to log HTTP requests to winston
 
-app.get("/health", (req, res) => {
-  res.json({ message: "User service is up and running" });
+app.get("/msg/v1/health", (req, res) => {
+  res.json({ message: "message service is up and running" });
 });
 // //routes
 app.use("/msg/v1", messageRoutes);
