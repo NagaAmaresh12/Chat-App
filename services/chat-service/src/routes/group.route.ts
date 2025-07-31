@@ -35,7 +35,7 @@ router.get(
   authenticate,
   validateParams(chatIDParamsSchema),
   getGroupChatByChatID
-);
+); //✅tested
 
 router.delete(
   "/delete/:chatID",

@@ -185,6 +185,12 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
 export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
   const userId = req.user.id;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  if (!isValid(userId)) {
+    throw new AppError("Invalid UserId");
+  }
+  console.log({
+    userId,
+  });
 
   try {
     // Get all chat participants for the user
