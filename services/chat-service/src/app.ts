@@ -30,7 +30,7 @@ app.get("/health", authenticate, (req, res) => {
   });
 });
 app.use("/private", privateChatRoutes);
-app.use("/groups", groupChatRoutes);
+app.use("/group", groupChatRoutes);
 app.use(
   morgan("combined", {
     stream: {

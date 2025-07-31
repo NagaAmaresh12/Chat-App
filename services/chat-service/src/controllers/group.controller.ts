@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
-import { sendError, sendSuccess } from "../utils/index.js";
+import {
+  AppError,
+  isValid,
+  logger,
+  sendError,
+  sendSuccess,
+} from "../utils/index.js";
 import axios from "axios";
 import { Types } from "mongoose";
 import { Chat } from "../models/chat.model.js";
@@ -53,19 +59,35 @@ const populateChatWithUsers = async (chat: any, token: string) => {
 };
 
 export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
-  const { name, members, description } = req.body;
-  const creatorId = req.user._id;
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  console.log(
+    "validations are valid... execution started at createNewGroupChat.."
+  );
 
+  const { name, members, description } = req.body;
+  const creatorId = req.user.id;
+  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  console.log({
+    name,
+    members,
+    description,
+  });
+
+  if (!members) {
+    throw new AppError("Invalid members", 400);
+  }
   try {
     if (!USER_SERVICE) {
       return sendError(res, "Invalid USER_SERVICE endpoint", 500);
     }
+    console.log(`adding creator ID:${creatorId} to the members...`);
 
     // Add creator to members if not already included
     const allMembers = members.includes(creatorId.toString())
       ? members
       : [creatorId.toString(), ...members];
+    console.log(
+      "creator id has added to the members.. and verifying all members existance"
+    );
 
     // Verify all members exist
     const memberPromises = allMembers.map(async (memberId: string) => {
@@ -78,8 +100,15 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
         return null;
       }
     });
+    console.log("these are the members exists", {
+      memberPromises,
+    });
+    console.log("validating members...");
 
     const validMembers = (await Promise.all(memberPromises)).filter(Boolean);
+    console.log({
+      validMembers,
+    });
 
     if (validMembers.length < 2) {
       return sendError(
@@ -88,6 +117,7 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
         400
       );
     }
+    console.log("creating group chat...");
 
     // Create group chat
     const participants = validMembers.map((memberId: string) => ({
@@ -95,20 +125,27 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
       role: memberId === creatorId.toString() ? "owner" : "member",
       isActive: true,
     }));
-
-    const groupChat = await Chat.create({
-      type: "group",
-      groupName: name,
-      groupDescription: description || "",
+    console.log({
       participants,
-      groupSettings: {
-        whoCanAddMembers: "admins",
-        whoCanEditGroupInfo: "admins",
-        whoCanSendMessages: "everyone",
-      },
-      lastActivity: new Date(),
     });
 
+    let groupChat: any;
+    try {
+      groupChat = await Chat.create({
+        type: "group",
+        groupName: name,
+        groupDescription: description || "",
+        participants,
+        groupSettings: {
+          whoCanAddMembers: "admins",
+          whoCanEditGroupInfo: "admins",
+          whoCanSendMessages: "everyone",
+        },
+        lastActivity: new Date(),
+      });
+    } catch (error) {
+      console.log("Failed to create group chat...");
+    }
     // Create ChatParticipant entries for all members
     const chatParticipants = validMembers.map((memberId: string) => ({
       chatId: groupChat._id,
@@ -118,17 +155,27 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
       isPinned: false,
     }));
 
-    await ChatParticipant.create(chatParticipants);
+    try {
+      await ChatParticipant.create(chatParticipants);
+    } catch (error) {
+      console.log(
+        "Failed to create ChatParticipants...at createNewGroupChat in chat-service"
+      );
+    }
 
     // Populate with user details
-    const populatedGroup = await populateChatWithUsers(groupChat, token);
 
-    return sendSuccess(
-      res,
-      { group: populatedGroup },
-      "Group chat created successfully",
-      200
-    );
+    try {
+      const populatedGroup = await populateChatWithUsers(groupChat, token);
+      return sendSuccess(
+        res,
+        { group: populatedGroup },
+        "Group chat created successfully",
+        200
+      );
+    } catch (error) {
+      console.log("Error in populateChatWithUsers");
+    }
   } catch (error) {
     console.error("Error creating group chat:", error);
     return sendError(res, "Failed to create group chat", 500, error);
@@ -136,7 +183,7 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
 };
 
 export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
-  const userId = req.user._id;
+  const userId = req.user.id;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   try {
@@ -209,7 +256,7 @@ export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
 
 export const getGroupChatByChatID = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
-  const userId = req.user._id;
+  const userId = req.user.id;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   if (!Types.ObjectId.isValid(chatID!)) {
@@ -259,7 +306,7 @@ export const editGroupChatByChatID = async (
 ) => {
   const { chatID } = req.params;
   const { name, description } = req.body;
-  const userId = req.user._id;
+  const userId = req.user.id;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   if (!Types.ObjectId.isValid(chatID!)) {
@@ -322,7 +369,7 @@ export const deleteGroupChatByChatID = async (
   res: Response
 ) => {
   const { chatID } = req.params;
-  const userId = req.user._id;
+  const userId = req.user.id;
 
   if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
@@ -368,7 +415,7 @@ export const deleteGroupChatByChatID = async (
 export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
   const { userID } = req.body;
-  const requesterId = req.user._id;
+  const requesterId = req.user.id;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   if (!Types.ObjectId.isValid(chatID!) || !Types.ObjectId.isValid(userID)) {
@@ -442,7 +489,7 @@ export const removeMemberInGroupChat = async (
 ) => {
   const { chatID } = req.params;
   const { userID } = req.body;
-  const requesterId = req.user._id;
+  const requesterId = req.user.id;
 
   if (!Types.ObjectId.isValid(chatID!) || !Types.ObjectId.isValid(userID)) {
     return sendError(res, "Invalid chat or user ID", 400);

@@ -26,7 +26,7 @@ router.post(
   authenticate,
   validateBody(groupChatSchema),
   createNewGroupChat
-);
+); //✅tested
 
 router.get("/my-groups", authenticate, getGroupChatByChatID);
 
