@@ -14,6 +14,8 @@ import {
 } from "../controllers/message.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { rateLimiter } from "../middlewares/ratelimit.middleware.js";
+import { validateJoiBody } from "../middlewares/validation.middleware.js";
+import { createMessageSchema } from "../utils/joi.validate.js";
 
 const router = express.Router();
 
@@ -22,7 +24,9 @@ router.use(authenticate);
 
 // Create a new message
 router.post(
-  "/",
+  "/create",
+  authenticate,
+  validateJoiBody(createMessageSchema),
   rateLimiter({ windowMs: 15 * 60 * 1000, max: 100 }), // 100 messages per 15 minutes
   createMessage
 );

@@ -1,93 +1,91 @@
-// import { Request, Response, NextFunction } from "express";
-// import { ZodError } from "zod";
-// import type { ZodSchema } from "zod";
+import { Request, Response, NextFunction } from "express";
+import { ZodError, ZodSchema } from "zod";
+import { ObjectSchema } from "joi";
 
-// // Body validation middleware
-// export const validateBody = (schema: ZodSchema) => {
-//   return (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//       const validatedData = schema.parse(req.body);
-//       req.body = validatedData;
-//       next();
-//     } catch (error) {
-//       if (error instanceof ZodError) {
-//         const errors = error?.errors?.map((err) => ({
-//           field: err.path.join("."),
-//           message: err.message,
-//           code: err.code,
-//         }));
+// Body validation middleware
 
-//         return res.status(400).json({
-//           success: false,
-//           message: "Body validation failed",
-//           errors,
-//         });
-//       }
+export const validateJoiBody = (schema: ObjectSchema<any>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const { error, value } = schema.validate(req.body, {
+      abortEarly: false,
+      allowUnknown: false,
+      stripUnknown: true,
+    });
 
-//       return res.status(500).json({
-//         success: false,
-//         message: "Internal server error during body validation",
-//       });
-//     }
-//   };
-// };
+    if (error) {
+      const errors = error.details.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      }));
 
-// // Params validation middleware
-// export const validateParams = (schema: ZodSchema) => {
-//   return (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//       const validatedData = schema.parse(req.params);
-//       req.params = validatedData;
-//       next();
-//     } catch (error) {
-//       if (error instanceof ZodError) {
-//         const errors = error.errors.map((err) => ({
-//           field: err.path.join("."),
-//           message: err.message,
-//           code: err.code,
-//         }));
+      return res.status(400).json({
+        success: false,
+        message: "Body validation failed",
+        errors,
+      });
+    }
 
-//         return res.status(400).json({
-//           success: false,
-//           message: "Parameters validation failed",
-//           errors,
-//         });
-//       }
+    req.body = value;
+    next();
+  };
+};
 
-//       return res.status(500).json({
-//         success: false,
-//         message: "Internal server error during parameters validation",
-//       });
-//     }
-//   };
-// };
+// Params validation middleware
+export const validateParams = (schema: ZodSchema<any>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const validatedData = schema.parse(req.params);
+      req.params = validatedData;
+      next();
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const errors = (error as ZodError).issues.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        }));
 
-// // Query validation middleware
-// export const validateQuery = (schema: ZodSchema) => {
-//   return (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//       const validatedData = schema.parse(req.query);
-//       req.query = validatedData;
-//       next();
-//     } catch (error) {
-//       if (error instanceof ZodError) {
-//         const errors = error.errors.map((err) => ({
-//           field: err.path.join("."),
-//           message: err.message,
-//           code: err.code,
-//         }));
+        return res.status(400).json({
+          success: false,
+          message: "Parameters validation failed",
+          errors,
+        });
+      }
 
-//         return res.status(400).json({
-//           success: false,
-//           message: "Query validation failed",
-//           errors,
-//         });
-//       }
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error during parameters validation",
+      });
+    }
+  };
+};
 
-//       return res.status(500).json({
-//         success: false,
-//         message: "Internal server error during query validation",
-//       });
-//     }
-//   };
-// };
+// Query validation middleware
+export const validateQuery = (schema: ZodSchema<any>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const validatedData = schema.parse(req.query);
+      req.query = validatedData;
+      next();
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const errors = (error as ZodError).issues.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+          code: err.code,
+        }));
+
+        return res.status(400).json({
+          success: false,
+          message: "Query validation failed",
+          errors,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error during query validation",
+      });
+    }
+  };
+};

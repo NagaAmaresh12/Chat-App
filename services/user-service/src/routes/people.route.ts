@@ -13,7 +13,7 @@ const router = Router();
 router.get("/all", authenticate, getAllUsers);
 
 router.get("/:userID", authenticate, getUserByID); //✅[TEST WITH POSTMAN]
-router.post("/batch", authenticate, getUsersByBatch);
+router.post("/batch", authenticate, getUsersByBatch); //req.body array of users
 router.patch("/edit/:userID", authenticate, updateUserByID); // ✅[TEST WITH POSTMAN]
 
 export default router;
