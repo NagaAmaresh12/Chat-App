@@ -1,180 +1,163 @@
-import { z } from "zod";
-import { Types } from "mongoose";
+import Joi from "joi";
+import mongoose from "mongoose";
 
-// Custom validator for MongoDB ObjectId
-const objectIdSchema = z.string().refine((val) => Types.ObjectId.isValid(val), {
-  message: "Invalid ObjectId format",
+// Custom ObjectId validation
+const objectIdValidation = Joi.string().custom((value, helpers) => {
+  if (!mongoose.Types.ObjectId.isValid(value)) {
+    return helpers.error("any.invalid");
+  }
+  return value;
+}, "ObjectId validation");
+
+// Attachment validation schema
+const attachmentSchema = Joi.object({
+  type: Joi.string().valid("image", "video", "audio", "document").required(),
+  url: Joi.string().uri().required(),
+  filename: Joi.string().min(1).max(255).required(),
+  size: Joi.number()
+    .positive()
+    .max(100 * 1024 * 1024)
+    .required(), // Max 100MB
+  mimeType: Joi.string().required(),
+  thumbnailUrl: Joi.string().uri().optional(),
 });
 
-// Media content validation schema
-const mediaContentSchema = z.object({
-  url: z.string().url().optional(),
-  filename: z.string().optional(),
-  size: z.number().positive().optional(),
-  mimeType: z.string().optional(),
-  duration: z.number().positive().optional(),
-  thumbnail: z.string().url().optional(),
-  dimensions: z
-    .object({
-      width: z.number().positive(),
-      height: z.number().positive(),
-    })
+// Reply to schema
+const replyToSchema = Joi.object({
+  messageId: objectIdValidation.required(),
+  senderId: objectIdValidation.required(),
+  content: Joi.string().max(200).required(),
+  messageType: Joi.string().valid("text", "media", "emoji").required(),
+});
+
+// Create message validation
+export const createMessageSchema = Joi.object({
+  chatId: objectIdValidation.required(),
+  senderId: objectIdValidation.required(),
+  content: Joi.string()
+    .max(4000)
+    .when("messageType", {
+      is: Joi.string().valid("text", "emoji"),
+      then: Joi.required(),
+      otherwise: Joi.optional(),
+    }),
+  messageType: Joi.string()
+    .valid("text", "image", "video", "audio", "document", "emoji")
+    .default("text"),
+  attachments: Joi.array()
+    .items(attachmentSchema)
+    .default([])
+    .custom((attachments, helpers) => {
+      const messageType = helpers.state.ancestors[0].messageType;
+
+      if (
+        (messageType === "text" || messageType === "emoji") &&
+        attachments.length > 0
+      ) {
+        return helpers.error("any.invalid", {
+          message: "Text and emoji messages cannot have attachments",
+        });
+      }
+
+      if (
+        messageType !== "text" &&
+        messageType !== "emoji" &&
+        attachments.length === 0
+      ) {
+        return helpers.error("any.required", {
+          message: "Media messages must have attachments",
+        });
+      }
+
+      // Limit attachments per message
+      if (attachments.length > 10) {
+        return helpers.error("array.max", {
+          message: "Maximum 10 attachments per message",
+        });
+      }
+
+      return attachments;
+    }),
+  replyTo: replyToSchema.optional(),
+});
+
+// Update message validation
+export const updateMessageSchema = Joi.object({
+  content: Joi.string().max(4000).required(),
+  editedAt: Joi.date().default(new Date()),
+}).custom((value, helpers) => {
+  // Only text and emoji messages can be edited
+  return value;
+});
+
+// Forward message validation
+export const forwardMessageSchema = Joi.object({
+  originalMessageId: objectIdValidation.required(),
+  targetChatIds: Joi.array()
+    .items(objectIdValidation)
+    .min(1)
+    .max(20)
+    .required(), // Max 20 forwards at once
+  senderId: objectIdValidation.required(),
+});
+
+// Get messages validation
+export const getMessagesSchema = Joi.object({
+  chatId: objectIdValidation.required(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(50).default(20),
+  before: objectIdValidation.optional(), // Message ID to get messages before this
+  after: objectIdValidation.optional(), // Message ID to get messages after this
+  search: Joi.string().max(100).optional(),
+  messageType: Joi.string()
+    .valid("text", "image", "video", "audio", "document", "emoji")
     .optional(),
 });
 
-// Create message validation schema
-export const createMessageSchema = z.object({
-  body: z
-    .object({
-      chatId: objectIdSchema,
-      messageType: z
-        .enum([
-          "text",
-          "image",
-          "video",
-          "audio",
-          "document",
-          "location",
-          "contact",
-        ])
-        .default("text"),
-      content: z.object({
-        text: z.string().min(1).max(4096).optional(),
-        media: mediaContentSchema.optional(),
-      }),
-      mentions: z.array(objectIdSchema).optional().default([]),
-    })
-    .refine(
-      (data) => {
-        if (data.messageType === "text") {
-          return data.content.text && data.content.text.length > 0;
-        } else {
-          return data.content.media && data.content.media.url;
-        }
-      },
-      {
-        message:
-          "Text messages must have text content, media messages must have media URL",
-        path: ["content"],
-      }
-    ),
+// Delete message validation
+export const deleteMessageSchema = Joi.object({
+  messageId: objectIdValidation.required(),
+  deletedBy: objectIdValidation.required(),
+  deleteForEveryone: Joi.boolean().default(false),
 });
 
-// Edit message validation schema
-export const editMessageSchema = z.object({
-  params: z.object({
-    msgID: objectIdSchema,
-  }),
-  body: z.object({
-    content: z.object({
-      text: z.string().min(1).max(4096),
-    }),
-  }),
+// Mark as read validation
+export const markAsReadSchema = Joi.object({
+  messageIds: Joi.array().items(objectIdValidation).min(1).max(100).required(),
+  userId: objectIdValidation.required(),
 });
 
-// Reply message validation schema
-export const replyMessageSchema = z.object({
-  params: z.object({
-    msgID: objectIdSchema,
-  }),
-  body: z
-    .object({
-      messageType: z
-        .enum([
-          "text",
-          "image",
-          "video",
-          "audio",
-          "document",
-          "location",
-          "contact",
-        ])
-        .default("text"),
-      content: z.object({
-        text: z.string().min(1).max(4096).optional(),
-        media: mediaContentSchema.optional(),
-      }),
-      mentions: z.array(objectIdSchema).optional().default([]),
-    })
-    .refine(
-      (data) => {
-        if (data.messageType === "text") {
-          return data.content.text && data.content.text.length > 0;
-        } else {
-          return data.content.media && data.content.media.url;
-        }
-      },
-      {
-        message:
-          "Text messages must have text content, media messages must have media URL",
-        path: ["content"],
-      }
-    ),
+// Add reaction validation
+export const addReactionSchema = Joi.object({
+  messageId: objectIdValidation.required(),
+  userId: objectIdValidation.required(),
+  emoji: Joi.string().min(1).max(10).required(), // Support unicode emojis
 });
 
-// Forward message validation schema
-export const forwardMessageSchema = z.object({
-  params: z.object({
-    msgID: objectIdSchema,
-  }),
-  body: z.object({
-    chatIds: z.array(objectIdSchema).min(1),
-  }),
+// Remove reaction validation
+export const removeReactionSchema = Joi.object({
+  messageId: objectIdValidation.required(),
+  userId: objectIdValidation.required(),
+  emoji: Joi.string().min(1).max(10).required(),
 });
 
-// Post reaction validation schema
-export const postReactionSchema = z.object({
-  params: z.object({
-    msgID: objectIdSchema,
-  }),
-  body: z.object({
-    emoji: z.string().min(1).max(10),
-    action: z.enum(["add", "remove"]).default("add"),
-  }),
+// Search messages validation
+export const searchMessagesSchema = Joi.object({
+  chatId: objectIdValidation.optional(),
+  query: Joi.string().min(1).max(100).required(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(20).default(10),
+  messageType: Joi.string()
+    .valid("text", "image", "video", "audio", "document", "emoji")
+    .optional(),
+  senderId: objectIdValidation.optional(),
+  dateFrom: Joi.date().optional(),
+  dateTo: Joi.date().optional(),
 });
 
-// Get messages by chat validation schema
-export const getMessagesByChatSchema = z.object({
-  query: z.object({
-    chatId: objectIdSchema,
-    page: z.string().regex(/^\d+$/).transform(Number).default("1"),
-    limit: z.string().regex(/^\d+$/).transform(Number).default("50"),
-    before: objectIdSchema.optional(),
-    after: objectIdSchema.optional(),
-  }),
-});
-
-// Get message by ID validation schema
-export const getMessageByIdSchema = z.object({
-  params: z.object({
-    msgID: objectIdSchema,
-  }),
-});
-
-// Get message status validation schema
-export const getMessageStatusSchema = z.object({
-  params: z.object({
-    msgID: objectIdSchema,
-  }),
-});
-
-// Get message thread validation schema
-export const getMessageThreadSchema = z.object({
-  params: z.object({
-    msgID: objectIdSchema,
-  }),
-  query: z.object({
-    page: z.string().regex(/^\d+$/).transform(Number).default("1"),
-    limit: z.string().regex(/^\d+$/).transform(Number).default("20"),
-  }),
-});
-
-// Delete message validation schema
-export const deleteMessageSchema = z.object({
-  params: z.object({
-    msgID: objectIdSchema,
-  }),
-  body: z.object({
-    deleteForEveryone: z.boolean().default(false),
-  }),
+// Bulk delete validation
+export const bulkDeleteSchema = Joi.object({
+  messageIds: Joi.array().items(objectIdValidation).min(1).max(100).required(),
+  deletedBy: objectIdValidation.required(),
+  deleteForEveryone: Joi.boolean().default(false),
 });

@@ -1,146 +1,100 @@
-import { Router } from "express";
-import { authenticate } from "../middlewares/index.js";
-
+import express from "express";
 import {
-  validateSchema,
-  validateFileUpload,
-  validateChatMembership,
-  validateMessageOwnership,
-  rateLimitMessages,
-} from "../middlewares/validation.middleware.js";
-
-import {
-  createMessageSchema,
-  editMessageSchema,
-  replyMessageSchema,
-  forwardMessageSchema,
-  postReactionSchema,
-  getMessagesByChatSchema,
-  getMessageByIdSchema,
-  getMessageStatusSchema,
-  deleteMessageSchema,
-  getMessageThreadSchema,
-} from "../utils/index.js";
-import {
-  createNewMessage,
-  getMessageBymsgID,
-  getMessageThreadByMsgID,
-  getMessagesByChatID,
-  getMsgStatusByMsgID,
-  editMessageByMsgID,
-  replyMsgByMessageID,
-  forwardMsgByMessageID,
-  deleteMessageByMsgID,
-  postReactionsBymsgID,
-  markMessageAsDelivered,
-  markMessageAsRead,
+  createMessage,
+  getMessageById,
+  getMessages,
+  updateMessage,
+  deleteMessage,
+  forwardMessage,
+  addReaction,
+  markAsRead,
+  removeReaction,
+  searchMessages,
+  bulkDeleteMessages,
 } from "../controllers/message.controller.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
+import { rateLimiter } from "../middlewares/ratelimit.middleware.js";
 
-const router = Router();
+const router = express.Router();
+
+// Apply authentication middleware to all routes
+router.use(authenticate);
 
 // Create a new message
 router.post(
-  "/create",
-  authenticate,
-  rateLimitMessages,
-  // validateSchema(createMessageSchema),
-  validateFileUpload,
-  validateChatMembership,
-  createNewMessage
+  "/",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 100 }), // 100 messages per 15 minutes
+  createMessage
 );
 
-// Get message by ID
-router.get(
-  "/:msgID",
-  authenticate,
-  validateSchema(getMessageByIdSchema),
-  getMessageBymsgID
-);
-
-// Get messages by chat ID with pagination
+// Get messages for a chat with pagination
 router.get(
   "/chat/:chatId",
-  authenticate,
-  validateSchema(getMessagesByChatSchema),
-  validateChatMembership,
-  getMessagesByChatID
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 200 }), // 200 requests per 15 minutes
+  getMessages
 );
 
-// Get message delivery status
+// Get single message by ID
 router.get(
-  "/status/:msgID",
-  authenticate,
-  validateSchema(getMessageStatusSchema),
-  getMsgStatusByMsgID
+  "/:messageId",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 300 }), // 300 requests per 15 minutes
+  getMessageById
 );
 
-// Add or remove reaction to message
-router.post(
-  "/reactions/:msgID",
-  authenticate,
-  validateSchema(postReactionSchema),
-  postReactionsBymsgID
+// Update/Edit a message
+router.put(
+  "/:messageId",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 50 }), // 50 edits per 15 minutes
+  updateMessage
 );
 
-// Reply to a message within the "same chat"
-router.post(
-  "/reply/:msgID",
-  authenticate,
-  rateLimitMessages,
-  validateSchema(replyMessageSchema),
-  validateFileUpload,
-  validateChatMembership,
-  replyMsgByMessageID
-);
-
-// Forward message to "multiple chats"
-router.post(
-  "/forward/:msgID",
-  authenticate,
-  validateSchema(forwardMessageSchema),
-  forwardMsgByMessageID
-);
-
-// Edit message (only text messages, within 15 minutes)
-router.patch(
-  "/edit/:msgID",
-  authenticate,
-  validateSchema(editMessageSchema),
-  validateMessageOwnership,
-  editMessageByMsgID
-);
-
-// Delete message (soft delete for user, or delete for everyone)
+// Delete a message
 router.delete(
-  "/delete/:msgID",
-  authenticate,
-  validateSchema(deleteMessageSchema),
-  validateMessageOwnership,
-  deleteMessageByMsgID
+  "/:messageId",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 100 }), // 100 deletes per 15 minutes
+  deleteMessage
 );
 
-// Get message thread (replies to a message)
+// Forward message(s)
+router.post(
+  "/forward",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 20 }), // 20 forwards per 15 minutes
+  forwardMessage
+);
+
+// Mark messages as read
+router.patch(
+  "/read",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 300 }), // 300 read updates per 15 minutes
+  markAsRead
+);
+
+// Add reaction to message
+router.post(
+  "/reactions",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 200 }), // 200 reactions per 15 minutes
+  addReaction
+);
+
+// Remove reaction from message
+router.delete(
+  "/reactions",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 200 }), // 200 reaction removals per 15 minutes
+  removeReaction
+);
+
+// Search messages
 router.get(
-  "/thread/:msgID",
-  authenticate,
-  validateSchema(getMessageThreadSchema),
-  getMessageThreadByMsgID
+  "/search/query",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 100 }), // 100 searches per 15 minutes
+  searchMessages
 );
 
-// Mark message as delivered (for read receipts)
-router.patch(
-  "/delivered/:msgID",
-  authenticate,
-  validateSchema(getMessageByIdSchema),
-  markMessageAsDelivered
-);
-
-// Mark message as read (for read receipts)
-router.patch(
-  "/read/:msgID",
-  authenticate,
-  validateSchema(getMessageByIdSchema),
-  markMessageAsRead
+// Bulk delete messages
+router.delete(
+  "/bulk",
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }), // 10 bulk deletes per 15 minutes
+  bulkDeleteMessages
 );
 
 export default router;
