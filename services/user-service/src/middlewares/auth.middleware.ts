@@ -322,9 +322,10 @@ async function validateAccessToken(token: string): Promise<{
 }> {
   try {
     const decoded = jwt.verify(token, JWT_ACCESS_SECRET) as JwtPayload;
+    console.log({ decoded });
 
     // Validate token structure
-    if (!decoded.userId || !decoded.tokenType) {
+    if (!decoded.userId) {
       return {
         success: false,
         error: "invalid",
@@ -333,13 +334,13 @@ async function validateAccessToken(token: string): Promise<{
     }
 
     // Check if it's actually an access token
-    if (decoded.tokenType !== "access") {
-      return {
-        success: false,
-        error: "invalid",
-        message: "Invalid token type",
-      };
-    }
+    // if (decoded.tokenType !== "access") {
+    //   return {
+    //     success: false,
+    //     error: "invalid",
+    //     message: "Invalid token type",
+    //   };
+    // }
 
     // Find user
     const user = await User.findById(decoded.userId);
