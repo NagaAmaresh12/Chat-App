@@ -1,5 +1,5 @@
 // privateChatSchema
-import Joi from "joi";
+import Joi, { string } from "joi";
 export const privateChatSchema = Joi.object({
   participantID: Joi.string().required(), // User you're chatting with
 });
@@ -36,11 +36,20 @@ export const editGroupSchema = Joi.object({
 });
 
 // addMemberSchema
-export const addMemberSchema = Joi.object({
-  userID: Joi.string().hex().length(24).required(),
-});
+// export const addMemberSchema = Joi.object({
+//   userID: Joi.string().hex().length(24).required(),
+// });
 
+export const addMemberSchema = Joi.object({
+  userIDs: Joi.array()
+    .items(Joi.string().hex().length(24).required())
+    .min(1)
+    .required(),
+});
 // removeMemberSchema
 export const removeMemberSchema = Joi.object({
-  userID: Joi.string().hex().length(24).required(),
+  userIDs: Joi.array()
+    .items(Joi.string().hex().length(24).required())
+    .min(1)
+    .required(),
 });

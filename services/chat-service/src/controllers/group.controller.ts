@@ -418,14 +418,90 @@ export const deleteGroupChatByChatID = async (
   }
 };
 
+// export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
+//   const { chatID } = req.params;
+//   const { userID } = req.body;
+//   const requesterId = req.user.id;
+//   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+
+//   if (!Types.ObjectId.isValid(chatID!) || !Types.ObjectId.isValid(userID)) {
+//     return sendError(res, "Invalid chat or user ID", 400);
+//   }
+
+//   try {
+//     const group = await Chat.findOne({
+//       _id: chatID,
+//       type: "group",
+//       "participants.user": requesterId,
+//       "participants.isActive": true,
+//     });
+
+//     if (!group) {
+//       return sendError(res, "Group not found or access denied", 404);
+//     }
+
+//     // Check permissions
+//     const requesterParticipant = group.participants.find(
+//       (p) => p.user.toString() === requesterId.toString() && p.isActive
+//     );
+
+//     const canAdd =
+//       requesterParticipant &&
+//       (requesterParticipant.role === "owner" ||
+//         requesterParticipant.role === "admin" ||
+//         group.groupSettings?.whoCanAddMembers === "everyone");
+
+//     if (!canAdd) {
+//       return sendError(res, "Permission denied to add members", 403);
+//     }
+
+//     // Verify user exists
+//     const { data } = await axios.get(`${USER_SERVICE}/people/${userID}`, {
+//       headers: { Authorization: `Bearer ${token}` },
+//     });
+
+//     if (!data?.data) {
+//       return sendError(res, "User not found", 404);
+//     }
+
+//     // Add member to group
+//     const result = await group.addParticipant(
+//       new Types.ObjectId(userID),
+//       "member"
+//     );
+//     if (!result) {
+//       return sendError(res, "User is already a member of this group", 400);
+//     }
+
+//     // Create ChatParticipant entry
+//     await ChatParticipant.create({
+//       chatId: chatID,
+//       userId: userID,
+//       unreadCount: 0,
+//       isArchived: false,
+//       isPinned: false,
+//     });
+
+//     return sendSuccess(res, "Member added successfully");
+//   } catch (error) {
+//     console.error("Error adding member to group:", error);
+//     return sendError(res, "Failed to add member", 500, error);
+//   }
+// };
+// ✅ Validation schema - array of ObjectIds
+
 export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
-  const { userID } = req.body;
+  const { userIDs }: { userIDs: string[] } = req.body;
   const requesterId = req.user.id;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
-  if (!Types.ObjectId.isValid(chatID!) || !Types.ObjectId.isValid(userID)) {
-    return sendError(res, "Invalid chat or user ID", 400);
+  // ✅ Validate chatID and all userIDs format
+  if (
+    !Types.ObjectId.isValid(chatID!) ||
+    !userIDs.every((id: string) => Types.ObjectId.isValid(id))
+  ) {
+    return sendError(res, "Invalid chat or user IDs", 400);
   }
 
   try {
@@ -440,7 +516,7 @@ export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
       return sendError(res, "Group not found or access denied", 404);
     }
 
-    // Check permissions
+    // ✅ Permission check
     const requesterParticipant = group.participants.find(
       (p) => p.user.toString() === requesterId.toString() && p.isActive
     );
@@ -455,50 +531,143 @@ export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
       return sendError(res, "Permission denied to add members", 403);
     }
 
-    // Verify user exists
-    const { data } = await axios.get(`${USER_SERVICE}/people/${userID}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    let alreadyMembers: string[] = [];
+    let notFoundUsers: string[] = [];
 
-    if (!data?.data) {
-      return sendError(res, "User not found", 404);
-    }
+    // ✅ Parallel addition using map + Promise.all
+    const addResults = await Promise.all(
+      userIDs.map(async (userID) => {
+        try {
+          // 1️⃣ Verify user exists in User Service
+          const { data } = await axios.get(`${USER_SERVICE}/people/${userID}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
 
-    // Add member to group
-    const result = await group.addParticipant(
-      new Types.ObjectId(userID),
-      "member"
+          if (!data?.data) {
+            notFoundUsers.push(userID);
+            return null;
+          }
+
+          // 2️⃣ Add member to group
+          const result = await group.addParticipant(
+            new Types.ObjectId(userID),
+            "member"
+          );
+
+          if (!result) {
+            alreadyMembers.push(userID);
+            return null;
+          }
+
+          // 3️⃣ Create ChatParticipant entry
+          await ChatParticipant.create({
+            chatId: chatID,
+            userId: userID,
+            unreadCount: 0,
+            isArchived: false,
+            isPinned: false,
+          });
+
+          return userID; // successfully added
+        } catch (err) {
+          console.error(`Error adding member ${userID}:`, err);
+          return null;
+        }
+      })
     );
-    if (!result) {
-      return sendError(res, "User is already a member of this group", 400);
-    }
 
-    // Create ChatParticipant entry
-    await ChatParticipant.create({
-      chatId: chatID,
-      userId: userID,
-      unreadCount: 0,
-      isArchived: false,
-      isPinned: false,
+    const addedCount = addResults.filter(Boolean).length;
+
+    return sendSuccess(res, {
+      message: `Added ${addedCount} member(s) successfully`,
+      alreadyMembers,
+      notFoundUsers,
     });
-
-    return sendSuccess(res, "Member added successfully");
   } catch (error) {
-    console.error("Error adding member to group:", error);
-    return sendError(res, "Failed to add member", 500, error);
+    console.error("Error adding members to group:", error);
+    return sendError(res, "Failed to add members", 500, error);
   }
 };
+
+// export const removeMemberInGroupChat = async (
+//   req: AuthRequest,
+//   res: Response
+// ) => {
+//   const { chatID } = req.params;
+//   const { userID } = req.body;
+//   const requesterId = req.user.id;
+
+//   if (!Types.ObjectId.isValid(chatID!) || !Types.ObjectId.isValid(userID)) {
+//     return sendError(res, "Invalid chat or user ID", 400);
+//   }
+
+//   try {
+//     const group = await Chat.findOne({
+//       _id: chatID,
+//       type: "group",
+//       "participants.user": requesterId,
+//       "participants.isActive": true,
+//     });
+
+//     if (!group) {
+//       return sendError(res, "Group not found or access denied", 404);
+//     }
+
+//     // Check permissions
+//     const requesterParticipant = group.participants.find(
+//       (p) => p.user.toString() === requesterId.toString() && p.isActive
+//     );
+
+//     const targetParticipant = group.participants.find(
+//       (p) => p.user.toString() === userID.toString() && p.isActive
+//     );
+
+//     if (!targetParticipant) {
+//       return sendError(res, "User is not a member of this group", 400);
+//     }
+
+//     // Users can remove themselves, or admins/owners can remove others
+//     const canRemove =
+//       requesterId.toString() === userID.toString() ||
+//       (requesterParticipant &&
+//         (requesterParticipant.role === "owner" ||
+//           (requesterParticipant.role === "admin" &&
+//             targetParticipant.role === "member")));
+
+//     if (!canRemove) {
+//       return sendError(res, "Permission denied to remove this member", 403);
+//     }
+
+//     // Remove member from group
+//     await group.removeParticipant(new Types.ObjectId(userID));
+
+//     // Update ChatParticipant entry
+//     await ChatParticipant.findOneAndUpdate(
+//       { chatId: chatID, userId: userID },
+//       { isArchived: true }
+//     );
+
+//     return sendSuccess(res, "Member removed successfully");
+//   } catch (error) {
+//     console.error("Error removing member from group:", error);
+//     return sendError(res, "Failed to remove member", 500, error);
+//   }
+// };
 
 export const removeMemberInGroupChat = async (
   req: AuthRequest,
   res: Response
 ) => {
   const { chatID } = req.params;
-  const { userID } = req.body;
+  const { userIDs }: { userIDs: string[] } = req.body; // Explicit typing
   const requesterId = req.user.id;
 
-  if (!Types.ObjectId.isValid(chatID!) || !Types.ObjectId.isValid(userID)) {
-    return sendError(res, "Invalid chat or user ID", 400);
+  // ✅ Validate chatID and all userIDs
+  if (
+    !Types.ObjectId.isValid(chatID!) ||
+    !userIDs.every((id) => Types.ObjectId.isValid(id))
+  ) {
+    return sendError(res, "Invalid chat or user IDs", 400);
   }
 
   try {
@@ -513,43 +682,61 @@ export const removeMemberInGroupChat = async (
       return sendError(res, "Group not found or access denied", 404);
     }
 
-    // Check permissions
+    // ✅ Check requester permissions
     const requesterParticipant = group.participants.find(
       (p) => p.user.toString() === requesterId.toString() && p.isActive
     );
 
-    const targetParticipant = group.participants.find(
-      (p) => p.user.toString() === userID.toString() && p.isActive
+    let notMembers: string[] = [];
+    let permissionDenied: string[] = [];
+
+    // ✅ Parallel processing for removals
+    const removeResults = await Promise.all(
+      userIDs.map(async (userID: string) => {
+        const targetParticipant = group.participants.find(
+          (p) => p.user.toString() === userID.toString() && p.isActive
+        );
+
+        if (!targetParticipant) {
+          notMembers.push(userID);
+          return null;
+        }
+
+        // Users can remove themselves, or admins/owners can remove others
+        const canRemove =
+          requesterId.toString() === userID.toString() ||
+          (requesterParticipant &&
+            (requesterParticipant.role === "owner" ||
+              (requesterParticipant.role === "admin" &&
+                targetParticipant.role === "member")));
+
+        if (!canRemove) {
+          permissionDenied.push(userID);
+          return null;
+        }
+
+        // Remove member from group
+        await group.removeParticipant(new Types.ObjectId(userID));
+
+        // Update ChatParticipant entry
+        await ChatParticipant.findOneAndUpdate(
+          { chatId: chatID, userId: userID },
+          { isArchived: true }
+        );
+
+        return userID; // Successfully removed
+      })
     );
 
-    if (!targetParticipant) {
-      return sendError(res, "User is not a member of this group", 400);
-    }
+    const removedCount = removeResults.filter(Boolean).length;
 
-    // Users can remove themselves, or admins/owners can remove others
-    const canRemove =
-      requesterId.toString() === userID.toString() ||
-      (requesterParticipant &&
-        (requesterParticipant.role === "owner" ||
-          (requesterParticipant.role === "admin" &&
-            targetParticipant.role === "member")));
-
-    if (!canRemove) {
-      return sendError(res, "Permission denied to remove this member", 403);
-    }
-
-    // Remove member from group
-    await group.removeParticipant(new Types.ObjectId(userID));
-
-    // Update ChatParticipant entry
-    await ChatParticipant.findOneAndUpdate(
-      { chatId: chatID, userId: userID },
-      { isArchived: true }
-    );
-
-    return sendSuccess(res, "Member removed successfully");
+    return sendSuccess(res, {
+      message: `Removed ${removedCount} member(s) successfully`,
+      notMembers,
+      permissionDenied,
+    });
   } catch (error) {
-    console.error("Error removing member from group:", error);
-    return sendError(res, "Failed to remove member", 500, error);
+    console.error("Error removing members from group:", error);
+    return sendError(res, "Failed to remove members", 500, error);
   }
 };

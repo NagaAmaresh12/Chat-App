@@ -7,7 +7,7 @@ import {
   addMemberInGroupChat,
   removeMemberInGroupChat,
   getMyGroupChats,
-} from "../controllers/group.controller.js";
+} from "../controllers/index.js";
 import {
   authenticate,
   validateBody,
@@ -76,5 +76,7 @@ router.delete(
   validateBody(removeMemberSchema),
   removeMemberInGroupChat
 ); //setting isActive to false but keeping user data
+// ====================================== Join Group BY UserID ==============================
+// router.post('/join-group',authenticate,validateBody(),joinGroupByUserID)
 //✅tested
 export default router;

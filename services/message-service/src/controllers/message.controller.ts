@@ -28,6 +28,8 @@ export const createMessage = async (
   res: Response
 ) => {
   try {
+    console.log("creating new message...");
+
     const { error, value } = createMessageSchema.validate(req.body);
     if (error) {
       return res.status(400).json({
@@ -42,12 +44,15 @@ export const createMessage = async (
 
     // Verify chat exists and user has permission
     try {
+      console.log("Getting chat Details while creating new message...");
+
       const chatResponse = await axios.get(
         `${process.env.CHAT_SERVICE}/api/chats/${chatId}`,
         {
           headers: { "user-id": senderId },
         }
       );
+      console.log({ chatResponse });
 
       if (!chatResponse.data.success) {
         return res.status(404).json({

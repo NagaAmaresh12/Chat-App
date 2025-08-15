@@ -12,7 +12,7 @@ export interface AuthRequest extends Request {
 const USER_SERVICE = process.env.USER_SERVICE!;
 
 // Helper function to fetch user details
-const fetchUserDetails = async (userIds: string[], token: string) => {
+export const fetchUserDetails = async (userIds: string[], token: string) => {
   try {
     // Batch endpoint would be more efficient
     const userPromises = userIds.map((userId) =>

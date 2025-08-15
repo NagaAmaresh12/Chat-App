@@ -10,6 +10,7 @@ import {
 } from "./config/index.js";
 import privateChatRoutes from "./routes/private.route.js";
 import groupChatRoutes from "./routes/group.route.js";
+import commonChatRoutes from "./routes/common.route.js";
 import cookieParser from "cookie-parser";
 config();
 const app = express();
@@ -29,6 +30,7 @@ app.get("/health", authenticate, (req, res) => {
     message: "Chat service is up and running",
   });
 });
+app.use("/common", commonChatRoutes);
 app.use("/private", privateChatRoutes);
 app.use("/group", groupChatRoutes);
 app.use(
