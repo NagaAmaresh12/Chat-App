@@ -198,7 +198,7 @@ userSchema.methods.generateTokens = function () {
       username: user.username,
     },
     process.env.JWT_ACCESS_SECRET!,
-    { expiresIn: "1m" }
+    { expiresIn: "15m" }
   );
 
   const refreshToken = jwt.sign(
