@@ -175,4 +175,5 @@ chatSchema.methods.removeParticipant = async function (
 };
 
 // Export model
-export const Chat: Model<IChat> = mongoose.model<IChat>("Chat", chatSchema);
+const Chat: Model<IChat> = mongoose.model<IChat>("Chat", chatSchema);
+export { Document, Chat };
