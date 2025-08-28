@@ -241,6 +241,148 @@ export const getprivateChatByChatID = async (
   }
 
   try {
+    // Find the chat with only necessary fields
+    const chat = await Chat.findOne({
+      _id: chatID,
+      type: "private",
+      "participants.user": userId,
+      "participants.isActive": true,
+    }).select("_id type lastActivity participants");
+
+    if (!chat) {
+      return sendError(res, "Chat not found or access denied", 404);
+    }
+
+    // Get user's chat participant info
+    const chatParticipant = await ChatParticipant.findOne({
+      chatId: chatID,
+      userId: userId,
+    }).select("unreadCount isMuted isPinned");
+
+    // Populate with minimal user details
+    const populatedChat = await populateChatWithMinimalUserData(chat, token);
+
+    // Create optimized response
+    const responseData = {
+      chat: {
+        _id: populatedChat._id,
+        type: populatedChat.type,
+        lastActivity: populatedChat.lastActivity,
+        participants: populatedChat.participants.map((participant: any) => ({
+          user: {
+            _id: participant.user._id,
+            username: participant.user.username,
+            avatar: participant.user.avatar || "",
+            isOnline: participant.user.isOnline,
+          },
+          role: participant.role,
+          isActive: participant.isActive,
+        })),
+      },
+      userChatInfo: {
+        unreadCount: chatParticipant?.unreadCount || 0,
+        isMuted: chatParticipant?.isMuted || false,
+        isPinned: chatParticipant?.isPinned || false,
+      },
+    };
+
+    return sendSuccess(res, responseData, "Chat retrieved successfully");
+  } catch (error) {
+    console.error("Error getting private chat:", error);
+    return sendError(res, "Failed to retrieve chat", 500, error);
+  }
+};
+
+// Helper function to populate chat with minimal user data
+const populateChatWithMinimalUserData = async (chat: any, token: string) => {
+  try {
+    const USER_SERVICE = process.env.USER_SERVICE!;
+
+    // Get user IDs from participants
+    const userIds = chat.participants.map((p: any) => p.user.toString());
+
+    // Make batch request to user service for minimal user data
+    const userPromises = userIds.map(async (userId: string) => {
+      try {
+        const response = await axios.get(
+          `${USER_SERVICE}/users/${userId}/minimal`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            timeout: 5000,
+          }
+        );
+        return response.data.data;
+      } catch (error) {
+        console.error(`Error fetching user ${userId}:`, error);
+        // Return fallback user data
+        return {
+          _id: userId,
+          username: "Unknown User",
+          avatar: "",
+          isOnline: false,
+        };
+      }
+    });
+
+    const users = await Promise.all(userPromises);
+
+    // Create user map for easy lookup
+    const userMap = users.reduce((acc: any, user: any) => {
+      acc[user._id] = user;
+      return acc;
+    }, {});
+
+    // Populate participants with user data
+    const populatedParticipants = chat.participants.map((participant: any) => ({
+      ...participant.toObject(),
+      user: userMap[participant.user.toString()] || {
+        _id: participant.user.toString(),
+        username: "Unknown User",
+        avatar: "",
+        isOnline: false,
+      },
+    }));
+
+    return {
+      ...chat.toObject(),
+      participants: populatedParticipants,
+    };
+  } catch (error) {
+    console.error("Error populating chat with user data:", error);
+    // Return chat with fallback user data
+    const fallbackParticipants = chat.participants.map((participant: any) => ({
+      ...participant.toObject(),
+      user: {
+        _id: participant.user.toString(),
+        username: "Unknown User",
+        avatar: "",
+        isOnline: false,
+      },
+    }));
+
+    return {
+      ...chat.toObject(),
+      participants: fallbackParticipants,
+    };
+  }
+};
+
+// Alternative version if you prefer to modify your existing populateChatWithUsers function
+export const getprivateChatByChatIDAlternative = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  const { chatID } = req.params;
+  const userId = req.user.id;
+  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+
+  if (!Types.ObjectId.isValid(chatID!)) {
+    return sendError(res, "Invalid chat ID", 400);
+  }
+
+  try {
     // Find the chat
     const chat = await Chat.findOne({
       _id: chatID,
@@ -253,7 +395,7 @@ export const getprivateChatByChatID = async (
       return sendError(res, "Chat not found or access denied", 404);
     }
 
-    // Populate with user details
+    // Populate with user details (using your existing function)
     const populatedChat = await populateChatWithUsers(chat, token);
 
     // Get user's chat participant info
@@ -262,18 +404,38 @@ export const getprivateChatByChatID = async (
       userId: userId,
     });
 
-    const responseData = {
-      chat: populatedChat,
+    // Filter and format response to include only necessary fields
+    const optimizedResponseData = {
+      chat: {
+        _id: populatedChat._id,
+        type: populatedChat.type,
+        lastActivity: populatedChat.lastActivity,
+        participants: populatedChat.participants
+          .filter((participant: any) => participant.isActive) // Only active participants
+          .map((participant: any) => ({
+            user: {
+              _id: participant.user._id,
+              username: participant.user.username,
+              avatar: participant.user.avatar || "",
+              isOnline: participant.user.isOnline || false,
+            },
+            role: participant.role,
+            isActive: participant.isActive,
+          })),
+      },
       userChatInfo: {
         unreadCount: chatParticipant?.unreadCount || 0,
         isMuted: chatParticipant?.isMuted || false,
-        isArchived: chatParticipant?.isArchived || false,
         isPinned: chatParticipant?.isPinned || false,
-        lastReadMessageId: chatParticipant?.lastReadMessageId,
       },
     };
 
-    return sendSuccess(res, responseData, "Chat retrieved successfully", 200);
+    return sendSuccess(
+      res,
+      optimizedResponseData,
+      "Chat retrieved successfully",
+      200
+    );
   } catch (error) {
     console.error("Error getting private chat:", error);
     return sendError(res, "Failed to retrieve chat", 500, error);
