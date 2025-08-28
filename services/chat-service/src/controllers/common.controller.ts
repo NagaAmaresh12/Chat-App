@@ -91,7 +91,7 @@ export const getArchivedChatsByUserID = async (
           lastMessage,
           unreadCount: cp?.unreadCount,
           isPinned: cp?.isPinned,
-          // isArchived: cp.isArchived,
+          isArchived: cp?.isArchived,
           lastReadMessageId: cp?.lastReadMessageId,
         };
       })
@@ -188,7 +188,8 @@ export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
           lastMessage,
           unreadCount: cp?.unreadCount,
           isPinned: cp?.isPinned,
-          // isArchived: cp.isArchived,
+          isArchived: cp.isArchived,
+          isMuted: cp.isMuted,
           lastReadMessageId: cp?.lastReadMessageId,
         };
       })

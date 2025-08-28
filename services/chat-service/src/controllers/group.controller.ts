@@ -14,6 +14,14 @@ import { ChatParticipant } from "../models/chat.particitipate.model.js";
 interface AuthRequest extends Request {
   user?: any;
 }
+interface ChatUpdateRequest extends AuthRequest {
+  name?: string;
+  description?: string;
+  isMuted?: boolean;
+  isArchived?: boolean;
+  isPinned?: boolean;
+  isActive?: boolean;
+}
 
 const USER_SERVICE = process.env.USER_SERVICE!;
 
@@ -311,7 +319,18 @@ export const editGroupChatByChatID = async (
   res: Response
 ) => {
   const { chatID } = req.params;
-  const { name, description } = req.body;
+  const { name, description, isArchived, isActive, isMuted, isPinned } =
+    req.body;
+  console.log("here", {
+    body: req.body,
+    isArchived,
+    name,
+    description,
+    isActive,
+    isMuted,
+    isPinned,
+  });
+
   const userId = req.user.id;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
@@ -350,7 +369,10 @@ export const editGroupChatByChatID = async (
     const updateData: any = {};
     if (name) updateData.groupName = name;
     if (description !== undefined) updateData.groupDescription = description;
-
+    if (isArchived) updateData.isArchived = isArchived;
+    if (isPinned) updateData.isPinned = isPinned;
+    if (isMuted) updateData.isMuted = isMuted;
+    if (isActive) updateData.isActive = isActive;
     const updatedGroup = await Chat.findByIdAndUpdate(chatID, updateData, {
       new: true,
     });

@@ -33,6 +33,9 @@ export const groupChatSchema = Joi.object({
 export const editGroupSchema = Joi.object({
   name: Joi.string().min(3),
   description: Joi.string(),
+  isArchived: Joi.boolean(),
+  isPinned: Joi.boolean(),
+  isMuted: Joi.boolean(),
 });
 
 // addMemberSchema
