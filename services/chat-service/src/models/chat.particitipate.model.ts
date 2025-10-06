@@ -8,6 +8,7 @@ export interface IChatParticipant extends Document {
   isMuted?: boolean;
   muteUntil?: Date;
   isArchived?: boolean;
+  isBlocked?: boolean;
   isPinned?: boolean;
   pinnedAt?: Date;
   customNotificationSound?: string;
@@ -41,6 +42,10 @@ const chatParticipantSchema = new Schema<IChatParticipant>(
     },
     muteUntil: Date,
     isArchived: {
+      type: Boolean,
+      default: false,
+    },
+    isBlocked: {
       type: Boolean,
       default: false,
     },

@@ -113,57 +113,7 @@ const userSchema = new Schema<IUser>(
       ],
       default: null,
     },
-    favourite: [
-      {
-        user: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-        },
-        addedAt: {
-          type: Date,
-          default: Date.now,
-        },
-        nickname: String,
-      },
-    ],
-    settings: {
-      privacy: {
-        lastSeen: {
-          type: String,
-          enum: ["everyone", "favourite", "nobody"],
-          default: "everyone",
-        },
-        profilePhoto: {
-          type: String,
-          enum: ["everyone", "favourite", "nobody"],
-          default: "everyone",
-        },
-        status: {
-          type: String,
-          enum: ["everyone", "favourite", "nobody"],
-          default: "everyone",
-        },
-      },
-      notifications: {
-        messageNotifications: {
-          type: Boolean,
-          default: true,
-        },
-        groupNotifications: {
-          type: Boolean,
-          default: true,
-        },
-        sound: {
-          type: Boolean,
-          default: true,
-        },
-      },
-      theme: {
-        type: String,
-        enum: ["light", "dark", "system"],
-        default: "system",
-      },
-    },
+
     refreshToken: {
       token: String,
       createdAt: {

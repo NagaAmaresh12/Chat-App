@@ -116,6 +116,7 @@ const chatSchema = new Schema<IChat>(
       type: Boolean,
       default: false,
     },
+
     isPinned: [
       {
         user: {
