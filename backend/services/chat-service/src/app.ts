@@ -30,9 +30,9 @@ app.get("/health", (req, res) => {
     message: "Chat service is up and running",
   });
 });
-app.use("/common", commonChatRoutes);
 app.use("/private", privateChatRoutes);
-app.use("/group", groupChatRoutes);
+app.use("/groups", groupChatRoutes);
+app.use("/common", commonChatRoutes);
 app.use(
   morgan("combined", {
     stream: {

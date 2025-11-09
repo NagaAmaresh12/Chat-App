@@ -9,20 +9,28 @@ export interface AuthRequest extends Request {
   user?: any;
 }
 
-const USER_SERVICE = process.env.USER_SERVICE!;
+const USER_SERVICE = process.env.USERS_SERVICE!;
 
 // Helper function to fetch user details
 export const fetchUserDetails = async (userIds: string[], token: string) => {
   try {
     // Batch endpoint would be more efficient
     const userPromises = userIds.map((userId) =>
-      axios.get(`${USER_SERVICE}/people/${userId}`, {
+      axios.get(`${USER_SERVICE}/people/${userId}`, { //............... axios.get(...) returns a Promise (because it’s asynchronous).
         headers: { Authorization: `Bearer ${token}` },
       })
     );
+// So userPromises becomes an array of Promises, like:
+// [
+//   Promise<pending>,
+//   Promise<pending>,
+//   Promise<pending>,
+//   ...
+// ]
+// when we use promise.all, All requests fired at once.Instead of calling each request,at once until one finished,we get this when we use "for,while loop" 
+    const responses = await Promise.all(userPromises);//All requests fired at once.
+    return responses.map((res) => res.data?.data).filter(Boolean);//[ { name: "John", id: "123" }, { name: "Ava", id: "456" }, undefined, null ], if api call failed or didn't return any data, we get values likes undefined or null, so we want to select only values which are correct, That's why we use Boolean here
 
-    const responses = await Promise.all(userPromises);
-    return responses.map((res) => res.data?.data).filter(Boolean);
   } catch (error) {
     console.error("Error fetching user details:", error);
     return [];
@@ -49,9 +57,10 @@ const populateChatWithUsers = async (chat: any, token: string) => {
   };
 };
 
-export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
+export const createNewPrivateChat = async (req: AuthRequest, res: Response) => {
   const { participantID } = req.body;
-  const senderId = req.user.id;
+  const senderId = req.headers["x-user-id"] as string;
+
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
   console.log("In createNewPrivateChat", {
     token,
@@ -78,6 +87,9 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
+    console.log('====================================');
+    console.log({userData:data});
+    console.log('====================================');
     const participant = data?.data;
     if (!participant) {
       return sendError(res, "Participant does not exist", 400);
@@ -86,10 +98,12 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
     // Check if chat already exists
     let existingChat = await Chat.findOne({
       type: "private",
-      "participants.user": { $all: [senderId, participantID] },
-      "participants.isActive": true,
+      "participants.user": { $all: [senderId, participantID] },//This $all condition ensures that both users are in the chat, regardless of their order.
+      "participants.isActive": true,//Find a chat document where at least one element in the participants array has isActive: true.
     });
-
+console.log('====================================');
+console.log({existingChat});
+console.log('====================================');
     if (existingChat) {
       // Populate with user details
       const populatedChat = await populateChatWithUsers(existingChat, token);
@@ -113,7 +127,7 @@ export const createNewprivateChat = async (req: AuthRequest, res: Response) => {
         {
           user: participantID,
           role: "member",
-          isActive: true,
+          isActive: true,//this checking active is not for user active or using this app,it is about whether that user is in the chat or blocked this chat
         },
       ],
       lastActivity: new Date(),
@@ -156,7 +170,8 @@ export const getprivateChatsByUserID = async (
   req: AuthRequest,
   res: Response
 ) => {
-  const userId = req.user.id;
+  const userId = req.headers["x-user-id"] as string;
+;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   try {
@@ -228,12 +243,18 @@ export const getprivateChatsByUserID = async (
   }
 };
 
-export const getprivateChatByChatID = async (
+export const getPrivateChatByChatID = async (
   req: AuthRequest,
   res: Response
 ) => {
-  const { chatID } = req.params;
-  const userId = req.user.id;
+  console.log("Request comes here");
+  
+  const { chatID } = req?.params;
+  console.log({chatID});
+  
+  const userId = req.headers['x-user-id'];
+  console.log({userId});
+  
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   if (!Types.ObjectId.isValid(chatID!)) {
@@ -296,7 +317,7 @@ export const getprivateChatByChatID = async (
 // Helper function to populate chat with minimal user data
 const populateChatWithMinimalUserData = async (chat: any, token: string) => {
   try {
-    const USER_SERVICE = process.env.USER_SERVICE!;
+    const USER_SERVICE = process.env.USERS_SERVICE!;
 
     // Get user IDs from participants
     const userIds = chat.participants.map((p: any) => p.user.toString());
@@ -447,8 +468,8 @@ export const editprivateChatByChatID = async (
   res: Response
 ) => {
   const { chatID } = req.params;
-  const { isArchived, isMuted, isPinned } = req.body;
-  const userId = req.user.id;
+  const { isArchived, isMuted, isPinned ,isBlocked} = req.body;
+  const userId = req.headers['x-user-id'];
 
   if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
@@ -470,6 +491,7 @@ export const editprivateChatByChatID = async (
     // Update user's chat participant settings
     const updateData: any = {};
     if (typeof isArchived === "boolean") updateData.isArchived = isArchived;
+    if (typeof isBlocked === "boolean") updateData.isBlocked = isBlocked;
     if (typeof isMuted === "boolean") updateData.isMuted = isMuted;
     if (typeof isPinned === "boolean") {
       updateData.isPinned = isPinned;
@@ -494,25 +516,31 @@ export const editprivateChatByChatID = async (
   }
 };
 
-export const deleteprivateChatByChatID = async (
-  req: AuthRequest,
-  res: Response
-) => {
+//we don't delete the chat but we don't show or hide the chat, making isActive:false to that user who wants this chat not to visible
+export const deleteprivateChatByChatID = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
-  const userId = req.user.id;
+  const userIdHeader = req.headers["x-user-id"];
 
-  if (!Types.ObjectId.isValid(chatID!)) {
-    return sendError(res, "Invalid chat ID", 400);
+  // ✅ Ensure userId and chatID are valid
+  if (!chatID || typeof chatID !== "string" || !Types.ObjectId.isValid(chatID)) {
+    return sendError(res, "Invalid or missing chat ID", 400);
   }
 
-  try {
-    console.log("trying to delete chat.......");
+  if (!userIdHeader || typeof userIdHeader !== "string" || !Types.ObjectId.isValid(userIdHeader)) {
+    return sendError(res, "Invalid or missing user ID", 400);
+  }
 
-    // Find the chat and verify user is a participant
+  const chatObjectId = new Types.ObjectId(chatID);
+  const userObjectId = new Types.ObjectId(userIdHeader);
+
+  try {
+    console.log("Trying to delete chat...");
+
+    // ✅ Find the chat and verify user is a participant
     const chat = await Chat.findOne({
-      _id: chatID,
+      _id: chatObjectId,
       type: "private",
-      "participants.user": userId,
+      "participants.user": userObjectId,
       "participants.isActive": true,
     });
 
@@ -520,12 +548,12 @@ export const deleteprivateChatByChatID = async (
       return sendError(res, "Chat not found or access denied", 404);
     }
 
-    // Remove user from chat participants (soft delete)
-    await chat.removeParticipant(userId);
+    // ✅ Remove user from participants (soft delete)
+    await chat.removeParticipant(userObjectId);
 
-    // Remove or archive user's ChatParticipant entry
+    // ✅ Archive user’s ChatParticipant entry
     await ChatParticipant.findOneAndUpdate(
-      { chatId: chatID, userId: userId },
+      { chatId: chatObjectId, userId: userObjectId },
       { isArchived: true }
     );
 

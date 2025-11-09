@@ -232,49 +232,34 @@ export const getUsersByBatch = async (req: AuthRequest, res: Response) => {
 };
 export const updateUserByID = async (req: AuthRequest, res: Response) => {
   const { userID } = req.params;
-  const { username, bio, profilePhoto } = req.body;
 
-  if (!isValid(userID!)) {
-    sendError(res, "Invalid UserId", 400);
-  }
+  if (!isValid(userID!)) return sendError(res, "Invalid UserId", 400);
+
   const user = await User.findById(userID);
-  if (!user) {
-    sendError(res, "User Does not Exists", 400);
-  }
-  user && (user.username = username ? username : user?.username);
-  user && (user.bio = bio ? bio : user?.bio);
-  user &&
-    (user.settings.privacy.profilePhoto = profilePhoto
-      ? profilePhoto
-      : user?.settings.privacy.profilePhoto);
+  if (!user) return sendError(res, "User does not exist", 404);
 
-  await user?.save();
-  console.log(
-    "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
-    {
-      accessToken: req?.accessToken,
-      refreshToken: req?.refreshToken,
-    }
-  );
+  // apply body values directly
+  // only update the fields which exist in req.body
+  Object.assign(user, req.body);
 
-  if (req?.accessToken && req?.refreshToken) {
-    console.log(
-      "since new tokens generated and received from req. and setting both token in cookies in res"
-    );
+  await user.save();
 
-    res.cookie("accessToken", req?.accessToken, {
+  // if new tokens exist (because access expired)
+  if (req.accessToken && req.refreshToken) {
+    res.cookie("accessToken", req.accessToken, {
       httpOnly: true,
-      sameSite: "lax", // or "strict" in production
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       maxAge: 15 * 60 * 1000,
     });
 
-    res.cookie("refreshToken", req?.refreshToken, {
+    res.cookie("refreshToken", req.refreshToken, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
-  sendSuccess(res, user, "Edited User Details Successfully", 200);
+
+  return sendSuccess(res, user, "User updated successfully", 200);
 };

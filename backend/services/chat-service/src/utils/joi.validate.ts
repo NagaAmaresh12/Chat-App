@@ -1,5 +1,6 @@
 // privateChatSchema
 import Joi, { string } from "joi";
+
 export const privateChatSchema = Joi.object({
   participantID: Joi.string().required(), // User you're chatting with
 });

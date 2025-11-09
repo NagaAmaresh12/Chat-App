@@ -222,7 +222,7 @@ export const me = (req: AuthRequest, res: AuthResponse) => {
 // -----------------------------
 // REFRESH TOKEN
 // -----------------------------
-export const refreshToken = async (req: AuthRequest, res: AuthResponse) => {
+export const refreshToken = async (req: AuthRequest, res: Response) => {
   try {
     // Try to get token from cookie first, then custom header, then Authorization header
     const tokenFromCookie = (req as any)?.cookies?.refreshToken;

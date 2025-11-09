@@ -1,8 +1,8 @@
 import { Router } from "express";
 import {
-  createNewprivateChat,
+  createNewPrivateChat,
   getprivateChatsByUserID,
-  getprivateChatByChatID,
+  getPrivateChatByChatID,
   editprivateChatByChatID,
   deleteprivateChatByChatID,
 } from "../controllers/index.js";
@@ -20,7 +20,7 @@ const router = Router();
 router.post(
   "/new",
   validateBody(privateChatSchema),
-  createNewprivateChat
+  createNewPrivateChat
 );
 // ===================================== Read All Message ============================
 router.get("/my-chats", getprivateChatsByUserID); // Fetch all chats for the user i want to APpy pagination here
@@ -35,7 +35,7 @@ router.get("/my-chats", getprivateChatsByUserID); // Fetch all chats for the use
 router.get(
   "/:chatID",
   validateParams(chatIDParamsSchema),
-  getprivateChatByChatID //✅tested
+  getPrivateChatByChatID //✅tested
 );
 // ===================================== Update Message my ChatID ============================
 router.patch(

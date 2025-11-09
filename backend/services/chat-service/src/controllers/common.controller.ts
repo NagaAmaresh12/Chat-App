@@ -113,7 +113,7 @@ export const getArchivedChatsByUserID = async (
 };
 
 export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
-  const userId = req.user.id;
+  const userId = req?.headers['x-user-id'];
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   try {

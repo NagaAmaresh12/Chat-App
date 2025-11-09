@@ -72,7 +72,7 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
   );
 
   const { name, members, description } = req.body;
-  const creatorId = req.user.id;
+  const creatorId = req?.headers['x-user-id']!;
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
   console.log({
     name,
@@ -391,7 +391,7 @@ export const editGroupChatByChatID = async (
     return sendError(res, "Failed to update group", 500, error);
   }
 };
-
+//we don't delete the chat but we don't show or hide the chat, making isActive:false to that user who wants this chat not to visible
 export const deleteGroupChatByChatID = async (
   req: AuthRequest,
   res: Response

@@ -1,14 +1,14 @@
 import { Router } from "express";
 import proxy from "../middlewares/proxy.js";
+import { verifyToken } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-console.log("route check", proxy("user-service"));
-
-router.use("/users", proxy("users-service"));
-
-router.use("/chats", proxy("chats-service"));
-router.use("/messages", proxy("messages-service"));
-router.use("/media", proxy("media-service"));
-router.use("/socket", proxy("socket-service"));
+//Public Routes
+router.use("/users",proxy("users-service"));
+//protected Routes
+router.use("/chats", verifyToken,proxy("chats-service"));
+router.use("/messages", verifyToken,proxy("messages-service"));
+router.use("/notifications", verifyToken,proxy("notifications-service"));
+router.use("/socket", verifyToken,proxy("socket-service"));
 
 export default router;
