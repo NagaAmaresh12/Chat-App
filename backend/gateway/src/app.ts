@@ -13,19 +13,19 @@ config({
 });
 const app = express();
 //middlewares
-//should not use express.json() and express.urlencoded({extended:true}) , to send post request
+//❌❌❌❌should not use express.json() and express.urlencoded({extended:true}) , to send post request
 // app.use(helmetMiddleware);
 // app.use(ratelimiter);
 
 
 app.use(cors);
 // Enable JSON body parsing
-app.use(express.json());
 // ✅ Enable cookie parsing
 app.use(cookieParser());
 
 
 app.use("/api", routes);
+
 app.get("/health",(req,res)=>{
   res.send({message:"Gateway is Working"})
 })

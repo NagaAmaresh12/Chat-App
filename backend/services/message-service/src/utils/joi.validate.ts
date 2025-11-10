@@ -34,34 +34,30 @@ const replyToSchema = Joi.object({
 export const createMessageSchema = Joi.object({
   chatId: objectIdValidation.required(),
   senderId: objectIdValidation.required(),
-  content: Joi.string()
-    .max(4000)
-    .when("messageType", {
-      is: Joi.string().valid("text", "emoji"),
-      then: Joi.required(),
-      otherwise: Joi.optional(),
-    }),
+  chatType: Joi.string().valid("private", "group"),
   messageType: Joi.string()
     .valid("text", "image", "video", "audio", "document", "emoji")
     .default("text"),
+
+  // content is optional, but max 4000 chars
+  content: Joi.string().max(4000).optional(),
+
   attachments: Joi.array()
     .items(attachmentSchema)
     .default([])
     .custom((attachments, helpers) => {
       const messageType = helpers.state.ancestors[0].messageType;
 
-      if (
-        (messageType === "text" || messageType === "emoji") &&
-        attachments.length > 0
-      ) {
-        return helpers.error("any.invalid", {
-          message: "Text and emoji messages cannot have attachments",
+      // Limit attachments
+      if (attachments.length > 10) {
+        return helpers.error("array.max", {
+          message: "Maximum 10 attachments per message",
         });
       }
 
+      // For media messages, at least one attachment is recommended
       if (
-        messageType !== "text" &&
-        messageType !== "emoji" &&
+        ["image", "video", "audio", "document"].includes(messageType) &&
         attachments.length === 0
       ) {
         return helpers.error("any.required", {
@@ -69,17 +65,13 @@ export const createMessageSchema = Joi.object({
         });
       }
 
-      // Limit attachments per message
-      if (attachments.length > 10) {
-        return helpers.error("array.max", {
-          message: "Maximum 10 attachments per message",
-        });
-      }
-
       return attachments;
-    }),
+    })
+    .optional(),
+
   replyTo: replyToSchema.optional(),
 });
+
 
 // Update message validation
 export const updateMessageSchema = Joi.object({

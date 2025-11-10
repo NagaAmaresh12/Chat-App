@@ -1,243 +1,217 @@
+// src/controllers/group.controller.ts
 import { Request, Response } from "express";
-import {
-  AppError,
-  isValid,
-  logger,
-  sendError,
-  sendSuccess,
-} from "../utils/index.js";
 import axios from "axios";
 import { Types } from "mongoose";
 import { Chat } from "../models/chat.model.js";
 import { ChatParticipant } from "../models/chat.particitipate.model.js";
+import { AppError, isValid, logger, sendError, sendSuccess } from "../utils/index.js";
 
 interface AuthRequest extends Request {
   user?: any;
 }
-interface ChatUpdateRequest extends AuthRequest {
-  name?: string;
-  description?: string;
-  isMuted?: boolean;
-  isArchived?: boolean;
-  isPinned?: boolean;
-  isActive?: boolean;
-}
 
-const USER_SERVICE = process.env.USER_SERVICE!;
+// ----------------- Helpers -----------------
 
-// Helper function to fetch user details
+/** Return the first header string if array else value. */
+export const getHeaderValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
+/** Return a Types.ObjectId if valid, else null */
+export const safeObjectId = (id: string): Types.ObjectId | null =>
+  Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : null;
+
+const USER_SERVICE = process.env.USERS_SERVICE || "";
+
+/** Fetch user details from user-service for array of ids using provided token */
 const fetchUserDetails = async (userIds: string[], token: string) => {
-  try {
-    // Batch endpoint would be more efficient
-    const userPromises = userIds.map((userId) =>
-      axios.get(`${USER_SERVICE}/people/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    );
+  if (!userIds || userIds.length === 0) return [];
 
-    const responses = await Promise.all(userPromises);
-    return responses.map((res) => res.data?.data).filter(Boolean);
-  } catch (error) {
-    console.error("Error fetching user details:", error);
+  if (!USER_SERVICE) {
+    logger.error("USER_SERVICE not configured");
     return [];
   }
+
+  if (!token) {
+    logger.warn("fetchUserDetails called without token");
+    return [];
+  }
+
+  const requests = userIds.map((u) =>
+    axios
+      .get(`${USER_SERVICE}/people/${u}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.data?.data)
+      .catch((err) => {
+        logger.warn("User service fetch failed for userId", { userId: u, err: err?.message || err });
+        return null;
+      })
+  );
+
+  const results = await Promise.all(requests);
+  return results.filter(Boolean); // keep non-null entries
 };
 
-// Helper function to populate chat with user details
+/** Populate a Chat document's participants with user objects fetched from user service */
 const populateChatWithUsers = async (chat: any, token: string) => {
-  const userIds = chat.participants
+  if (!chat) return chat;
+
+  const participantIds = chat.participants
     .filter((p: any) => p.isActive)
     .map((p: any) => p.user.toString());
 
-  const users = await fetchUserDetails(userIds, token);
+  const users = await fetchUserDetails([...new Set(participantIds)] as string[], token);
+  const userMap = new Map(users.map((u: any) => [String(u._id), u]));
 
-  // Map users back to participants
-  const populatedParticipants = chat.participants.map((participant: any) => {
-    const user = users.find((u) => u._id === participant.user.toString());
+  // map participants -> include user object (or fallback)
+  const populatedParticipants = chat.participants.map((p: any) => {
+    const userObj = userMap.get(String(p.user)) || { _id: p.user };
+    // If p is a mongoose subdoc, toObject keeps fields consistent
+    const base = typeof p.toObject === "function" ? p.toObject() : { ...p };
     return {
-      ...participant.toObject(),
-      user: user || { _id: participant.user }, // Fallback if user not found
+      ...base,
+      user: userObj,
     };
   });
 
-  return {
-    ...chat.toObject(),
-    participants: populatedParticipants,
-  };
+  const chatObj = typeof chat.toObject === "function" ? chat.toObject() : { ...chat };
+  chatObj.participants = populatedParticipants;
+  return chatObj;
 };
 
+// ----------------- Controllers -----------------
+
+/**
+ * Create a new group chat
+ */
 export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
-  console.log(
-    "validations are valid... execution started at createNewGroupChat.."
-  );
-
   const { name, members, description } = req.body;
-  const creatorId = req?.headers['x-user-id']!;
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
-  console.log({
-    name,
-    members,
-    description,
-  });
+  const creatorHeader = getHeaderValue(req.headers["x-user-id"]);
+  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
 
-  if (!members) {
-    throw new AppError("Invalid members", 400);
+  if (!creatorHeader) return sendError(res, "Missing creator ID in headers", 400);
+  if (!Array.isArray(members) || members.length === 0) {
+    return sendError(res, "Members must be a non-empty array", 400);
   }
-  try {
-    if (!USER_SERVICE) {
-      return sendError(res, "Invalid USER_SERVICE endpoint", 500);
-    }
-    console.log(`adding creator ID:${creatorId} to the members...`);
+  if (!token) return sendError(res, "Authentication token missing", 401);
+  if (!USER_SERVICE) return sendError(res, "USER_SERVICE not configured", 500);
 
-    // Add creator to members if not already included
-    const allMembers = members.includes(creatorId.toString())
-      ? members
-      : [creatorId.toString(), ...members];
-    console.log(
-      "creator id has added to the members.. and verifying all members existance"
+  try {
+    // ensure creator included and unique
+    const normalizedMembers = Array.from(new Set([creatorHeader, ...members.map(String)]));
+
+    // verify each member exists in user-service
+    const checkResults = await Promise.all(
+      normalizedMembers.map(async (m) => {
+        try {
+          const { data } = await axios.get(`${USER_SERVICE}/people/${m}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          return data?.data ? m : null;
+        } catch (err) {
+          return null;
+        }
+      })
     );
 
-    // Verify all members exist
-    const memberPromises = allMembers.map(async (memberId: string) => {
-      try {
-        const { data } = await axios.get(`${USER_SERVICE}/people/${memberId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        return data?.data ? memberId : null;
-      } catch {
-        return null;
-      }
-    });
-    console.log("these are the members exists", {
-      memberPromises,
-    });
-    console.log("validating members...");
-
-    const validMembers = (await Promise.all(memberPromises)).filter(Boolean);
-    console.log({
-      validMembers,
-    });
-
+    const validMembers = checkResults.filter(Boolean) as string[];
     if (validMembers.length < 2) {
-      return sendError(
-        res,
-        "At least 2 valid members required for group chat",
-        400
-      );
+      return sendError(res, "At least 2 valid members required for group chat", 400);
     }
-    console.log("creating group chat...");
 
-    // Create group chat
-    const participants = validMembers.map((memberId: string) => ({
-      user: new Types.ObjectId(memberId),
-      role: memberId === creatorId.toString() ? "owner" : "member",
-      isActive: true,
-    }));
-    console.log({
-      participants,
+    // create participants list
+    const participants = validMembers.map((memberId) => {
+      const role = memberId === creatorHeader ? "owner" : "member";
+      return {
+        user: safeObjectId(memberId)!, // guaranteed valid because user-service returned user
+        role,
+        isActive: true,
+      };
     });
 
-    let groupChat: any;
-    try {
-      groupChat = await Chat.create({
-        type: "group",
-        groupName: name,
-        groupDescription: description || "",
-        participants,
-        groupSettings: {
-          whoCanAddMembers: "admins",
-          whoCanEditGroupInfo: "admins",
-          whoCanSendMessages: "everyone",
-        },
-        lastActivity: new Date(),
-      });
-    } catch (error) {
-      console.log("Failed to create group chat...");
-    }
-    // Create ChatParticipant entries for all members
-    const chatParticipants = validMembers.map((memberId: string) => ({
+    const groupChat = await Chat.create({
+      type: "group",
+      groupName: name,
+      groupDescription: description || "",
+      participants,
+      groupSettings: {
+        whoCanAddMembers: "admins",
+        whoCanEditGroupInfo: "admins",
+        whoCanSendMessages: "everyone",
+      },
+      lastActivity: new Date(),
+    });
+
+    // create ChatParticipant entries
+    const chatParticipants = validMembers.map((memberId) => ({
       chatId: groupChat._id,
-      userId: new Types.ObjectId(memberId),
+      userId: safeObjectId(memberId)!,
       unreadCount: 0,
       isArchived: false,
       isPinned: false,
     }));
 
-    try {
-      await ChatParticipant.create(chatParticipants);
-    } catch (error) {
-      console.log(
-        "Failed to create ChatParticipants...at createNewGroupChat in chat-service"
-      );
-    }
+    await ChatParticipant.insertMany(chatParticipants);
 
-    // Populate with user details
-
-    try {
-      const populatedGroup = await populateChatWithUsers(groupChat, token);
-      return sendSuccess(
-        res,
-        { group: populatedGroup },
-        "Group chat created successfully",
-        200
-      );
-    } catch (error) {
-      console.log("Error in populateChatWithUsers");
-    }
+    const populatedGroup = await populateChatWithUsers(groupChat, token);
+    return sendSuccess(res, { group: populatedGroup }, "Group chat created successfully", 200);
   } catch (error) {
-    console.error("Error creating group chat:", error);
+    logger.error("createNewGroupChat failed", { error });
     return sendError(res, "Failed to create group chat", 500, error);
   }
 };
 
+/**
+ * Get all group chats for logged-in user
+ */
 export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
-  const userId = req.user.id;
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
-  if (!isValid(userId)) {
-    throw new AppError("Invalid UserId");
-  }
-  console.log({
-    userId,
-  });
+  console.log("Request Comes Here..");
+  
+  const userHeader = getHeaderValue(req.headers["x-user-id"]);
+  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
+
+  if (!userHeader) return sendError(res, "Missing user ID in headers", 400);
+  if (!isValid(userHeader)) return sendError(res, "Invalid user ID", 400);
+  if (!token) logger.warn("getMyGroupChats: no token provided; user info fetches may fail");
 
   try {
-    // Get all chat participants for the user
+    // find chatParticipant rows for this user
     const chatParticipants = await ChatParticipant.find({
-      userId: userId,
+      userId: safeObjectId(userHeader)!,
       isArchived: { $ne: true },
     }).sort({ isPinned: -1, updatedAt: -1 });
 
-    // Get chat IDs
     const chatIds = chatParticipants.map((cp) => cp.chatId);
 
-    // Get all group chats
+    if (!chatIds.length) {
+      return sendSuccess(res, { groups: [], count: 0 }, "Group chats retrieved successfully", 200);
+    }
+
+    // fetch chats
     const chats = await Chat.find({
       _id: { $in: chatIds },
       type: "group",
+      "participants.isActive": true,
     });
 
-    // Collect all unique user IDs from all chats
+    // collect unique user ids
     const allUserIds = new Set<string>();
-    chats.forEach((chat) => {
-      chat.participants.forEach((p) => {
-        if (p.isActive) allUserIds.add(p.user.toString());
+    chats.forEach((c: any) => {
+      (c.participants || []).forEach((p: any) => {
+        if (p.isActive) allUserIds.add(String(p.user));
       });
     });
 
-    // Fetch all users in batch
     const users = await fetchUserDetails(Array.from(allUserIds), token);
-    const userMap = new Map(users.map((u) => [u._id, u]));
+    const userMap = new Map((users || []).map((u: any) => [String(u._id), u]));
 
-    // Map and populate chats
+    // assemble groups list
     const groups = chatParticipants
       .map((cp) => {
-        const chat = chats.find((c) => c._id == cp.chatId.toString());
+        const chat = chats.find((c) => String(c._id) === String(cp.chatId));
         if (!chat) return null;
 
-        // Populate participants
-        const populatedParticipants = chat.participants.map((p) => ({
-          ...p,
-          user: userMap.get(p.user.toString()) || { _id: p.user },
+        const populatedParticipants = chat.participants.map((p: any) => ({
+          ...(p.toObject ? p.toObject() : p),
+          user: userMap.get(String(p.user)) || { _id: p.user },
         }));
 
         return {
@@ -253,48 +227,39 @@ export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
       })
       .filter(Boolean);
 
-    return sendSuccess(
-      res,
-      {
-        groups,
-        count: groups.length,
-      },
-      "Group chats retrieved successfully",
-      200
-    );
+    return sendSuccess(res, { groups, count: groups.length }, "Group chats retrieved successfully", 200);
   } catch (error) {
-    console.error("Error getting group chats:", error);
+    logger.error("getMyGroupChats failed", { error });
     return sendError(res, "Failed to retrieve group chats", 500, error);
   }
 };
 
+/**
+ * Get a specific group chat by chatID (must be participant)
+ */
 export const getGroupChatByChatID = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
-  const userId = req.user.id;
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  const userHeader = getHeaderValue(req.headers["x-user-id"]);
+  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
 
-  if (!Types.ObjectId.isValid(chatID!)) {
-    return sendError(res, "Invalid chat ID", 400);
-  }
+  if (!userHeader) return sendError(res, "Missing user ID in headers", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
 
   try {
     const group = await Chat.findOne({
       _id: chatID,
       type: "group",
-      "participants.user": userId,
+      "participants.user": safeObjectId(userHeader),
       "participants.isActive": true,
     });
 
-    if (!group) {
-      return sendError(res, "Group not found or access denied", 404);
-    }
+    if (!group) return sendError(res, "Group not found or access denied", 404);
 
-    // Populate with user details
     const populatedGroup = await populateChatWithUsers(group, token);
 
     const chatParticipant = await ChatParticipant.findOne({
-      chatId: chatID,
-      userId: userId,
+      chatId: safeObjectId(chatID)!,
+      userId: safeObjectId(userHeader)!,
     });
 
     const responseData = {
@@ -309,456 +274,385 @@ export const getGroupChatByChatID = async (req: AuthRequest, res: Response) => {
 
     return sendSuccess(res, responseData, "Group retrieved successfully", 200);
   } catch (error) {
-    console.error("Error getting group chat:", error);
+    logger.error("getGroupChatByChatID failed", { error });
     return sendError(res, "Failed to retrieve group", 500, error);
   }
 };
 
-export const editGroupChatByChatID = async (
-  req: AuthRequest,
-  res: Response
-) => {
+/**
+ * Edit group chat settings (group-level fields)
+ * 🔧 FIX: Separate user-specific settings from group settings
+ */
+export const editGroupChatByChatID = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
-  const { name, description, isArchived, isActive, isMuted, isPinned } =
-    req.body;
-  console.log("here", {
-    body: req.body,
-    isArchived,
-    name,
-    description,
-    isActive,
-    isMuted,
-    isPinned,
-  });
+  const { name, description, isPinned, isMuted, isArchived, groupSettings, isBlocked } = req.body ?? {};
 
-  const userId = req.user.id;
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  const headerUser = getHeaderValue(req.headers["x-user-id"]);
+  const userId = headerUser || (req.user && (req.user.id || req.user.userId));
+  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
 
-  if (!Types.ObjectId.isValid(chatID!)) {
-    return sendError(res, "Invalid chat ID", 400);
-  }
+  if (!userId) return sendError(res, "Missing user id", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
 
   try {
+    // ✅ Find group
     const group = await Chat.findOne({
       _id: chatID,
       type: "group",
-      "participants.user": userId,
+      "participants.user": safeObjectId(userId),
       "participants.isActive": true,
     });
+    if (!group) return sendError(res, "Group not found or access denied", 404);
 
-    if (!group) {
-      return sendError(res, "Group not found or access denied", 404);
-    }
-
-    // Check if user has permission to edit group info
+    // ✅ Check permissions
     const userParticipant = group.participants.find(
-      (p) => p.user.toString() === userId.toString() && p.isActive
+      (p: any) => String(p.user) === String(userId) && p.isActive
     );
-
     const canEdit =
-      userParticipant &&
+      !!userParticipant &&
       (userParticipant.role === "owner" ||
         userParticipant.role === "admin" ||
         group.groupSettings?.whoCanEditGroupInfo === "everyone");
+    if (!canEdit) return sendError(res, "Permission denied", 403);
 
-    if (!canEdit) {
-      return sendError(res, "Permission denied to edit group info", 403);
+    const updateData: Record<string, any> = {};
+
+    // ✅ Group-level edits
+    if (typeof name === "string" && name.trim()) updateData.groupName = name.trim();
+    if (typeof description === "string") updateData.groupDescription = description.trim();
+    if (groupSettings && typeof groupSettings === "object") {
+      updateData.groupSettings = { ...group.groupSettings, ...groupSettings };
     }
 
-    // Update group info
-    const updateData: any = {};
-    if (name) updateData.groupName = name;
-    if (description !== undefined) updateData.groupDescription = description;
-    if (isArchived) updateData.isArchived = isArchived;
-    if (isPinned) updateData.isPinned = isPinned;
-    if (isMuted) updateData.isMuted = isMuted;
-    if (isActive) updateData.isActive = isActive;
-    const updatedGroup = await Chat.findByIdAndUpdate(chatID, updateData, {
-      new: true,
-    });
+    // ✅ Save group changes if any
+    if (Object.keys(updateData).length > 0) {
+      Object.assign(group, updateData);
+      await group.save();
+    }
 
-    // Populate with user details
-    const populatedGroup = await populateChatWithUsers(updatedGroup, token);
+    // ✅ Handle per-user preferences in ChatParticipant
+    if (typeof isArchived === "boolean" || typeof isMuted === "boolean" || typeof isPinned === "boolean" || typeof isBlocked === "boolean") {
+      await ChatParticipant.updateOne(
+        { chatId: chatID, userId },
+        {
+          ...(typeof isArchived === "boolean" && { isArchived }),
+          ...(typeof isMuted === "boolean" && { isMuted }),
+          ...(typeof isPinned === "boolean" && { isPinned, pinnedAt: isPinned ? new Date() : null }),
+          ...(typeof isBlocked === "boolean" && { isBlocked }), // ✅ add this
+        }
+      );
+    }
 
-    return sendSuccess(
-      res,
-      { group: populatedGroup },
-      "Group updated successfully",
-      200
-    );
+    const populatedGroup = await populateChatWithUsers(group, token);
+    return sendSuccess(res, { group: populatedGroup }, "Group updated successfully", 200);
   } catch (error) {
-    console.error("Error editing group chat:", error);
+    logger.error("editGroupChatByChatID failed", { error });
     return sendError(res, "Failed to update group", 500, error);
   }
 };
-//we don't delete the chat but we don't show or hide the chat, making isActive:false to that user who wants this chat not to visible
-export const deleteGroupChatByChatID = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  const { chatID } = req.params;
-  const userId = req.user.id;
 
-  if (!Types.ObjectId.isValid(chatID!)) {
-    return sendError(res, "Invalid chat ID", 400);
+/**
+ * 🆕 NEW: Update user-specific group settings (mute, pin, archive)
+ */
+export const updateUserGroupSettings = async (req: AuthRequest, res: Response) => {
+  const { chatID } = req.params;
+  const { isMuted, isPinned, isArchived } = req.body;
+
+  const userHeader = getHeaderValue(req.headers["x-user-id"]);
+
+  if (!userHeader) return sendError(res, "Missing user ID in headers", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
+
+  try {
+    // Verify user is participant
+    const group = await Chat.findOne({
+      _id: chatID,
+      type: "group",
+      "participants.user": safeObjectId(userHeader),
+      "participants.isActive": true,
+    });
+
+    if (!group) return sendError(res, "Group not found or access denied", 404);
+
+    // Update ChatParticipant (user-specific settings)
+    const updateData: any = {};
+    if (typeof isMuted === "boolean") updateData.isMuted = isMuted;
+    if (typeof isPinned === "boolean") updateData.isPinned = isPinned;
+    if (typeof isArchived === "boolean") updateData.isArchived = isArchived;
+
+    const updatedChatParticipant = await ChatParticipant.findOneAndUpdate(
+      { chatId: safeObjectId(chatID)!, userId: safeObjectId(userHeader)! },
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedChatParticipant) {
+      return sendError(res, "ChatParticipant record not found", 404);
+    }
+
+    return sendSuccess(
+      res,
+      { userGroupInfo: updatedChatParticipant },
+      "User group settings updated successfully",
+      200
+    );
+  } catch (error) {
+    logger.error("updateUserGroupSettings failed", { error });
+    return sendError(res, "Failed to update user group settings", 500, error);
   }
+};
+
+/**
+ * Delete (leave) group or delete group entirely (owner)
+ */
+export const deleteGroupChatByChatID = async (req: AuthRequest, res: Response) => {
+  const { chatID } = req.params;
+  const userHeader = getHeaderValue(req.headers["x-user-id"]);
+
+  if (!userHeader) return sendError(res, "Missing user ID in headers", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
 
   try {
     const group = await Chat.findOne({
       _id: chatID,
       type: "group",
-      "participants.user": userId,
+      "participants.user": safeObjectId(userHeader),
       "participants.isActive": true,
     });
 
-    if (!group) {
-      return sendError(res, "Group not found or access denied", 404);
-    }
+    if (!group) return sendError(res, "Group not found or access denied", 404);
 
     const userParticipant = group.participants.find(
-      (p) => p.user.toString() === userId.toString() && p.isActive
+      (p: any) => String(p.user) === String(userHeader) && p.isActive
     );
 
-    // Only owner can delete the entire group
-    if (userParticipant?.role === "owner") {
-      // Delete entire group
+    if (!userParticipant) return sendError(res, "Not a group participant", 403);
+
+    // Owner deletes entire group
+    if (userParticipant.role === "owner") {
       await Chat.findByIdAndDelete(chatID);
-      await ChatParticipant.deleteMany({ chatId: chatID });
-      return sendSuccess(res, "Group deleted successfully");
-    } else {
-      // Regular member leaving the group
-      await group.removeParticipant(userId);
-      await ChatParticipant.findOneAndUpdate(
-        { chatId: chatID, userId: userId },
-        { isArchived: true }
-      );
-      return sendSuccess(res, "Left group successfully");
+      await ChatParticipant.deleteMany({ chatId: safeObjectId(chatID)! });
+      return sendSuccess(res, null, "Group deleted successfully");
     }
+
+    // Otherwise user leaves group (soft remove)
+    await group.removeParticipant(safeObjectId(userHeader)!);
+    // ensure persistence if removeParticipant didn't save internally
+    if (typeof group.save === "function") await group.save();
+
+    await ChatParticipant.findOneAndUpdate(
+      { chatId: safeObjectId(chatID)!, userId: safeObjectId(userHeader)! },
+      { isArchived: true }
+    );
+
+    return sendSuccess(res, null, "Left group successfully");
   } catch (error) {
-    console.error("Error deleting group chat:", error);
+    logger.error("deleteGroupChatByChatID failed", { error });
     return sendError(res, "Failed to delete group", 500, error);
   }
 };
 
-// export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
-//   const { chatID } = req.params;
-//   const { userID } = req.body;
-//   const requesterId = req.user.id;
-//   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
-
-//   if (!Types.ObjectId.isValid(chatID!) || !Types.ObjectId.isValid(userID)) {
-//     return sendError(res, "Invalid chat or user ID", 400);
-//   }
-
-//   try {
-//     const group = await Chat.findOne({
-//       _id: chatID,
-//       type: "group",
-//       "participants.user": requesterId,
-//       "participants.isActive": true,
-//     });
-
-//     if (!group) {
-//       return sendError(res, "Group not found or access denied", 404);
-//     }
-
-//     // Check permissions
-//     const requesterParticipant = group.participants.find(
-//       (p) => p.user.toString() === requesterId.toString() && p.isActive
-//     );
-
-//     const canAdd =
-//       requesterParticipant &&
-//       (requesterParticipant.role === "owner" ||
-//         requesterParticipant.role === "admin" ||
-//         group.groupSettings?.whoCanAddMembers === "everyone");
-
-//     if (!canAdd) {
-//       return sendError(res, "Permission denied to add members", 403);
-//     }
-
-//     // Verify user exists
-//     const { data } = await axios.get(`${USER_SERVICE}/people/${userID}`, {
-//       headers: { Authorization: `Bearer ${token}` },
-//     });
-
-//     if (!data?.data) {
-//       return sendError(res, "User not found", 404);
-//     }
-
-//     // Add member to group
-//     const result = await group.addParticipant(
-//       new Types.ObjectId(userID),
-//       "member"
-//     );
-//     if (!result) {
-//       return sendError(res, "User is already a member of this group", 400);
-//     }
-
-//     // Create ChatParticipant entry
-//     await ChatParticipant.create({
-//       chatId: chatID,
-//       userId: userID,
-//       unreadCount: 0,
-//       isArchived: false,
-//       isPinned: false,
-//     });
-
-//     return sendSuccess(res, "Member added successfully");
-//   } catch (error) {
-//     console.error("Error adding member to group:", error);
-//     return sendError(res, "Failed to add member", 500, error);
-//   }
-// };
-// ✅ Validation schema - array of ObjectIds
-
+/**
+ * Add multiple members to group chat
+ */
 export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
   const { userIDs }: { userIDs: string[] } = req.body;
-  const requesterId = req.user.id;
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  const requesterHeader = getHeaderValue(req.headers["x-user-id"]);
+  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
 
-  // ✅ Validate chatID and all userIDs format
-  if (
-    !Types.ObjectId.isValid(chatID!) ||
-    !userIDs.every((id: string) => Types.ObjectId.isValid(id))
-  ) {
-    return sendError(res, "Invalid chat or user IDs", 400);
-  }
+  if (!requesterHeader) return sendError(res, "Missing requester ID in headers", 400);
+  if (!Array.isArray(userIDs) || userIDs.length === 0) return sendError(res, "userIDs required", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
+  if (!userIDs.every((id) => Types.ObjectId.isValid(id))) return sendError(res, "Invalid user IDs provided", 400);
+  if (!token) return sendError(res, "Authentication token missing", 401);
 
   try {
     const group = await Chat.findOne({
-      _id: chatID,
+      _id: safeObjectId(chatID),
       type: "group",
-      "participants.user": requesterId,
+      "participants.user": safeObjectId(requesterHeader),
       "participants.isActive": true,
     });
 
-    if (!group) {
-      return sendError(res, "Group not found or access denied", 404);
-    }
+    if (!group) return sendError(res, "Group not found or access denied", 404);
 
-    // ✅ Permission check
     const requesterParticipant = group.participants.find(
-      (p) => p.user.toString() === requesterId.toString() && p.isActive
+      (p: any) => String(p.user) === String(requesterHeader) && p.isActive
     );
 
     const canAdd =
-      requesterParticipant &&
+      !!requesterParticipant &&
       (requesterParticipant.role === "owner" ||
         requesterParticipant.role === "admin" ||
         group.groupSettings?.whoCanAddMembers === "everyone");
 
-    if (!canAdd) {
-      return sendError(res, "Permission denied to add members", 403);
-    }
+    if (!canAdd) return sendError(res, "Permission denied to add members", 403);
 
-    let alreadyMembers: string[] = [];
-    let notFoundUsers: string[] = [];
+    const existingIds = new Set(group.participants.map((p: any) => String(p.user)));
 
-    // ✅ Parallel addition using map + Promise.all
-    const addResults = await Promise.all(
+    const notFoundUsers: string[] = [];
+    const alreadyMembers: string[] = [];
+    const toAddUnique: string[] = [];
+
+    // Validate users and filter out duplicates
+    await Promise.all(
       userIDs.map(async (userID) => {
+        if (existingIds.has(userID)) {
+          alreadyMembers.push(userID);
+          return;
+        }
         try {
-          // 1️⃣ Verify user exists in User Service
           const { data } = await axios.get(`${USER_SERVICE}/people/${userID}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-
           if (!data?.data) {
             notFoundUsers.push(userID);
-            return null;
+            return;
           }
-
-          // 2️⃣ Add member to group
-          const result = await group.addParticipant(
-            new Types.ObjectId(userID),
-            "member"
-          );
-
-          if (!result) {
-            alreadyMembers.push(userID);
-            return null;
-          }
-
-          // 3️⃣ Create ChatParticipant entry
-          await ChatParticipant.create({
-            chatId: chatID,
-            userId: userID,
-            unreadCount: 0,
-            isArchived: false,
-            isPinned: false,
-          });
-
-          return userID; // successfully added
+          toAddUnique.push(userID);
         } catch (err) {
-          console.error(`Error adding member ${userID}:`, err);
-          return null;
+          notFoundUsers.push(userID);
         }
       })
     );
 
-    const addedCount = addResults.filter(Boolean).length;
+    if (toAddUnique.length === 0) {
+      return sendSuccess(
+        res,
+        { message: "No new users to add", alreadyMembers, notFoundUsers },
+        "No users added",
+        200
+      );
+    }
 
-    return sendSuccess(res, {
-      message: `Added ${addedCount} member(s) successfully`,
-      alreadyMembers,
-      notFoundUsers,
+    // Add participants to chat document
+    toAddUnique.forEach((id) => {
+      const objectId = safeObjectId(id);
+      if (!objectId) return; // Skip if invalid
+      
+      group.participants.push({
+        user: objectId,
+        role: "member",
+        isActive: true,
+      });
     });
+
+    // persist chat
+    await group.save();
+
+    // Create ChatParticipant entries
+    const chatParticipantDocs = toAddUnique.map((id) => ({
+      chatId: group._id,
+      userId: safeObjectId(id)!,
+      unreadCount: 0,
+      isArchived: false,
+      isPinned: false,
+    }));
+
+    await ChatParticipant.insertMany(chatParticipantDocs);
+
+    return sendSuccess(
+      res,
+      {
+        addedCount: toAddUnique.length,
+        alreadyMembers,
+        notFoundUsers,
+      },
+      `Added ${toAddUnique.length} member(s) successfully`,
+      200
+    );
   } catch (error) {
-    console.error("Error adding members to group:", error);
+    logger.error("addMemberInGroupChat failed", { error });
     return sendError(res, "Failed to add members", 500, error);
   }
 };
 
-// export const removeMemberInGroupChat = async (
-//   req: AuthRequest,
-//   res: Response
-// ) => {
-//   const { chatID } = req.params;
-//   const { userID } = req.body;
-//   const requesterId = req.user.id;
-
-//   if (!Types.ObjectId.isValid(chatID!) || !Types.ObjectId.isValid(userID)) {
-//     return sendError(res, "Invalid chat or user ID", 400);
-//   }
-
-//   try {
-//     const group = await Chat.findOne({
-//       _id: chatID,
-//       type: "group",
-//       "participants.user": requesterId,
-//       "participants.isActive": true,
-//     });
-
-//     if (!group) {
-//       return sendError(res, "Group not found or access denied", 404);
-//     }
-
-//     // Check permissions
-//     const requesterParticipant = group.participants.find(
-//       (p) => p.user.toString() === requesterId.toString() && p.isActive
-//     );
-
-//     const targetParticipant = group.participants.find(
-//       (p) => p.user.toString() === userID.toString() && p.isActive
-//     );
-
-//     if (!targetParticipant) {
-//       return sendError(res, "User is not a member of this group", 400);
-//     }
-
-//     // Users can remove themselves, or admins/owners can remove others
-//     const canRemove =
-//       requesterId.toString() === userID.toString() ||
-//       (requesterParticipant &&
-//         (requesterParticipant.role === "owner" ||
-//           (requesterParticipant.role === "admin" &&
-//             targetParticipant.role === "member")));
-
-//     if (!canRemove) {
-//       return sendError(res, "Permission denied to remove this member", 403);
-//     }
-
-//     // Remove member from group
-//     await group.removeParticipant(new Types.ObjectId(userID));
-
-//     // Update ChatParticipant entry
-//     await ChatParticipant.findOneAndUpdate(
-//       { chatId: chatID, userId: userID },
-//       { isArchived: true }
-//     );
-
-//     return sendSuccess(res, "Member removed successfully");
-//   } catch (error) {
-//     console.error("Error removing member from group:", error);
-//     return sendError(res, "Failed to remove member", 500, error);
-//   }
-// };
-
-export const removeMemberInGroupChat = async (
-  req: AuthRequest,
-  res: Response
-) => {
+/**
+ * Remove members from group chat (multiple)
+ */
+export const removeMemberInGroupChat = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
-  const { userIDs }: { userIDs: string[] } = req.body; // Explicit typing
-  const requesterId = req.user.id;
+  const { userIDs }: { userIDs: string[] } = req.body;
+  const requesterHeader = getHeaderValue(req.headers["x-user-id"]);
 
-  // ✅ Validate chatID and all userIDs
-  if (
-    !Types.ObjectId.isValid(chatID!) ||
-    !userIDs.every((id) => Types.ObjectId.isValid(id))
-  ) {
-    return sendError(res, "Invalid chat or user IDs", 400);
-  }
+  if (!requesterHeader) return sendError(res, "Missing requester ID in headers", 400);
+  if (!Array.isArray(userIDs) || userIDs.length === 0) return sendError(res, "userIDs required", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
+  if (!userIDs.every((id) => Types.ObjectId.isValid(id))) return sendError(res, "Invalid user IDs", 400);
 
   try {
     const group = await Chat.findOne({
-      _id: chatID,
+      _id: safeObjectId(chatID),
       type: "group",
-      "participants.user": requesterId,
+      "participants.user": safeObjectId(requesterHeader),
       "participants.isActive": true,
     });
 
-    if (!group) {
-      return sendError(res, "Group not found or access denied", 404);
+    if (!group) return sendError(res, "Group not found or access denied", 404);
+
+    const requesterParticipant = group.participants.find(
+      (p: any) => String(p.user) === String(requesterHeader) && p.isActive
+    );
+
+    if (!requesterParticipant) return sendError(res, "Requester not a member", 403);
+
+    const notMembers: string[] = [];
+    const permissionDenied: string[] = [];
+    const removed: string[] = [];
+
+    // protecting owner: get owner id
+    const ownerParticipant = group.participants.find((p: any) => p.role === "owner");
+    const ownerId = ownerParticipant ? String(ownerParticipant.user) : null;
+
+    for (const userID of userIDs) {
+      const targetParticipant = group.participants.find((p: any) => String(p.user) === String(userID) && p.isActive);
+      if (!targetParticipant) {
+        notMembers.push(userID);
+        continue;
+      }
+
+      // cannot remove owner via this API
+      if (ownerId && String(userID) === ownerId) {
+        permissionDenied.push(userID);
+        continue;
+      }
+
+      const canRemove =
+        String(requesterHeader) === String(userID) ||
+        (requesterParticipant && (requesterParticipant.role === "owner" || requesterParticipant.role === "admin"));
+
+      if (!canRemove) {
+        permissionDenied.push(userID);
+        continue;
+      }
+
+      // perform removal
+      await group.removeParticipant(safeObjectId(userID)!);
+      removed.push(userID);
+
+      // archive ChatParticipant entry
+      await ChatParticipant.findOneAndUpdate(
+        { chatId: safeObjectId(chatID)!, userId: safeObjectId(userID)! },
+        { isArchived: true }
+      );
     }
 
-    // ✅ Check requester permissions
-    const requesterParticipant = group.participants.find(
-      (p) => p.user.toString() === requesterId.toString() && p.isActive
+    // ensure persistence
+    if (typeof group.save === "function") await group.save();
+
+    return sendSuccess(
+      res,
+      {
+        removedCount: removed.length,
+        notMembers,
+        permissionDenied,
+      },
+      `Removed ${removed.length} member(s) successfully`,
+      200
     );
-
-    let notMembers: string[] = [];
-    let permissionDenied: string[] = [];
-
-    // ✅ Parallel processing for removals
-    const removeResults = await Promise.all(
-      userIDs.map(async (userID: string) => {
-        const targetParticipant = group.participants.find(
-          (p) => p.user.toString() === userID.toString() && p.isActive
-        );
-
-        if (!targetParticipant) {
-          notMembers.push(userID);
-          return null;
-        }
-
-        // Users can remove themselves, or admins/owners can remove others
-        const canRemove =
-          requesterId.toString() === userID.toString() ||
-          (requesterParticipant &&
-            (requesterParticipant.role === "owner" ||
-              (requesterParticipant.role === "admin" &&
-                targetParticipant.role === "member")));
-
-        if (!canRemove) {
-          permissionDenied.push(userID);
-          return null;
-        }
-
-        // Remove member from group
-        await group.removeParticipant(new Types.ObjectId(userID));
-
-        // Update ChatParticipant entry
-        await ChatParticipant.findOneAndUpdate(
-          { chatId: chatID, userId: userID },
-          { isArchived: true }
-        );
-
-        return userID; // Successfully removed
-      })
-    );
-
-    const removedCount = removeResults.filter(Boolean).length;
-
-    return sendSuccess(res, {
-      message: `Removed ${removedCount} member(s) successfully`,
-      notMembers,
-      permissionDenied,
-    });
   } catch (error) {
-    console.error("Error removing members from group:", error);
+    logger.error("removeMemberInGroupChat failed", { error });
     return sendError(res, "Failed to remove members", 500, error);
   }
 };

@@ -20,7 +20,8 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    const accessToken = extractAccessToken(req);
+    const headerToken =  req?.headers?.authorization;
+    const accessToken = extractAccessToken(req) || headerToken;
     const refreshToken = extractRefreshToken(req);
 
     if (!accessToken && !refreshToken)

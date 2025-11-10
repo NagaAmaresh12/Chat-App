@@ -1,9 +1,9 @@
 import {
   createNewPrivateChat,
   getPrivateChatByChatID,
-  getprivateChatsByUserID,
-  editprivateChatByChatID,
-  deleteprivateChatByChatID,
+  getPrivateChatsByUserID,
+  editPrivateChatByChatID,
+  deletePrivateChatByChatID,
 } from "./private.controller.js";
 import {
   getGroupChatByChatID,
@@ -23,9 +23,9 @@ export {
   createNewPrivateChat,
   getMyGroupChats,
   getPrivateChatByChatID,
-  getprivateChatsByUserID,
-  editprivateChatByChatID,
-  deleteprivateChatByChatID,
+  getPrivateChatsByUserID,
+  editPrivateChatByChatID,
+  deletePrivateChatByChatID,
   getArchivedChatsByUserID,
   createNewGroupChat,
   getGroupChatByChatID,

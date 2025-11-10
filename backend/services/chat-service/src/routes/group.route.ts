@@ -27,7 +27,7 @@ router.post(
   createNewGroupChat
 ); //✅tested
 
-router.get("/my-groups", getMyGroupChats); //✅tested
+router.get("/my-group", getMyGroupChats); //✅tested
 
 router.get(
   "/:chatID",
@@ -35,11 +35,6 @@ router.get(
   getGroupChatByChatID
 ); //✅tested
 
-router.delete(
-  "/delete/:chatID",
-  validateParams(chatIDParamsSchema),
-  deleteGroupChatByChatID
-);
 
 router.put(
   "/edit/:chatID",
@@ -47,10 +42,10 @@ router.put(
   validateBody(editGroupSchema),
   editGroupChatByChatID
 ); //✅tested
+
 router.delete(
   "/delete/:chatID",
   validateParams(chatIDParamsSchema),
-  //   validateBody(deleteGroupSchema),
   deleteGroupChatByChatID
 ); //✅tested //setting isActive to false but keeping user data in group chat so,
 //  that particular chat will not be listed to that user

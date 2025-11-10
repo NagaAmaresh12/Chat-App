@@ -1,11 +1,11 @@
 import { AppError } from "../utils/ApiError.js";
 import { isValid } from "../utils/validation.js";
 
-const userService = process.env.USER_SERVICE || "http://localhost:3001";
-const chatService = process.env.CHAT_SERVICE || "http://localhost:3002";
-const messageService = process.env.MESSAGE_SERVICE || "http://localhost:3003";
+const userService = process.env.USERS_SERVICE || "http://localhost:3001";
+const chatService = process.env.CHATS_SERVICE || "http://localhost:3002";
+const messageService = process.env.MESSAGES_SERVICE || "http://localhost:3003";
 const notificationService =
-  process.env.NOTIFICATION_SERVICE || "http://localhost:3004";
+  process.env.NOTIFICATIONS_SERVICE || "http://localhost:3004";
 if (
   !isValid(userService as string) ||
   !isValid(chatService as string) ||

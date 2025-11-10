@@ -7,9 +7,9 @@ config({
 import { AppError } from "../utils/ApiError.js";
 import { isValid } from "../utils/validation.js";
 
-const USER_SERVICE_URL = process.env.USER_SERVICE_URL!;
-if (!isValid(USER_SERVICE_URL)) {
-  console.log("user service url", USER_SERVICE_URL);
+const USERS_SERVICE_URL = process.env.USERS_SERVICE_URL!;
+if (!isValid(USERS_SERVICE_URL)) {
+  console.log("user service url", USERS_SERVICE_URL);
 
   throw new AppError("ORIGIN IS NOT FOUND IN API GATEWAY", 500);
 }

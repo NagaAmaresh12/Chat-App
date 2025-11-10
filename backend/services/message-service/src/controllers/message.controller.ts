@@ -14,6 +14,7 @@ import {
   searchMessagesSchema,
   removeReactionSchema,
 } from "../utils/joi.validate.js";
+import { sendError, sendSuccess } from "../utils/response.js";
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -22,70 +23,87 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-// Create a new message
-export const createMessage = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  try {
-    console.log("creating new message...");
+let CHATS_SERVICE = process.env.CHATS_SERVICE!;
+let USERS_SERVICE = process.env.USERS_SERVICE!;
 
+
+// Create a new message
+export const createMessage = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log("🔹 Creating new message...");
+
+    // Use the authenticated user ID as senderId
+    const senderId = req.headers["x-user-id"] as string;
+    if (!senderId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const token =
+      req.headers["authorization"]?.split(" ")[1] ||
+      req.cookies?.accessToken ||
+      req.cookies?.refreshToken;
+    console.log('====================================');
+    console.log({token});
+    console.log('====================================');
+    // Validate request body
     const { error, value } = createMessageSchema.validate(req.body);
     if (error) {
       return res.status(400).json({
         success: false,
         message: "Validation error",
-        errors: error.details.map((detail) => detail.message),
+        errors: error.details.map((d) => d.message),
       });
     }
 
-    const { chatId, senderId, content, messageType, attachments, replyTo } =
-      value;
+    const { chatId, content, messageType, attachments, replyTo, chatType } = value;
 
-    // Verify chat exists and user has permission
+    console.log("🔹 Incoming message data:", {
+      chatId,
+      senderId,
+      content,
+      messageType,
+      attachments,
+      replyTo,
+      chatType,
+    });
+
+    // ------------------------- Verify chat -------------------------
     try {
-      console.log("Getting chat Details while creating new message...");
-
       const chatResponse = await axios.get(
-        `${process.env.CHAT_SERVICE}/api/chats/${chatId}`,
+        `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
         {
-          headers: { "user-id": senderId },
+          headers: { "x-user-id": senderId, Authorization: `Bearer ${token}` },
         }
       );
-      console.log({ chatResponse });
 
-      if (!chatResponse.data.success) {
+      if (chatResponse?.data?.status !== "success" || !chatResponse.data.data) {
         return res.status(404).json({
           success: false,
           message: "Chat not found or access denied",
         });
       }
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to verify chat access",
-      });
+    } catch (err: any) {
+      return sendError(res, "Failed to verify chat access", 500, err);
     }
 
-    // Verify user exists
+    // ------------------------- Verify user -------------------------
+    let userData;
     try {
-      const userResponse = await axios.get(
-        `${process.env.USER_SERVICE}/api/users/${senderId}`
-      );
-      if (!userResponse.data.success) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-      }
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to verify user",
+      const userResponse = await axios.get(`${USERS_SERVICE}/people/${senderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (userResponse?.data?.status !== "success" || !userResponse?.data?.data) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      userData = userResponse.data.data;
+      console.log("🔹 Verified user:", userData);
+    } catch (err: any) {
+      return sendError(res, "Failed to verify user", 500, err);
     }
 
-    // If replying to a message, verify it exists
+    // ------------------------- Verify replyTo message -------------------------
     if (replyTo) {
       const originalMessage = await Message.findById(replyTo.messageId);
       if (!originalMessage || originalMessage.isDeleted) {
@@ -96,7 +114,7 @@ export const createMessage = async (
       }
     }
 
-    // Create the message
+    // ------------------------- Create message -------------------------
     const message = new Message({
       chatId,
       senderId,
@@ -107,40 +125,23 @@ export const createMessage = async (
     });
 
     const savedMessage = await message.save();
+    console.log("🔹 Message saved:", savedMessage._id);
 
-    // Populate the saved message with user data
-    const populatedMessage = await Message.findById(savedMessage._id).lean();
+    const populatedMessage = {
+      ...savedMessage.toObject(),
+      sender: userData,
+    };
 
-    // Get user data for response
-    try {
-      const userResponse = await axios.get(
-        `${process.env.USER_SERVICE}/api/users/${senderId}`
-      );
-      const messageWithUser = {
-        ...populatedMessage,
-        sender: userResponse.data.data,
-      };
-
-      res.status(201).json({
-        success: true,
-        message: "Message created successfully",
-        data: messageWithUser,
-      });
-    } catch (error) {
-      res.status(201).json({
-        success: true,
-        message: "Message created successfully",
-        data: populatedMessage,
-      });
-    }
-  } catch (error) {
-    console.error("Create message error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
+    res.status(201).json({
+      success: true,
+      message: "Message created successfully",
+      data: populatedMessage,
     });
+  } catch (err: any) {
+    return sendError(res, "Failed to create message", 500, err);
   }
 };
+
 
 // Get messages for a chat with pagination
 export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
@@ -164,23 +165,20 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
     // Verify user has access to chat
     try {
       const chatResponse = await axios.get(
-        `${process.env.CHAT_SERVICE}/api/chats/${chatId}`,
+        `${CHATS_SERVICE}/api/chats/${chatId}`,
         {
           headers: { "user-id": userId },
         }
       );
 
-      if (!chatResponse.data.success) {
+      if (chatResponse?.data?.status !== "success" || !chatResponse?.data?.data) {
         return res.status(404).json({
           success: false,
           message: "Chat not found or access denied",
         });
       }
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to verify chat access",
-      });
+      sendError(res,"Failed to verify chat access",500,error)
     }
 
     // Build query
@@ -234,7 +232,7 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
 
     try {
       const usersPromises = senderIds.map((id) =>
-        axios.get(`${process.env.USER_SERVICE}/api/users/${id}`)
+        axios.get(`${USERS_SERVICE}/people/${id}`)
       );
       const usersResponses = await Promise.allSettled(usersPromises);
 
@@ -409,7 +407,7 @@ export const deleteMessage = async (
     if (deleteForEveryone && !isOwner) {
       try {
         const chatResponse = await axios.get(
-          `${process.env.CHAT_SERVICE}/api/chats/${message.chatId}/members/${userId}`
+          `${CHATS_SERVICE}/api/chats/${message.chatId}/members/${userId}`
         );
         canDeleteForEveryone = chatResponse.data.data?.role === "admin";
       } catch (error) {
@@ -487,7 +485,7 @@ export const forwardMessage = async (
     // Verify access to all target chats
     const chatVerifications = await Promise.allSettled(
       targetChatIds.map((chatId: string) =>
-        axios.get(`${process.env.CHAT_SERVICE}/api/chats/${chatId}`, {
+        axios.get(`${CHATS_SERVICE}/api/chats/${chatId}`, {
           headers: { "user-id": userId },
         })
       )
@@ -724,6 +722,10 @@ export const searchMessages = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
+  const token =
+      req.headers["authorization"] ||
+      req.cookies?.accessToken ||
+      req.cookies?.refreshToken;
   try {
     const { error, value } = searchMessagesSchema.validate(req.query);
     if (error) {
@@ -756,9 +758,9 @@ export const searchMessages = async (
       // Verify access to specific chat
       try {
         const chatResponse = await axios.get(
-          `${process.env.CHAT_SERVICE}/api/chats/${chatId}`,
+          `${CHATS_SERVICE}/api/chats/${chatId}`,
           {
-            headers: { "user-id": userId },
+            headers: { "x-user-id": userId },
           }
         );
 
@@ -780,7 +782,7 @@ export const searchMessages = async (
       // Search in all accessible chats
       try {
         const chatsResponse = await axios.get(
-          `${process.env.CHAT_SERVICE}/api/chats`,
+          `${CHATS_SERVICE}/api/chats`,
           {
             headers: { "user-id": userId },
           }
@@ -851,7 +853,9 @@ export const searchMessages = async (
 
     try {
       const usersPromises = senderIds.map((id) =>
-        axios.get(`${process.env.USER_SERVICE}/api/users/${id}`)
+        axios.get(`${USERS_SERVICE}/people/${id}`,{
+          headers: { "user-id": userId ,Authorization:token},
+        })
       );
       const usersResponses = await Promise.allSettled(usersPromises);
 
@@ -897,6 +901,10 @@ export const bulkDeleteMessages = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
+  const token =
+      req.headers["authorization"] ||
+      req.cookies?.accessToken ||
+      req.cookies?.refreshToken;
   try {
     const { error, value } = bulkDeleteSchema.validate(req.body);
     if (error) {
@@ -947,7 +955,9 @@ export const bulkDeleteMessages = async (
         if (!chatAdminMap.has(chatId)) {
           try {
             const chatResponse = await axios.get(
-              `${process.env.CHAT_SERVICE}/api/chats/${chatId}/members/${userId}`
+              `${CHATS_SERVICE}/api/chats/${chatId}/members/${userId}`,{
+          headers: { "user-id": userId ,Authorization:token},
+        }
             );
             const isAdmin = chatResponse.data.data?.role === "admin";
             chatAdminMap.set(chatId, isAdmin);
@@ -1011,6 +1021,7 @@ export const getMessageById = async (
   res: Response
 ) => {
   try {
+    let token = req?.headers.authorization || req?.cookies?.accessToken ||req?.cookies?.refreshToken
     const { messageId } = req.params;
     const userId = req.user?.id;
     if (!userId) {
@@ -1038,9 +1049,9 @@ export const getMessageById = async (
     // Verify access to chat
     try {
       const chatResponse = await axios.get(
-        `${process.env.CHAT_SERVICE}/api/chats/${message.chatId}`,
+        `${CHATS_SERVICE}/api/chats/${message.chatId}`,
         {
-          headers: { "user-id": userId },
+          headers: { "user-id": userId ,Authorization:token},
         }
       );
 
@@ -1060,9 +1071,15 @@ export const getMessageById = async (
     // Get sender data
     try {
       const userResponse = await axios.get(
-        `${process.env.USER_SERVICE}/api/users/${message.senderId}`
+        `${USERS_SERVICE}/people/${message.senderId}`,
+        {
+          headers: {
+      Authorization: token || "", // send the token if needed
+      // "x-user-id": senderId // optional if your service requires it
+    }
+        }
       );
-      if (userResponse.data.success) {
+      if (userResponse.data?.status =='success') {
         (message as any).sender = userResponse.data.data;
       }
     } catch (error) {

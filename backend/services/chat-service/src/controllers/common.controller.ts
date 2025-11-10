@@ -5,6 +5,7 @@ import { Schema, Types } from "mongoose";
 import { isValid, sendError, sendSuccess } from "../utils/index.js";
 import { fetchUserDetails } from "./private.controller.js";
 import { ChatParticipant } from "../models/chat.particitipate.model.js";
+import { getHeaderValue } from "./group.controller.js";
 export interface AuthRequest extends Request {
   user?: any;
 }
@@ -16,7 +17,7 @@ export const getArchivedChatsByUserID = async (
   req: AuthRequest,
   res: Response
 ) => {
-  const userId = req.user.id;
+  const userId = getHeaderValue(req.headers["x-user-id"]);
   const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
 
   try {

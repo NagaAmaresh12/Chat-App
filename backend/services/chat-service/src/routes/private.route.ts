@@ -1,10 +1,10 @@
 import { Router } from "express";
 import {
   createNewPrivateChat,
-  getprivateChatsByUserID,
+  getPrivateChatsByUserID,
   getPrivateChatByChatID,
-  editprivateChatByChatID,
-  deleteprivateChatByChatID,
+  editPrivateChatByChatID,
+  deletePrivateChatByChatID,
 } from "../controllers/index.js";
 import { validateBody, validateParams } from "../middlewares/index.js";
 import {
@@ -14,42 +14,41 @@ import {
 } from "../utils/index.js";
 
 const router = Router();
-// Creating a 1-1 or group chat between users
-//✅tested
 // ===================================== Create NEW Message ============================
+
 router.post(
   "/new",
   validateBody(privateChatSchema),
   createNewPrivateChat
 );
+
 // ===================================== Read All Message ============================
-router.get("/my-chats", getprivateChatsByUserID); // Fetch all chats for the user i want to APpy pagination here
-//✅tested
-// router.patch(
-//   "/last-message/:chatID",
-//   authenticate,
-//   validateBody(),
-//   editLastMessageByChatID
-// );
+
+router.get("/my-private", getPrivateChatsByUserID); 
+
 // ===================================== Read single Message By ChatID ============================
+
 router.get(
   "/:chatID",
   validateParams(chatIDParamsSchema),
-  getPrivateChatByChatID //✅tested
+  getPrivateChatByChatID 
 );
+
 // ===================================== Update Message my ChatID ============================
-router.patch(
+
+router.put(
   "/edit/:chatID",
   validateParams(chatIDParamsSchema),
   validateBody(editChatSchema),
-  editprivateChatByChatID
+  editPrivateChatByChatID
 );
-//✅tested
+
 // ===================================== Delete Message my ChatID ============================
+
 router.delete(
   "/delete/:chatID",
   validateParams(chatIDParamsSchema),
-  deleteprivateChatByChatID
+  deletePrivateChatByChatID
 );
-//✅tested
+
 export default router;

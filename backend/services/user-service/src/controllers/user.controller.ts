@@ -58,6 +58,7 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
     console.log(
       "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
       {
+      
         accessToken: req?.accessToken,
         refreshToken: req?.refreshToken,
       }
@@ -91,7 +92,7 @@ export const getUserByID = async (req: AuthRequest, res: Response) => {
   console.log("Gettin user by ID...");
 
   const { userID } = req.params;
-  console.log({ userID });
+  console.log({ userID,token:req?.headers.authorization });
 
   if (!isValid(userID!)) {
     return sendError(res, "UserID is Not Valid.", 400);
@@ -100,17 +101,7 @@ export const getUserByID = async (req: AuthRequest, res: Response) => {
   if (!user) {
     sendError(res, "User Does Not Exists", 400);
   }
-  //expected output
-  //   {
-  //   "data": {
-  //     "_id": "userId123",
-  //     "username": "john_doe",
-  //     "displayName": "John Doe",
-  //     "avatar": "https://example.com/avatar.jpg",
-  //     "isOnline": true,
-  //     "lastSeen": "2024-01-20T10:30:00Z"
-  //   }
-  // }
+
   const userData: IUserSemi = {
     _id: user?._id as string | Schema.Types.ObjectId,
     username: user?.username!,
@@ -136,33 +127,8 @@ export const getUserByID = async (req: AuthRequest, res: Response) => {
     },
   };
   console.log({ userData });
-  // console.log(
-  //   "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
-  //   {
-  //     accessToken: req?.accessToken,
-  //     refreshToken: req?.refreshToken,
-  //   }
-  // );
 
-  // if (req?.accessToken && req?.refreshToken) {
-  //   console.log(
-  //     "since new tokens generated and received from req. and setting both token in cookies in res"
-  //   );
 
-  //   res.cookie("accessToken", req?.accessToken, {
-  //     httpOnly: true,
-  //     sameSite: "lax", // or "strict" in production
-  //     secure: process.env.NODE_ENV === "production",
-  //     maxAge: 15 * 60 * 1000,
-  //   });
-
-  //   res.cookie("refreshToken", req?.refreshToken, {
-  //     httpOnly: true,
-  //     sameSite: "lax",
-  //     secure: process.env.NODE_ENV === "production",
-  //     maxAge: 7 * 24 * 60 * 60 * 1000,
-  //   });
-  // }
   sendSuccess(res, userData, "Fetched user Successfully", 200);
 };
 

@@ -166,7 +166,7 @@ console.log('====================================');
   }
 };
 
-export const getprivateChatsByUserID = async (
+export const getPrivateChatsByUserID = async (
   req: AuthRequest,
   res: Response
 ) => {
@@ -391,7 +391,7 @@ const populateChatWithMinimalUserData = async (chat: any, token: string) => {
 };
 
 // Alternative version if you prefer to modify your existing populateChatWithUsers function
-export const getprivateChatByChatIDAlternative = async (
+export const getPrivateChatByChatIDAlternative = async (
   req: AuthRequest,
   res: Response
 ) => {
@@ -463,7 +463,7 @@ export const getprivateChatByChatIDAlternative = async (
   }
 };
 
-export const editprivateChatByChatID = async (
+export const editPrivateChatByChatID = async (
   req: AuthRequest,
   res: Response
 ) => {
@@ -517,7 +517,7 @@ export const editprivateChatByChatID = async (
 };
 
 //we don't delete the chat but we don't show or hide the chat, making isActive:false to that user who wants this chat not to visible
-export const deleteprivateChatByChatID = async (req: AuthRequest, res: Response) => {
+export const deletePrivateChatByChatID = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
   const userIdHeader = req.headers["x-user-id"];
 

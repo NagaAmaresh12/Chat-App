@@ -21,6 +21,12 @@ interface PinnedUser {
   user: Types.ObjectId;
   pinnedAt?: Date;
 }
+export interface IUserAction {
+  user: Types.ObjectId;
+  archivedAt?: Date;
+  mutedAt?: Date;
+  pinnedAt?: Date;
+}
 
 // Main Chat Document interface
 export interface IChat extends Document {
@@ -32,8 +38,9 @@ export interface IChat extends Document {
   groupSettings?: GroupSettings;
   lastMessage?: Types.ObjectId;
   lastActivity?: Date;
-  isArchived?: boolean;
-  isPinned?: PinnedUser[];
+  isArchived?: { user: Types.ObjectId; archivedAt?: Date }[];
+  isMuted?: { user: Types.ObjectId; mutedAt?: Date }[];
+  isPinned?: { user: Types.ObjectId; pinnedAt?: Date }[];
 
   addParticipant(
     userId: Types.ObjectId,
@@ -112,23 +119,9 @@ const chatSchema = new Schema<IChat>(
       default: Date.now,
       index: true,
     },
-    isArchived: {
-      type: Boolean,
-      default: false,
-    },
+   // ✅ Per-user preferences
 
-    isPinned: [
-      {
-        user: {
-          type: Schema.Types.ObjectId,
-          ref: "User",
-        },
-        pinnedAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+
   },
   { timestamps: true }
 );

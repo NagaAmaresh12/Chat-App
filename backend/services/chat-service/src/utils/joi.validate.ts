@@ -14,6 +14,8 @@ export const chatIDParamsSchema = Joi.object({
 export const editChatSchema = Joi.object({
   isArchived: Joi.boolean(),
   isMuted: Joi.boolean(),
+  isPinned:Joi.boolean(),
+  isBlocked:Joi.boolean(),
   lastSeen: Joi.date(),
 });
 // deleteGroupSchema
@@ -30,14 +32,20 @@ export const groupChatSchema = Joi.object({
   description: Joi.string().allow(""),
 });
 
-// editGroupSchema
 export const editGroupSchema = Joi.object({
-  name: Joi.string().min(3),
-  description: Joi.string(),
-  isArchived: Joi.boolean(),
+  name: Joi.string().min(3).max(100),
+  description: Joi.string().max(500).allow(""),
+  groupSettings: Joi.object({
+    whoCanAddMembers: Joi.string().valid("admins", "everyone"),
+    whoCanEditGroupInfo: Joi.string().valid("admins", "everyone"),
+    whoCanSendMessages: Joi.string().valid("admins", "everyone"),
+  }),
   isPinned: Joi.boolean(),
+  isArchived: Joi.boolean(),
   isMuted: Joi.boolean(),
-});
+  isBlocked:Joi.boolean(),
+}).min(1);
+
 
 // addMemberSchema
 // export const addMemberSchema = Joi.object({
