@@ -221,6 +221,61 @@ export const me = (req: AuthRequest, res: AuthResponse) => {
   return sendSuccess(res, userData, "User is authenticated", 200);
 };
 
+//VERIFY-USER BY DECODING TOKEN
+
+interface DecodedToken {
+  userId: string;
+  email?: string;
+  username?: string;
+  role?: string;
+  tokenType?: "access" | "refresh";
+}
+
+export const verifyToken = (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res
+        .status(401)
+        .json({ status: "error", message: "Token missing" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    let decoded: DecodedToken;
+
+    try {
+      // Cast to unknown first, then to DecodedToken
+      decoded = jwt.verify(token!, JWT_SECRET_KEY) as unknown as DecodedToken;
+
+      // Optional runtime check
+      if (!decoded.userId) {
+        return res
+          .status(401)
+          .json({ status: "error", message: "Invalid token payload" });
+      }
+    } catch (err) {
+      return res
+        .status(401)
+        .json({ status: "error", message: `Invalid or expired token${err}` });
+    }
+
+    return res.json({
+      status: "success",
+      user: {
+        id: decoded.userId,
+        email: decoded.email,
+        username: decoded.username,
+        role: decoded.role,
+      },
+    });
+  } catch (err) {
+    console.error("Verify token error:", err);
+    return res
+      .status(500)
+      .json({ status: "error", message: "Internal server error" });
+  }
+};
+
 // -----------------------------
 // REFRESH TOKEN
 // -----------------------------

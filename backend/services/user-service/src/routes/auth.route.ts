@@ -5,6 +5,7 @@ import {
   logout,
   verifyOTP,
   refreshToken,
+  verifyToken,
 } from "../controllers/auth.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { validateBody } from "../middlewares/validation.middleware.js";
@@ -22,6 +23,7 @@ router.post("/verify-otp", validateBody(verifyOtpSchema), verifyOTP);
 router.post("/logout", authenticate, logout);
 //me  ✅[TEST WITH POSTMAN]
 router.get("/me", authenticate, me);
+router.get("/verify-token", verifyToken);
 //generate access token for other service
 
 //refresh Token End-Point Needed This would be handled by Middleware just call /me route

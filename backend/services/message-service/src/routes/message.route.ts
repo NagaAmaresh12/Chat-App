@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction } from "express";
 import {
   createMessage,
   getMessageByMsgId,
@@ -31,13 +31,28 @@ import {
 import { upload } from "../middlewares/upload.js";
 
 const router = express.Router();
+// Conditional multer middleware
+const conditionalMulter = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  const contentType = req.headers["content-type"] || "";
 
-// Create a new message
+  // Only use multer for multipart/form-data
+  if (contentType.includes("multipart/form-data")) {
+    return upload.array("attachments", 10)(req, res, next);
+  }
+
+  // For JSON requests, skip multer
+  next();
+};
+// Updated route
 router.post(
   "/create",
-  rateLimiter({ windowMs: 15 * 60 * 1000, max: 100 }), // put early to avoid abuse
-  upload.array("attachments", 10), // parse multipart -> req.files, req.body
-  validateJoiBody(createMessageSchema), // now validates fields from req.body
+  rateLimiter({ windowMs: 15 * 60 * 1000, max: 100 }),
+  conditionalMulter,
+  validateJoiBody(createMessageSchema),
   createMessage
 );
 
