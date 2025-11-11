@@ -20,9 +20,18 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    const headerToken =  req?.headers?.authorization;
+    const headerToken = req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7)
+      : req?.headers?.authorization || null;
     const accessToken = extractAccessToken(req) || headerToken;
     const refreshToken = extractRefreshToken(req);
+    console.log("====================================");
+    console.log({
+      headerToken: req.headers.authorization || "undefined", //In userService you won't get the headers whenn you call directly, because gateway will not set any headers from tokens, because in gateway userService public:check /gateway/routes/index.ts file. middleware is not applied there
+      accessToken,
+      refreshToken,
+    });
+    console.log("====================================");
 
     if (!accessToken && !refreshToken)
       return sendError(res, "Authentication required", 401);
@@ -74,7 +83,18 @@ function extractAccessToken(req: Request): string | undefined {
 }
 
 function extractRefreshToken(req: Request): string | undefined {
-  return req.cookies?.refreshToken || extractToken(req.headers["x-refresh-token"] as string);
+  if (!req.cookies?.refreshToken && req.headers["x-refresh-token"]) {
+    console.log("====================================");
+    console.log({
+      refreshTokenCookie: req.cookies?.refreshToken,
+      refreshTokenHeaders: req.headers["x-refresh-token"],
+    });
+    console.log("====================================");
+  }
+  return (
+    req.cookies?.refreshToken ||
+    extractToken(req.headers["x-refresh-token"] as string)
+  );
 }
 
 function extractToken(headerValue?: string | string[]): string | undefined {
@@ -87,22 +107,36 @@ function extractToken(headerValue?: string | string[]): string | undefined {
 async function validateAccessToken(token: string) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET_KEY) as JwtPayload;
-    console.log('====================================');
+    console.log("====================================");
     console.log({
-      decoded
+      decoded,
     });
-    console.log('====================================');
+    console.log("====================================");
     if (decoded.tokenType !== "access") {
-      return { success: false, error: "invalid", message: "Invalid token type" };
+      return {
+        success: false,
+        error: "invalid",
+        message: "Invalid token type",
+      };
     }
 
     const user = await User.findById(decoded.userId);
-    if (!user) return { success: false, error: "user_not_found", message: "User not found" };
+    if (!user)
+      return {
+        success: false,
+        error: "user_not_found",
+        message: "User not found",
+      };
 
     return { success: true, user };
   } catch (err) {
-    if (err instanceof TokenExpiredError) return { success: false, error: "expired" };
-    return { success: false, error: "invalid", message: "Invalid access token" };
+    if (err instanceof TokenExpiredError)
+      return { success: false, error: "expired" };
+    return {
+      success: false,
+      error: "invalid",
+      message: "Invalid access token",
+    };
   }
 }
 
@@ -110,16 +144,22 @@ async function handleRefreshToken(token: string, req: Request, res: Response) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET_KEY) as JwtPayload;
 
-    if (decoded.tokenType !== "refresh") return { success: false, message: "Invalid token type" };
+    if (decoded.tokenType !== "refresh")
+      return { success: false, message: "Invalid token type" };
 
     const user = await User.findById(decoded.userId);
     if (!user) return { success: false, message: "User not found" };
 
-    if (token !== user.refreshToken?.token) return { success: false, message: "Refresh token mismatch" };
-
-    const { accessToken: newAccess, refreshToken: newRefresh } = user.generateTokens();
+    if (token !== user.refreshToken?.token)
+      return { success: false, message: "Refresh token mismatch" };
+    console.log("====================================");
+    console.log("Generating new AccessToken & newRefreshToken....");
+    console.log("====================================");
+    const { accessToken: newAccess, refreshToken: newRefresh } =
+      user.generateTokens();
     user.refreshToken = { token: newRefresh, createdAt: new Date() };
     await user.save();
+    console.log({ newAccess, newRefresh });
 
     // detect if browser or microservice
     const fromBrowser = Boolean(req.cookies);
@@ -130,29 +170,38 @@ async function handleRefreshToken(token: string, req: Request, res: Response) {
       res.setHeader("x-refresh-token", newRefresh);
     }
 
-    return { success: true, user, newAccessToken: newAccess, newRefreshToken: newRefresh };
+    return {
+      success: true,
+      user,
+      newAccessToken: newAccess,
+      newRefreshToken: newRefresh,
+    };
   } catch {
     return { success: false, message: "Refresh failed" };
   }
 }
 
-function setCookieTokens(res: Response, accessToken: string, refreshToken: string) {
+function setCookieTokens(
+  res: Response,
+  accessToken: string,
+  refreshToken: string
+) {
   const isProd = process.env.NODE_ENV === "production";
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isProd,
+    secure: isProd, // set to true in production (https)
     maxAge: 15 * 60 * 1000,
-    path: "/"
+    path: "/",
   });
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isProd,
+    secure: isProd, // set to true in production (https)
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/"
+    path: "/",
   });
 }
 

@@ -6,7 +6,7 @@ export interface IAttachment {
   filename: string;
   size: number;
   mimeType: string;
-  thumbnailUrl?: string; // For videos and images
+  thumbnailUrl?: string;
 }
 
 export interface IReplyTo {
@@ -25,6 +25,7 @@ export interface IForwardedFrom {
 export interface IMessage extends Document {
   _id: mongoose.Types.ObjectId;
   chatId: mongoose.Types.ObjectId;
+  chatType: "private" | "group"; // ✅ Added here
   senderId: mongoose.Types.ObjectId;
   content: string;
   messageType: "text" | "image" | "video" | "audio" | "document" | "emoji";
@@ -58,26 +59,11 @@ const AttachmentSchema = new Schema<IAttachment>({
     enum: ["image", "video", "audio", "document"],
     required: true,
   },
-  url: {
-    type: String,
-    required: true,
-  },
-  filename: {
-    type: String,
-    required: true,
-  },
-  size: {
-    type: Number,
-    required: true,
-  },
-  mimeType: {
-    type: String,
-    required: true,
-  },
-  thumbnailUrl: {
-    type: String,
-    required: false,
-  },
+  url: { type: String, required: true },
+  filename: { type: String, required: true },
+  size: { type: Number, required: true },
+  mimeType: { type: String, required: true },
+  thumbnailUrl: { type: String },
 });
 
 const ReplyToSchema = new Schema<IReplyTo>({
@@ -86,19 +72,12 @@ const ReplyToSchema = new Schema<IReplyTo>({
     ref: "Message",
     required: true,
   },
-  senderId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
-  content: {
-    type: String,
-    required: true,
-    maxlength: 200, // Truncated content for preview
-  },
+  senderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  content: { type: String, maxlength: 200 },
   messageType: {
     type: String,
     enum: ["text", "media", "emoji"],
-    required: true,
+    required: false,
   },
 });
 
@@ -108,14 +87,8 @@ const ForwardedFromSchema = new Schema<IForwardedFrom>({
     ref: "Message",
     required: true,
   },
-  originalSenderId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
-  forwardedAt: {
-    type: Date,
-    default: Date.now,
-  },
+  originalSenderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  forwardedAt: { type: Date, default: Date.now },
 });
 
 const MessageSchema = new Schema<IMessage>(
@@ -125,6 +98,15 @@ const MessageSchema = new Schema<IMessage>(
       required: true,
       index: true,
     },
+
+    // ✅ Added chatType here
+    chatType: {
+      type: String,
+      enum: ["private", "group"],
+      required: true,
+      index: true, // optional but helpful for grouped queries
+    },
+
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
@@ -132,9 +114,9 @@ const MessageSchema = new Schema<IMessage>(
     },
     content: {
       type: String,
-      required: function (this: IMessage) {
-        return this.messageType === "text" || this.messageType === "emoji";
-      },
+      // required: function (this: IMessage) {
+      //   return this.messageType === "text" || this.messageType === "emoji";
+      // },
       maxlength: 4000,
     },
     messageType: {
@@ -156,69 +138,29 @@ const MessageSchema = new Schema<IMessage>(
         message: "Attachments validation failed",
       },
     },
-    replyTo: {
-      type: ReplyToSchema,
-      required: false,
-    },
-    forwardedFrom: {
-      type: ForwardedFromSchema,
-      required: false,
-    },
-    editedAt: {
-      type: Date,
-      required: false,
-    },
-    deletedAt: {
-      type: Date,
-      required: false,
-    },
-    deletedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: false,
-    },
-    isDeleted: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
+    replyTo: { type: ReplyToSchema },
+    forwardedFrom: { type: ForwardedFromSchema },
+    editedAt: { type: Date },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId },
+    isDeleted: { type: Boolean, default: false, index: true },
     readBy: [
       {
-        userId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-        },
-        readAt: {
-          type: Date,
-          default: Date.now,
-        },
+        userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        readAt: { type: Date, default: Date.now },
       },
     ],
     deliveredTo: [
       {
-        userId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-        },
-        deliveredAt: {
-          type: Date,
-          default: Date.now,
-        },
+        userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        deliveredAt: { type: Date, default: Date.now },
       },
     ],
     reactions: [
       {
-        userId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-        },
-        emoji: {
-          type: String,
-          required: true,
-        },
-        reactedAt: {
-          type: Date,
-          default: Date.now,
-        },
+        userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        emoji: { type: String, required: true },
+        reactedAt: { type: Date, default: Date.now },
       },
     ],
   },
@@ -228,12 +170,10 @@ const MessageSchema = new Schema<IMessage>(
   }
 );
 
-// Compound indexes for efficient queries
-MessageSchema.index({ chatId: 1, createdAt: -1 });
+// ✅ Updated Indexes
+MessageSchema.index({ chatId: 1, chatType: 1, createdAt: -1 });
 MessageSchema.index({ chatId: 1, isDeleted: 1, createdAt: -1 });
 MessageSchema.index({ senderId: 1, createdAt: -1 });
-
-// Text index for search functionality
 MessageSchema.index({ content: "text" });
 
 export const Message = mongoose.model<IMessage>("Message", MessageSchema);

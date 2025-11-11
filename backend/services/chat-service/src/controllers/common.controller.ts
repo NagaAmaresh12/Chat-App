@@ -18,7 +18,14 @@ export const getArchivedChatsByUserID = async (
   res: Response
 ) => {
   const userId = getHeaderValue(req.headers["x-user-id"]);
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   try {
     // 1️⃣ Get all chat participants for the user
@@ -43,7 +50,11 @@ export const getArchivedChatsByUserID = async (
     });
 
     // 4️⃣ Fetch user details in bulk
-    const users = await fetchUserDetails(Array.from(allUserIds), token);
+    const users = await fetchUserDetails(
+      Array.from(allUserIds),
+      token,
+      refreshToken
+    );
     const userMap = new Map(users.map((u) => [u._id.toString(), u]));
 
     // 5️⃣ Build WhatsApp-style chat list
@@ -114,8 +125,15 @@ export const getArchivedChatsByUserID = async (
 };
 
 export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
-  const userId = req?.headers['x-user-id'];
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  const userId = req?.headers["x-user-id"];
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   try {
     // 1️⃣ Get all chat participants for the user
@@ -140,7 +158,11 @@ export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
     });
 
     // 4️⃣ Fetch user details in bulk
-    const users = await fetchUserDetails(Array.from(allUserIds), token);
+    const users = await fetchUserDetails(
+      Array.from(allUserIds),
+      token,
+      refreshToken
+    );
     const userMap = new Map(users.map((u) => [u._id.toString(), u]));
 
     // 5️⃣ Build WhatsApp-style chat list

@@ -4,7 +4,13 @@ import axios from "axios";
 import { Types } from "mongoose";
 import { Chat } from "../models/chat.model.js";
 import { ChatParticipant } from "../models/chat.particitipate.model.js";
-import { AppError, isValid, logger, sendError, sendSuccess } from "../utils/index.js";
+import {
+  AppError,
+  isValid,
+  logger,
+  sendError,
+  sendSuccess,
+} from "../utils/index.js";
 
 interface AuthRequest extends Request {
   user?: any;
@@ -13,8 +19,9 @@ interface AuthRequest extends Request {
 // ----------------- Helpers -----------------
 
 /** Return the first header string if array else value. */
-export const getHeaderValue = (value: string | string[] | undefined): string | undefined =>
-  Array.isArray(value) ? value[0] : value;
+export const getHeaderValue = (
+  value: string | string[] | undefined
+): string | undefined => (Array.isArray(value) ? value[0] : value);
 
 /** Return a Types.ObjectId if valid, else null */
 export const safeObjectId = (id: string): Types.ObjectId | null =>
@@ -23,7 +30,11 @@ export const safeObjectId = (id: string): Types.ObjectId | null =>
 const USER_SERVICE = process.env.USERS_SERVICE || "";
 
 /** Fetch user details from user-service for array of ids using provided token */
-const fetchUserDetails = async (userIds: string[], token: string) => {
+const fetchUserDetails = async (
+  userIds: string[],
+  token: string,
+  refreshToken: string
+) => {
   if (!userIds || userIds.length === 0) return [];
 
   if (!USER_SERVICE) {
@@ -38,10 +49,18 @@ const fetchUserDetails = async (userIds: string[], token: string) => {
 
   const requests = userIds.map((u) =>
     axios
-      .get(`${USER_SERVICE}/people/${u}`, { headers: { Authorization: `Bearer ${token}` } })
+      .get(`${USER_SERVICE}/people/${u}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-refresh-token": refreshToken,
+        },
+      })
       .then((r) => r.data?.data)
       .catch((err) => {
-        logger.warn("User service fetch failed for userId", { userId: u, err: err?.message || err });
+        logger.warn("User service fetch failed for userId", {
+          userId: u,
+          err: err?.message || err,
+        });
         return null;
       })
   );
@@ -51,14 +70,22 @@ const fetchUserDetails = async (userIds: string[], token: string) => {
 };
 
 /** Populate a Chat document's participants with user objects fetched from user service */
-const populateChatWithUsers = async (chat: any, token: string) => {
+const populateChatWithUsers = async (
+  chat: any,
+  token: string,
+  refreshToken: string
+) => {
   if (!chat) return chat;
 
   const participantIds = chat.participants
     .filter((p: any) => p.isActive)
     .map((p: any) => p.user.toString());
 
-  const users = await fetchUserDetails([...new Set(participantIds)] as string[], token);
+  const users = await fetchUserDetails(
+    [...new Set(participantIds)] as string[],
+    token,
+    refreshToken
+  );
   const userMap = new Map(users.map((u: any) => [String(u._id), u]));
 
   // map participants -> include user object (or fallback)
@@ -72,7 +99,8 @@ const populateChatWithUsers = async (chat: any, token: string) => {
     };
   });
 
-  const chatObj = typeof chat.toObject === "function" ? chat.toObject() : { ...chat };
+  const chatObj =
+    typeof chat.toObject === "function" ? chat.toObject() : { ...chat };
   chatObj.participants = populatedParticipants;
   return chatObj;
 };
@@ -85,9 +113,17 @@ const populateChatWithUsers = async (chat: any, token: string) => {
 export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
   const { name, members, description } = req.body;
   const creatorHeader = getHeaderValue(req.headers["x-user-id"]);
-  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
-  if (!creatorHeader) return sendError(res, "Missing creator ID in headers", 400);
+  if (!creatorHeader)
+    return sendError(res, "Missing creator ID in headers", 400);
   if (!Array.isArray(members) || members.length === 0) {
     return sendError(res, "Members must be a non-empty array", 400);
   }
@@ -96,25 +132,39 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
 
   try {
     // ensure creator included and unique
-    const normalizedMembers = Array.from(new Set([creatorHeader, ...members.map(String)]));
+    const normalizedMembers = Array.from(
+      new Set([creatorHeader, ...members.map(String)])
+    );
 
     // verify each member exists in user-service
     const checkResults = await Promise.all(
       normalizedMembers.map(async (m) => {
         try {
           const { data } = await axios.get(`${USER_SERVICE}/people/${m}`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "x-refresh-token": refreshToken,
+            },
           });
           return data?.data ? m : null;
         } catch (err) {
-          return null;
+          return sendError(
+            res,
+            "Failed Verifying each member exists in user",
+            500,
+            err
+          );
         }
       })
     );
 
     const validMembers = checkResults.filter(Boolean) as string[];
     if (validMembers.length < 2) {
-      return sendError(res, "At least 2 valid members required for group chat", 400);
+      return sendError(
+        res,
+        "At least 2 valid members required for group chat",
+        400
+      );
     }
 
     // create participants list
@@ -151,8 +201,17 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
 
     await ChatParticipant.insertMany(chatParticipants);
 
-    const populatedGroup = await populateChatWithUsers(groupChat, token);
-    return sendSuccess(res, { group: populatedGroup }, "Group chat created successfully", 200);
+    const populatedGroup = await populateChatWithUsers(
+      groupChat,
+      token,
+      refreshToken
+    );
+    return sendSuccess(
+      res,
+      { group: populatedGroup },
+      "Group chat created successfully",
+      200
+    );
   } catch (error) {
     logger.error("createNewGroupChat failed", { error });
     return sendError(res, "Failed to create group chat", 500, error);
@@ -164,13 +223,23 @@ export const createNewGroupChat = async (req: AuthRequest, res: Response) => {
  */
 export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
   console.log("Request Comes Here..");
-  
+
   const userHeader = getHeaderValue(req.headers["x-user-id"]);
-  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   if (!userHeader) return sendError(res, "Missing user ID in headers", 400);
   if (!isValid(userHeader)) return sendError(res, "Invalid user ID", 400);
-  if (!token) logger.warn("getMyGroupChats: no token provided; user info fetches may fail");
+  if (!token)
+    logger.warn(
+      "getMyGroupChats: no token provided; user info fetches may fail"
+    );
 
   try {
     // find chatParticipant rows for this user
@@ -182,7 +251,12 @@ export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
     const chatIds = chatParticipants.map((cp) => cp.chatId);
 
     if (!chatIds.length) {
-      return sendSuccess(res, { groups: [], count: 0 }, "Group chats retrieved successfully", 200);
+      return sendSuccess(
+        res,
+        { groups: [], count: 0 },
+        "Group chats retrieved successfully",
+        200
+      );
     }
 
     // fetch chats
@@ -200,7 +274,11 @@ export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
       });
     });
 
-    const users = await fetchUserDetails(Array.from(allUserIds), token);
+    const users = await fetchUserDetails(
+      Array.from(allUserIds),
+      token!,
+      refreshToken
+    );
     const userMap = new Map((users || []).map((u: any) => [String(u._id), u]));
 
     // assemble groups list
@@ -227,7 +305,12 @@ export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
       })
       .filter(Boolean);
 
-    return sendSuccess(res, { groups, count: groups.length }, "Group chats retrieved successfully", 200);
+    return sendSuccess(
+      res,
+      { groups, count: groups.length },
+      "Group chats retrieved successfully",
+      200
+    );
   } catch (error) {
     logger.error("getMyGroupChats failed", { error });
     return sendError(res, "Failed to retrieve group chats", 500, error);
@@ -240,10 +323,18 @@ export const getMyGroupChats = async (req: AuthRequest, res: Response) => {
 export const getGroupChatByChatID = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
   const userHeader = getHeaderValue(req.headers["x-user-id"]);
-  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   if (!userHeader) return sendError(res, "Missing user ID in headers", 400);
-  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID))
+    return sendError(res, "Invalid chat ID", 400);
 
   try {
     const group = await Chat.findOne({
@@ -255,7 +346,11 @@ export const getGroupChatByChatID = async (req: AuthRequest, res: Response) => {
 
     if (!group) return sendError(res, "Group not found or access denied", 404);
 
-    const populatedGroup = await populateChatWithUsers(group, token);
+    const populatedGroup = await populateChatWithUsers(
+      group,
+      token!,
+      refreshToken
+    );
 
     const chatParticipant = await ChatParticipant.findOne({
       chatId: safeObjectId(chatID)!,
@@ -283,16 +378,35 @@ export const getGroupChatByChatID = async (req: AuthRequest, res: Response) => {
  * Edit group chat settings (group-level fields)
  * 🔧 FIX: Separate user-specific settings from group settings
  */
-export const editGroupChatByChatID = async (req: AuthRequest, res: Response) => {
+export const editGroupChatByChatID = async (
+  req: AuthRequest,
+  res: Response
+) => {
   const { chatID } = req.params;
-  const { name, description, isPinned, isMuted, isArchived, groupSettings, isBlocked } = req.body ?? {};
+  const {
+    name,
+    description,
+    isPinned,
+    isMuted,
+    isArchived,
+    groupSettings,
+    isBlocked,
+  } = req.body ?? {};
 
   const headerUser = getHeaderValue(req.headers["x-user-id"]);
   const userId = headerUser || (req.user && (req.user.id || req.user.userId));
-  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   if (!userId) return sendError(res, "Missing user id", 400);
-  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID))
+    return sendError(res, "Invalid chat ID", 400);
 
   try {
     // ✅ Find group
@@ -318,8 +432,10 @@ export const editGroupChatByChatID = async (req: AuthRequest, res: Response) => 
     const updateData: Record<string, any> = {};
 
     // ✅ Group-level edits
-    if (typeof name === "string" && name.trim()) updateData.groupName = name.trim();
-    if (typeof description === "string") updateData.groupDescription = description.trim();
+    if (typeof name === "string" && name.trim())
+      updateData.groupName = name.trim();
+    if (typeof description === "string")
+      updateData.groupDescription = description.trim();
     if (groupSettings && typeof groupSettings === "object") {
       updateData.groupSettings = { ...group.groupSettings, ...groupSettings };
     }
@@ -331,20 +447,37 @@ export const editGroupChatByChatID = async (req: AuthRequest, res: Response) => 
     }
 
     // ✅ Handle per-user preferences in ChatParticipant
-    if (typeof isArchived === "boolean" || typeof isMuted === "boolean" || typeof isPinned === "boolean" || typeof isBlocked === "boolean") {
+    if (
+      typeof isArchived === "boolean" ||
+      typeof isMuted === "boolean" ||
+      typeof isPinned === "boolean" ||
+      typeof isBlocked === "boolean"
+    ) {
       await ChatParticipant.updateOne(
         { chatId: chatID, userId },
         {
           ...(typeof isArchived === "boolean" && { isArchived }),
           ...(typeof isMuted === "boolean" && { isMuted }),
-          ...(typeof isPinned === "boolean" && { isPinned, pinnedAt: isPinned ? new Date() : null }),
+          ...(typeof isPinned === "boolean" && {
+            isPinned,
+            pinnedAt: isPinned ? new Date() : null,
+          }),
           ...(typeof isBlocked === "boolean" && { isBlocked }), // ✅ add this
         }
       );
     }
 
-    const populatedGroup = await populateChatWithUsers(group, token);
-    return sendSuccess(res, { group: populatedGroup }, "Group updated successfully", 200);
+    const populatedGroup = await populateChatWithUsers(
+      group,
+      token!,
+      refreshToken
+    );
+    return sendSuccess(
+      res,
+      { group: populatedGroup },
+      "Group updated successfully",
+      200
+    );
   } catch (error) {
     logger.error("editGroupChatByChatID failed", { error });
     return sendError(res, "Failed to update group", 500, error);
@@ -354,14 +487,18 @@ export const editGroupChatByChatID = async (req: AuthRequest, res: Response) => 
 /**
  * 🆕 NEW: Update user-specific group settings (mute, pin, archive)
  */
-export const updateUserGroupSettings = async (req: AuthRequest, res: Response) => {
+export const updateUserGroupSettings = async (
+  req: AuthRequest,
+  res: Response
+) => {
   const { chatID } = req.params;
   const { isMuted, isPinned, isArchived } = req.body;
 
   const userHeader = getHeaderValue(req.headers["x-user-id"]);
 
   if (!userHeader) return sendError(res, "Missing user ID in headers", 400);
-  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID))
+    return sendError(res, "Invalid chat ID", 400);
 
   try {
     // Verify user is participant
@@ -405,12 +542,16 @@ export const updateUserGroupSettings = async (req: AuthRequest, res: Response) =
 /**
  * Delete (leave) group or delete group entirely (owner)
  */
-export const deleteGroupChatByChatID = async (req: AuthRequest, res: Response) => {
+export const deleteGroupChatByChatID = async (
+  req: AuthRequest,
+  res: Response
+) => {
   const { chatID } = req.params;
   const userHeader = getHeaderValue(req.headers["x-user-id"]);
 
   if (!userHeader) return sendError(res, "Missing user ID in headers", 400);
-  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID))
+    return sendError(res, "Invalid chat ID", 400);
 
   try {
     const group = await Chat.findOne({
@@ -459,12 +600,23 @@ export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
   const { chatID } = req.params;
   const { userIDs }: { userIDs: string[] } = req.body;
   const requesterHeader = getHeaderValue(req.headers["x-user-id"]);
-  const token = req.cookies?.accessToken || req.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
-  if (!requesterHeader) return sendError(res, "Missing requester ID in headers", 400);
-  if (!Array.isArray(userIDs) || userIDs.length === 0) return sendError(res, "userIDs required", 400);
-  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
-  if (!userIDs.every((id) => Types.ObjectId.isValid(id))) return sendError(res, "Invalid user IDs provided", 400);
+  if (!requesterHeader)
+    return sendError(res, "Missing requester ID in headers", 400);
+  if (!Array.isArray(userIDs) || userIDs.length === 0)
+    return sendError(res, "userIDs required", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID))
+    return sendError(res, "Invalid chat ID", 400);
+  if (!userIDs.every((id) => Types.ObjectId.isValid(id)))
+    return sendError(res, "Invalid user IDs provided", 400);
   if (!token) return sendError(res, "Authentication token missing", 401);
 
   try {
@@ -489,7 +641,9 @@ export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
 
     if (!canAdd) return sendError(res, "Permission denied to add members", 403);
 
-    const existingIds = new Set(group.participants.map((p: any) => String(p.user)));
+    const existingIds = new Set(
+      group.participants.map((p: any) => String(p.user))
+    );
 
     const notFoundUsers: string[] = [];
     const alreadyMembers: string[] = [];
@@ -504,7 +658,10 @@ export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
         }
         try {
           const { data } = await axios.get(`${USER_SERVICE}/people/${userID}`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "x-refresh-token": refreshToken,
+            },
           });
           if (!data?.data) {
             notFoundUsers.push(userID);
@@ -513,6 +670,12 @@ export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
           toAddUnique.push(userID);
         } catch (err) {
           notFoundUsers.push(userID);
+          return sendError(
+            res,
+            "Failed in Validate users and filter out duplicates",
+            500,
+            err
+          );
         }
       })
     );
@@ -530,7 +693,7 @@ export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
     toAddUnique.forEach((id) => {
       const objectId = safeObjectId(id);
       if (!objectId) return; // Skip if invalid
-      
+
       group.participants.push({
         user: objectId,
         role: "member",
@@ -571,15 +734,22 @@ export const addMemberInGroupChat = async (req: AuthRequest, res: Response) => {
 /**
  * Remove members from group chat (multiple)
  */
-export const removeMemberInGroupChat = async (req: AuthRequest, res: Response) => {
+export const removeMemberInGroupChat = async (
+  req: AuthRequest,
+  res: Response
+) => {
   const { chatID } = req.params;
   const { userIDs }: { userIDs: string[] } = req.body;
   const requesterHeader = getHeaderValue(req.headers["x-user-id"]);
 
-  if (!requesterHeader) return sendError(res, "Missing requester ID in headers", 400);
-  if (!Array.isArray(userIDs) || userIDs.length === 0) return sendError(res, "userIDs required", 400);
-  if (!chatID || !Types.ObjectId.isValid(chatID)) return sendError(res, "Invalid chat ID", 400);
-  if (!userIDs.every((id) => Types.ObjectId.isValid(id))) return sendError(res, "Invalid user IDs", 400);
+  if (!requesterHeader)
+    return sendError(res, "Missing requester ID in headers", 400);
+  if (!Array.isArray(userIDs) || userIDs.length === 0)
+    return sendError(res, "userIDs required", 400);
+  if (!chatID || !Types.ObjectId.isValid(chatID))
+    return sendError(res, "Invalid chat ID", 400);
+  if (!userIDs.every((id) => Types.ObjectId.isValid(id)))
+    return sendError(res, "Invalid user IDs", 400);
 
   try {
     const group = await Chat.findOne({
@@ -595,18 +765,23 @@ export const removeMemberInGroupChat = async (req: AuthRequest, res: Response) =
       (p: any) => String(p.user) === String(requesterHeader) && p.isActive
     );
 
-    if (!requesterParticipant) return sendError(res, "Requester not a member", 403);
+    if (!requesterParticipant)
+      return sendError(res, "Requester not a member", 403);
 
     const notMembers: string[] = [];
     const permissionDenied: string[] = [];
     const removed: string[] = [];
 
     // protecting owner: get owner id
-    const ownerParticipant = group.participants.find((p: any) => p.role === "owner");
+    const ownerParticipant = group.participants.find(
+      (p: any) => p.role === "owner"
+    );
     const ownerId = ownerParticipant ? String(ownerParticipant.user) : null;
 
     for (const userID of userIDs) {
-      const targetParticipant = group.participants.find((p: any) => String(p.user) === String(userID) && p.isActive);
+      const targetParticipant = group.participants.find(
+        (p: any) => String(p.user) === String(userID) && p.isActive
+      );
       if (!targetParticipant) {
         notMembers.push(userID);
         continue;
@@ -620,7 +795,9 @@ export const removeMemberInGroupChat = async (req: AuthRequest, res: Response) =
 
       const canRemove =
         String(requesterHeader) === String(userID) ||
-        (requesterParticipant && (requesterParticipant.role === "owner" || requesterParticipant.role === "admin"));
+        (requesterParticipant &&
+          (requesterParticipant.role === "owner" ||
+            requesterParticipant.role === "admin"));
 
       if (!canRemove) {
         permissionDenied.push(userID);

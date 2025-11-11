@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { sendSuccess, sendError } from "../utils/response.js";
 import { User } from "../models/user.model.js";
 import { isValid } from "../utils/validation.js";
@@ -14,8 +14,7 @@ import { publishToMailQueue } from "../config/rabbitMQ.js";
 import { logger } from "../utils/logger.js";
 
 // Constants
-const JWT_SECRET = process.env.JWT_SECRET as string;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
+const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY as string;
 const TOKEN_EXPIRY_MS = 1000 * 60 * 60; // 1 hour
 const DEFAULT_OTP_EXPIRY_SECONDS = 300; // 5 minutes
 
@@ -40,7 +39,7 @@ export const login = async (req: Request, res: Response) => {
     console.log({
       email,
       username,
-      body:req.body
+      body: req.body,
     });
 
     if (!isValid(email) || !isValid(username)) {
@@ -49,9 +48,9 @@ export const login = async (req: Request, res: Response) => {
 
     const redisKey = `otp=${email}`;
     const existingOTP = await getRedisValue(redisKey);
-    console.log('====================================');
-    console.log("existing OTP",existingOTP);
-    console.log('====================================');
+    console.log("====================================");
+    console.log("existing OTP", existingOTP);
+    console.log("====================================");
     if (existingOTP) {
       return sendError(res, "Too many requests. Try again later.", 429);
     }
@@ -62,15 +61,18 @@ export const login = async (req: Request, res: Response) => {
     console.log({
       redisKey,
       otp,
-  
-    })
-    const responseOTP = await setRedisValue(redisKey, otp, DEFAULT_OTP_EXPIRY_SECONDS);
-    if(responseOTP == null){
-      console.log("Failed to set OTP in redis")
+    });
+    const responseOTP = await setRedisValue(
+      redisKey,
+      otp,
+      DEFAULT_OTP_EXPIRY_SECONDS
+    );
+    if (responseOTP == null) {
+      console.log("Failed to set OTP in redis");
     }
-console.log('====================================');
-console.log("responseOTP",responseOTP);
-console.log('====================================');
+    console.log("====================================");
+    console.log("responseOTP", responseOTP);
+    console.log("====================================");
     const message = {
       to: email,
       subject: "Your One-Time Password (OTP) for Verification",
@@ -136,14 +138,14 @@ export const verifyOTP = async (req: Request, res: Response) => {
     if (!user) {
       user = await User.create({ email, username });
     }
-console.log({user})
+    console.log({ user });
     const { accessToken, refreshToken } = user.generateTokens();
-    console.log('====================================');
+    console.log("====================================");
     console.log({
       accessToken,
-      refreshToken
+      refreshToken,
     });
-    console.log('====================================');
+    console.log("====================================");
     user.refreshToken = {
       token: refreshToken,
       createdAt: new Date(),
@@ -222,68 +224,85 @@ export const me = (req: AuthRequest, res: AuthResponse) => {
 // -----------------------------
 // REFRESH TOKEN
 // -----------------------------
-export const refreshToken = async (req: AuthRequest, res: Response) => {
+export const refreshToken = async (req: Request, res: Response) => {
   try {
-    // Try to get token from cookie first, then custom header, then Authorization header
+    // 🧩 1️⃣ Extract token from multiple possible sources
     const tokenFromCookie = (req as any)?.cookies?.refreshToken;
-    const tokenFromHeader = (req.headers["x-refresh-token"] as string) ||
-      (typeof req.headers.authorization === "string" && req.headers.authorization.startsWith("Bearer ")
+    const tokenFromHeader =
+      (req.headers["x-refresh-token"] as string) ||
+      (typeof req.headers.authorization === "string" &&
+      req.headers.authorization.startsWith("Bearer ")
         ? req.headers.authorization.slice(7)
         : undefined);
+    const tokenFromBody = req.body?.refreshToken;
 
-    const token = tokenFromCookie || tokenFromHeader || req?.body?.refreshToken;
+    const token = tokenFromCookie || tokenFromHeader || tokenFromBody;
 
     if (!token) {
       return sendError(res, "Refresh token not provided", 401);
     }
 
-    let decoded: any;
+    // 🧩 2️⃣ Verify the refresh token
+    let decoded: JwtPayload;
     try {
-      decoded = jwt.verify(token, JWT_REFRESH_SECRET) as any;
+      decoded = jwt.verify(token, JWT_SECRET_KEY) as JwtPayload;
     } catch (err) {
-      logger.info("Refresh token verify failed", { err });
+      logger?.info("Refresh token verify failed", { err });
       return sendError(res, "Invalid or expired refresh token", 401);
     }
 
-    if (!decoded?.userId || decoded?.tokenType !== "refresh") {
+    if (decoded.tokenType !== "refresh" || !decoded.userId) {
       return sendError(res, "Invalid refresh token payload", 401);
     }
 
+    // 🧩 3️⃣ Find user and validate token
     const user = await User.findById(decoded.userId);
     if (!user) return sendError(res, "User not found", 404);
 
-    // Compare provided token with stored one
     if (!user.refreshToken || token !== user.refreshToken.token) {
-      logger.info("Refresh token mismatch", { provided: token, stored: user.refreshToken?.token });
+      logger?.info("Refresh token mismatch", {
+        provided: token,
+        stored: user.refreshToken?.token,
+      });
       return sendError(res, "Refresh token mismatch. Please login again.", 403);
     }
 
-    // All good — generate new tokens and update stored refresh token
-    const { accessToken, refreshToken: newRefreshToken } = user.generateTokens();
+    // 🧩 4️⃣ Generate new tokens
+    const { accessToken, refreshToken: newRefreshToken } =
+      user.generateTokens();
     user.refreshToken = { token: newRefreshToken, createdAt: new Date() };
     await user.save();
 
-    // set cookies (similar to login)
+    // 🧩 5️⃣ Set new cookies (browser + Postman)
     res.cookie("accessToken", accessToken, {
       maxAge: TOKEN_EXPIRY_MS,
       httpOnly: true,
+      sameSite: "none",
       secure: process.env.NODE_ENV === "production",
     });
     res.cookie("refreshToken", newRefreshToken, {
       maxAge: TOKEN_EXPIRY_MS,
       httpOnly: true,
+      sameSite: "none",
       secure: process.env.NODE_ENV === "production",
     });
 
+    // 🧩 6️⃣ Also return tokens in headers for Gateway/microservices
+    res.setHeader("x-access-token", accessToken);
+    res.setHeader("x-refresh-token", newRefreshToken);
+
+    // 🧩 7️⃣ Return in JSON too
     const userResponse = {
       id: user._id,
       name: user.username,
       email: user.email,
       accessToken,
+      refreshToken: newRefreshToken,
     };
 
     return sendSuccess(res, userResponse, "Token refreshed successfully", 200);
   } catch (error) {
+    logger?.error("Failed to refresh token", { error });
     return sendError(res, "Failed to refresh token", 500, error);
   }
 };

@@ -8,10 +8,7 @@ import {
   removeMemberInGroupChat,
   getMyGroupChats,
 } from "../controllers/index.js";
-import {
-  validateBody,
-  validateParams,
-} from "../middlewares/index.js";
+import { validateBody, validateParams } from "../middlewares/index.js";
 import {
   chatIDParamsSchema,
   groupChatSchema,
@@ -21,11 +18,7 @@ import {
 } from "../utils/index.js";
 
 const router = Router();
-router.post(
-  "/new",
-  validateBody(groupChatSchema),
-  createNewGroupChat
-); //✅tested
+router.post("/new", validateBody(groupChatSchema), createNewGroupChat); //✅tested
 
 router.get("/my-group", getMyGroupChats); //✅tested
 
@@ -34,7 +27,6 @@ router.get(
   validateParams(chatIDParamsSchema),
   getGroupChatByChatID
 ); //✅tested
-
 
 router.put(
   "/edit/:chatID",

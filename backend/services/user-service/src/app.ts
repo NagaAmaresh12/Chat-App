@@ -30,7 +30,10 @@ app.get("/hi", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({ message: "User service is up and running" });
+  res.json({
+    token: req?.headers?.authorization || "undefined",
+    message: "User service is up and running",
+  });
 });
 //middlewares
 app.use(express.json());

@@ -30,48 +30,34 @@ const replyToSchema = Joi.object({
   messageType: Joi.string().valid("text", "media", "emoji").required(),
 });
 
+export const getMessageSchemaByChatID = Joi.object({
+  chatType: Joi.string().valid("private", "group"),
+});
+export const getMessageSchemaByMsgID = Joi.object({
+  chatType: Joi.string().valid("private", "group"),
+});
+export const editMessageSchemaByMsgID = Joi.object({
+  content: Joi.string(),
+});
+export const deleteMessageSchemaByMsgID = Joi.object({
+  deleteForEveryone: Joi.boolean(),
+});
+
 // Create message validation
 export const createMessageSchema = Joi.object({
   chatId: objectIdValidation.required(),
-  senderId: objectIdValidation.required(),
-  chatType: Joi.string().valid("private", "group"),
+  chatType: Joi.string().valid("private", "group").required(),
   messageType: Joi.string()
     .valid("text", "image", "video", "audio", "document", "emoji")
     .default("text"),
 
-  // content is optional, but max 4000 chars
   content: Joi.string().max(4000).optional(),
 
-  attachments: Joi.array()
-    .items(attachmentSchema)
-    .default([])
-    .custom((attachments, helpers) => {
-      const messageType = helpers.state.ancestors[0].messageType;
-
-      // Limit attachments
-      if (attachments.length > 10) {
-        return helpers.error("array.max", {
-          message: "Maximum 10 attachments per message",
-        });
-      }
-
-      // For media messages, at least one attachment is recommended
-      if (
-        ["image", "video", "audio", "document"].includes(messageType) &&
-        attachments.length === 0
-      ) {
-        return helpers.error("any.required", {
-          message: "Media messages must have attachments",
-        });
-      }
-
-      return attachments;
-    })
-    .optional(),
+  // Don't require attachments here — multer handles them
+  attachments: Joi.any().optional(),
 
   replyTo: replyToSchema.optional(),
 });
-
 
 // Update message validation
 export const updateMessageSchema = Joi.object({
@@ -93,7 +79,7 @@ export const forwardMessageSchema = Joi.object({
   senderId: objectIdValidation.required(),
 });
 
-// Get messages validation
+// Get messages validation By ChatID
 export const getMessagesSchema = Joi.object({
   chatId: objectIdValidation.required(),
   page: Joi.number().integer().min(1).default(1),
@@ -114,23 +100,24 @@ export const deleteMessageSchema = Joi.object({
 });
 
 // Mark as read validation
+
 export const markAsReadSchema = Joi.object({
-  messageIds: Joi.array().items(objectIdValidation).min(1).max(100).required(),
-  userId: objectIdValidation.required(),
+  messageIds: Joi.array()
+    .items(objectIdValidation) // your existing ObjectId validation
+    .min(1)
+    .max(100)
+    .required(),
 });
 
 // Add reaction validation
 export const addReactionSchema = Joi.object({
   messageId: objectIdValidation.required(),
-  userId: objectIdValidation.required(),
   emoji: Joi.string().min(1).max(10).required(), // Support unicode emojis
 });
 
 // Remove reaction validation
 export const removeReactionSchema = Joi.object({
   messageId: objectIdValidation.required(),
-  userId: objectIdValidation.required(),
-  emoji: Joi.string().min(1).max(10).required(),
 });
 
 // Search messages validation
@@ -150,6 +137,5 @@ export const searchMessagesSchema = Joi.object({
 // Bulk delete validation
 export const bulkDeleteSchema = Joi.object({
   messageIds: Joi.array().items(objectIdValidation).min(1).max(100).required(),
-  deletedBy: objectIdValidation.required(),
   deleteForEveryone: Joi.boolean().default(false),
 });

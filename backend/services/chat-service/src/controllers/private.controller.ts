@@ -12,25 +12,34 @@ export interface AuthRequest extends Request {
 const USER_SERVICE = process.env.USERS_SERVICE!;
 
 // Helper function to fetch user details
-export const fetchUserDetails = async (userIds: string[], token: string) => {
+export const fetchUserDetails = async (
+  userIds: string[],
+  token: string,
+  refreshToken: string
+) => {
   try {
     // Batch endpoint would be more efficient
     const userPromises = userIds.map((userId) =>
-      axios.get(`${USER_SERVICE}/people/${userId}`, { //............... axios.get(...) returns a Promise (because it’s asynchronous).
-        headers: { Authorization: `Bearer ${token}` },
+      axios.get(`${USER_SERVICE}/people/${userId}`, {
+        //............... axios.get(...) returns a Promise (because it’s asynchronous).
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-refresh-token": refreshToken,
+        },
       })
     );
-// So userPromises becomes an array of Promises, like:
-// [
-//   Promise<pending>,
-//   Promise<pending>,
-//   Promise<pending>,
-//   ...
-// ]
-// when we use promise.all, All requests fired at once.Instead of calling each request,at once until one finished,we get this when we use "for,while loop" 
-    const responses = await Promise.all(userPromises);//All requests fired at once.
-    return responses.map((res) => res.data?.data).filter(Boolean);//[ { name: "John", id: "123" }, { name: "Ava", id: "456" }, undefined, null ], if api call failed or didn't return any data, we get values likes undefined or null, so we want to select only values which are correct, That's why we use Boolean here
 
+    // So userPromises becomes an array of Promises, like:
+    // [
+    //   Promise<pending>,
+    //   Promise<pending>,
+    //   Promise<pending>,
+    //   ...
+    // ]
+    // when we use promise.all, All requests fired at once.Instead of calling each request,at once until one finished,we get this when we use "for,while loop"
+
+    const responses = await Promise.all(userPromises); //All requests fired at once.
+    return responses.map((res) => res.data?.data).filter(Boolean); //[ { name: "John", id: "123" }, { name: "Ava", id: "456" }, undefined, null ], if api call failed or didn't return any data, we get values likes undefined or null, so we want to select only values which are correct, That's why we use Boolean here
   } catch (error) {
     console.error("Error fetching user details:", error);
     return [];
@@ -38,9 +47,13 @@ export const fetchUserDetails = async (userIds: string[], token: string) => {
 };
 
 // Helper function to populate chat with user details
-const populateChatWithUsers = async (chat: any, token: string) => {
+const populateChatWithUsers = async (
+  chat: any,
+  token: string,
+  refreshToken: string
+) => {
   const userIds = chat.participants.map((p: any) => p.user.toString());
-  const users = await fetchUserDetails(userIds, token);
+  const users = await fetchUserDetails(userIds, token, refreshToken);
 
   // Map users back to participants
   const populatedParticipants = chat.participants.map((participant: any) => {
@@ -61,9 +74,18 @@ export const createNewPrivateChat = async (req: AuthRequest, res: Response) => {
   const { participantID } = req.body;
   const senderId = req.headers["x-user-id"] as string;
 
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
+
   console.log("In createNewPrivateChat", {
     token,
+    refreshToken,
   });
 
   console.log({ senderId, participantID });
@@ -84,12 +106,17 @@ export const createNewPrivateChat = async (req: AuthRequest, res: Response) => {
     // Verify participant exists
     const { data } = await axios.get(
       `${USER_SERVICE}/people/${participantID}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-refresh-token": refreshToken,
+        },
+      }
     );
 
-    console.log('====================================');
-    console.log({userData:data});
-    console.log('====================================');
+    console.log("====================================");
+    console.log({ userData: data });
+    console.log("====================================");
     const participant = data?.data;
     if (!participant) {
       return sendError(res, "Participant does not exist", 400);
@@ -98,15 +125,19 @@ export const createNewPrivateChat = async (req: AuthRequest, res: Response) => {
     // Check if chat already exists
     let existingChat = await Chat.findOne({
       type: "private",
-      "participants.user": { $all: [senderId, participantID] },//This $all condition ensures that both users are in the chat, regardless of their order.
-      "participants.isActive": true,//Find a chat document where at least one element in the participants array has isActive: true.
+      "participants.user": { $all: [senderId, participantID] }, //This $all condition ensures that both users are in the chat, regardless of their order.
+      "participants.isActive": true, //Find a chat document where at least one element in the participants array has isActive: true.
     });
-console.log('====================================');
-console.log({existingChat});
-console.log('====================================');
+    console.log("====================================");
+    console.log({ existingChat });
+    console.log("====================================");
     if (existingChat) {
       // Populate with user details
-      const populatedChat = await populateChatWithUsers(existingChat, token);
+      const populatedChat = await populateChatWithUsers(
+        existingChat,
+        token!,
+        refreshToken
+      );
       return sendSuccess(
         res,
         { chat: populatedChat },
@@ -127,7 +158,7 @@ console.log('====================================');
         {
           user: participantID,
           role: "member",
-          isActive: true,//this checking active is not for user active or using this app,it is about whether that user is in the chat or blocked this chat
+          isActive: true, //this checking active is not for user active or using this app,it is about whether that user is in the chat or blocked this chat
         },
       ],
       lastActivity: new Date(),
@@ -152,7 +183,11 @@ console.log('====================================');
     ]);
 
     // Populate the created chat with user details
-    const populatedChat = await populateChatWithUsers(newChat, token);
+    const populatedChat = await populateChatWithUsers(
+      newChat,
+      token!,
+      refreshToken
+    );
 
     return sendSuccess(
       res,
@@ -171,8 +206,14 @@ export const getPrivateChatsByUserID = async (
   res: Response
 ) => {
   const userId = req.headers["x-user-id"] as string;
-;
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   try {
     // Get all chat participants for the user
@@ -199,7 +240,11 @@ export const getPrivateChatsByUserID = async (
     });
 
     // Fetch all users in batch (more efficient)
-    const users = await fetchUserDetails(Array.from(allUserIds), token);
+    const users = await fetchUserDetails(
+      Array.from(allUserIds),
+      token,
+      refreshToken
+    );
     const userMap = new Map(users.map((u) => [u._id, u]));
 
     // Map and populate chats
@@ -248,14 +293,21 @@ export const getPrivateChatByChatID = async (
   res: Response
 ) => {
   console.log("Request comes here");
-  
+
   const { chatID } = req?.params;
-  console.log({chatID});
-  
-  const userId = req.headers['x-user-id'];
-  console.log({userId});
-  
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  console.log({ chatID });
+
+  const userId = req.headers["x-user-id"];
+  console.log({ userId });
+
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
@@ -281,7 +333,11 @@ export const getPrivateChatByChatID = async (
     }).select("unreadCount isMuted isPinned");
 
     // Populate with minimal user details
-    const populatedChat = await populateChatWithMinimalUserData(chat, token);
+    const populatedChat = await populateChatWithMinimalUserData(
+      chat,
+      token,
+      refreshToken
+    );
 
     // Create optimized response
     const responseData = {
@@ -315,7 +371,11 @@ export const getPrivateChatByChatID = async (
 };
 
 // Helper function to populate chat with minimal user data
-const populateChatWithMinimalUserData = async (chat: any, token: string) => {
+const populateChatWithMinimalUserData = async (
+  chat: any,
+  token: string,
+  refreshToken: string
+) => {
   try {
     const USER_SERVICE = process.env.USERS_SERVICE!;
 
@@ -330,6 +390,7 @@ const populateChatWithMinimalUserData = async (chat: any, token: string) => {
           {
             headers: {
               Authorization: `Bearer ${token}`,
+              "x-refresh-token": refreshToken,
             },
             timeout: 5000,
           }
@@ -397,7 +458,14 @@ export const getPrivateChatByChatIDAlternative = async (
 ) => {
   const { chatID } = req.params;
   const userId = req.user.id;
-  const token = req?.cookies?.accessToken || req?.cookies?.refreshToken;
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
@@ -417,7 +485,11 @@ export const getPrivateChatByChatIDAlternative = async (
     }
 
     // Populate with user details (using your existing function)
-    const populatedChat = await populateChatWithUsers(chat, token);
+    const populatedChat = await populateChatWithUsers(
+      chat,
+      token,
+      refreshToken
+    );
 
     // Get user's chat participant info
     const chatParticipant = await ChatParticipant.findOne({
@@ -468,8 +540,8 @@ export const editPrivateChatByChatID = async (
   res: Response
 ) => {
   const { chatID } = req.params;
-  const { isArchived, isMuted, isPinned ,isBlocked} = req.body;
-  const userId = req.headers['x-user-id'];
+  const { isArchived, isMuted, isPinned, isBlocked } = req.body;
+  const userId = req.headers["x-user-id"];
 
   if (!Types.ObjectId.isValid(chatID!)) {
     return sendError(res, "Invalid chat ID", 400);
@@ -517,16 +589,27 @@ export const editPrivateChatByChatID = async (
 };
 
 //we don't delete the chat but we don't show or hide the chat, making isActive:false to that user who wants this chat not to visible
-export const deletePrivateChatByChatID = async (req: AuthRequest, res: Response) => {
+export const deletePrivateChatByChatID = async (
+  req: AuthRequest,
+  res: Response
+) => {
   const { chatID } = req.params;
   const userIdHeader = req.headers["x-user-id"];
 
   // ✅ Ensure userId and chatID are valid
-  if (!chatID || typeof chatID !== "string" || !Types.ObjectId.isValid(chatID)) {
+  if (
+    !chatID ||
+    typeof chatID !== "string" ||
+    !Types.ObjectId.isValid(chatID)
+  ) {
     return sendError(res, "Invalid or missing chat ID", 400);
   }
 
-  if (!userIdHeader || typeof userIdHeader !== "string" || !Types.ObjectId.isValid(userIdHeader)) {
+  if (
+    !userIdHeader ||
+    typeof userIdHeader !== "string" ||
+    !Types.ObjectId.isValid(userIdHeader)
+  ) {
     return sendError(res, "Invalid or missing user ID", 400);
   }
 

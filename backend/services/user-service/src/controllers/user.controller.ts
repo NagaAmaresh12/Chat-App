@@ -3,19 +3,10 @@ import { Request, Response } from "express";
 import { AuthRequest } from "../controllers/auth.controller.js";
 import { isValid } from "../utils/validation.js";
 import { sendError, sendSuccess } from "../utils/response.js";
-// import type { IUser } from "../models/user.model.js";
+
 import type { Schema } from "mongoose";
 import mongoose from "mongoose";
-//   {
-//   "data": {
-//     "_id": "userId123",
-//     "username": "john_doe",
-//     "displayName": "John Doe",
-//     "avatar": "https://example.com/avatar.jpg",
-//     "isOnline": true,
-//     "lastSeen": "2024-01-20T10:30:00Z"
-//   }
-// }
+
 interface IUserSemi {
   _id: Schema.Types.ObjectId | string;
   email: string;
@@ -42,23 +33,19 @@ interface IUserSemi {
 }
 
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
+  let token = req?.headers?.authorization;
+  console.log("====================================");
+  console.log({ token });
+  console.log("====================================");
   try {
     const users = await User.find({}, "_id username email bio isOnline");
 
-    // const allUsers: IUserSemi[] = users.map((user) => ({
-    //   _id: user?._id as string,
-    //   email: user?.email,
-    //   username: user?.username,
-    //   bio: user?.bio,
-    //   isOnline: user?.isOnline,
-    // }));
     console.log({
       users,
     });
     console.log(
       "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
       {
-      
         accessToken: req?.accessToken,
         refreshToken: req?.refreshToken,
       }
@@ -90,9 +77,12 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
 };
 export const getUserByID = async (req: AuthRequest, res: Response) => {
   console.log("Gettin user by ID...");
-
+  let token = req?.headers?.authorization;
+  console.log("====================================");
+  console.log({ token });
+  console.log("====================================");
   const { userID } = req.params;
-  console.log({ userID,token:req?.headers.authorization });
+  console.log({ userID, token: req?.headers.authorization });
 
   if (!isValid(userID!)) {
     return sendError(res, "UserID is Not Valid.", 400);
@@ -127,7 +117,6 @@ export const getUserByID = async (req: AuthRequest, res: Response) => {
     },
   };
   console.log({ userData });
-
 
   sendSuccess(res, userData, "Fetched user Successfully", 200);
 };

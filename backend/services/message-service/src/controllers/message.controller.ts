@@ -15,7 +15,8 @@ import {
   removeReactionSchema,
 } from "../utils/joi.validate.js";
 import { sendError, sendSuccess } from "../utils/response.js";
-
+import { verifyChatAccess } from "../utils/verifyChatAccess.js";
+import { uploadBufferToCloudinary } from "../utils/uploadBufferToCloudinary.js";
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -26,26 +27,167 @@ interface AuthenticatedRequest extends Request {
 let CHATS_SERVICE = process.env.CHATS_SERVICE!;
 let USERS_SERVICE = process.env.USERS_SERVICE!;
 
-
 // Create a new message
-export const createMessage = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    console.log("🔹 Creating new message...");
+// export const createMessage = async (
+//   req: AuthenticatedRequest,
+//   res: Response
+// ) => {
+//   try {
+//     console.log("🔹 Creating new message...");
 
-    // Use the authenticated user ID as senderId
+//     // Use the authenticated user ID as senderId
+//     const senderId = req.headers["x-user-id"] as string;
+
+//     if (!senderId) {
+//       return res.status(401).json({ success: false, message: "Unauthorized" });
+//     }
+
+//     const token =
+//       req?.cookies?.accessToken ||
+//       (req?.headers?.authorization?.startsWith("Bearer ")
+//         ? req.headers.authorization.split(" ")[1]
+//         : undefined);
+//     const refreshToken =
+//       req?.body?.refreshToken || req?.headers["x-refresh-token"];
+//     console.log("====================================");
+//     console.log({ token, refreshToken });
+//     console.log("====================================");
+//     // Validate request body
+//     const { error, value } = createMessageSchema.validate(req.body);
+//     if (error) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Validation error",
+//         errors: error.details.map((d) => d.message),
+//       });
+//     }
+
+//     const { chatId, content, messageType, attachments, replyTo, chatType } =
+//       value;
+//     //If you don't get any of these above values even if you pass it, then check the joi validations fields, there are exists or renamed it
+//     console.log("🔹 Incoming message data:", {
+//       chatId,
+//       senderId,
+//       content,
+//       messageType,
+//       attachments,
+//       replyTo,
+//       chatType,
+//     });
+
+//     // ------------------------- Verify chat -------------------------
+//     try {
+//       const chatResponse = await axios.get(
+//         `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
+//         {
+//           headers: {
+//             "x-user-id": senderId,
+//             "x-refresh-token": refreshToken,
+//             ...(token && { Authorization: `Bearer ${token}` }),
+//           },
+//         }
+//       );
+
+//       if (chatResponse?.data?.status !== "success" || !chatResponse.data.data) {
+//         return res.status(404).json({
+//           success: false,
+//           message: "Chat not found or access denied",
+//         });
+//       }
+//     } catch (err: any) {
+//       return sendError(res, "Failed to verify chat access", 500, err);
+//     }
+
+//     // ------------------------- Verify user -------------------------
+//     let userData;
+//     try {
+//       const userResponse = await axios.get(
+//         `${USERS_SERVICE}/people/${senderId}`,
+//         {
+//           headers: {
+//             "x-user-id": senderId,
+//             "x-refresh-token": refreshToken,
+//             ...(token && { Authorization: `Bearer ${token}` }),
+//           },
+//         }
+//       );
+
+//       if (
+//         userResponse?.data?.status !== "success" ||
+//         !userResponse?.data?.data
+//       ) {
+//         return res
+//           .status(404)
+//           .json({ success: false, message: "User not found" });
+//       }
+
+//       userData = userResponse.data.data;
+//       console.log("🔹 Verified user:", userData);
+//     } catch (err: any) {
+//       return sendError(res, "Failed to verify user", 500, err);
+//     }
+
+//     // ------------------------- Verify replyTo message -------------------------
+//     if (replyTo) {
+//       const originalMessage = await Message.findById(replyTo.messageId);
+//       if (!originalMessage || originalMessage.isDeleted) {
+//         return res.status(404).json({
+//           success: false,
+//           message: "Original message not found or deleted",
+//         });
+//       }
+//     }
+
+//     // ------------------------- Create message -------------------------
+//     const message = new Message({
+//       chatId,
+//       senderId,
+//       content,
+//       messageType,
+//       attachments,
+//       replyTo,
+//       chatType,
+//     });
+
+//     const savedMessage = await message.save();
+//     console.log("🔹 Message saved:", savedMessage._id);
+
+//     const populatedMessage = {
+//       ...savedMessage.toObject(),
+//       sender: userData,
+//     };
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Message created successfully",
+//       data: populatedMessage,
+//     });
+//   } catch (err: any) {
+//     return sendError(res, "Failed to create message", 500, err);
+//   }
+// };
+export const createMessage = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    console.log("📩 Creating new message...");
+
     const senderId = req.headers["x-user-id"] as string;
-    if (!senderId) {
+    if (!senderId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
 
     const token =
-      req.headers["authorization"]?.split(" ")[1] ||
       req.cookies?.accessToken ||
-      req.cookies?.refreshToken;
-    console.log('====================================');
-    console.log({token});
-    console.log('====================================');
-    // Validate request body
+      (typeof req.headers.authorization === "string" &&
+      req.headers.authorization.startsWith("Bearer ")
+        ? req.headers.authorization.split(" ")[1]
+        : undefined);
+
+    const refreshToken =
+      req.body?.refreshToken || req.headers["x-refresh-token"];
+
+    // Validate body AFTER multer has populated req.body (multipart/form-data)
     const { error, value } = createMessageSchema.validate(req.body);
     if (error) {
       return res.status(400).json({
@@ -55,55 +197,53 @@ export const createMessage = async (req: AuthenticatedRequest, res: Response) =>
       });
     }
 
-    const { chatId, content, messageType, attachments, replyTo, chatType } = value;
+    const { chatId, content, messageType = "text", replyTo, chatType } = value;
 
-    console.log("🔹 Incoming message data:", {
-      chatId,
-      senderId,
-      content,
-      messageType,
-      attachments,
-      replyTo,
-      chatType,
-    });
-
-    // ------------------------- Verify chat -------------------------
+    // Verify chat (same as you had)
     try {
       const chatResponse = await axios.get(
         `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
         {
-          headers: { "x-user-id": senderId, Authorization: `Bearer ${token}` },
+          headers: {
+            "x-user-id": senderId,
+            "x-refresh-token": refreshToken,
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
         }
       );
-
-      if (chatResponse?.data?.status !== "success" || !chatResponse.data.data) {
-        return res.status(404).json({
-          success: false,
-          message: "Chat not found or access denied",
-        });
+      if (chatResponse?.data?.status !== "success") {
+        return res
+          .status(404)
+          .json({ success: false, message: "Chat not found or access denied" });
       }
     } catch (err: any) {
       return sendError(res, "Failed to verify chat access", 500, err);
     }
 
-    // ------------------------- Verify user -------------------------
+    // Verify user
     let userData;
     try {
-      const userResponse = await axios.get(`${USERS_SERVICE}/people/${senderId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (userResponse?.data?.status !== "success" || !userResponse?.data?.data) {
-        return res.status(404).json({ success: false, message: "User not found" });
+      const userResponse = await axios.get(
+        `${USERS_SERVICE}/people/${senderId}`,
+        {
+          headers: {
+            "x-user-id": senderId,
+            "x-refresh-token": refreshToken,
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        }
+      );
+      if (userResponse?.data?.status !== "success") {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
       }
-
       userData = userResponse.data.data;
-      console.log("🔹 Verified user:", userData);
     } catch (err: any) {
       return sendError(res, "Failed to verify user", 500, err);
     }
 
-    // ------------------------- Verify replyTo message -------------------------
+    // If replyTo provided, verify original message exists
     if (replyTo) {
       const originalMessage = await Message.findById(replyTo.messageId);
       if (!originalMessage || originalMessage.isDeleted) {
@@ -114,37 +254,78 @@ export const createMessage = async (req: AuthenticatedRequest, res: Response) =>
       }
     }
 
-    // ------------------------- Create message -------------------------
+    // Handle uploaded files (multer memory storage -> req.files)
+    const files = (req.files as Express.Multer.File[]) ?? [];
+    const uploadedFiles: Array<any> = [];
+
+    if (files.length > 0) {
+      for (const file of files) {
+        try {
+          const result = await uploadBufferToCloudinary(file.buffer, {
+            folder: process.env.CLOUDINARY_UPLOAD_FOLDER || "chat_uploads",
+            resource_type: "auto",
+          });
+
+          uploadedFiles.push({
+            url: result.secure_url,
+            publicId: result.public_id,
+            type: messageType, // required in schema
+            mimeType: file.mimetype, // required in schema
+            filename: file.originalname, // required in schema
+            format: result.format,
+            size: result.bytes,
+            resourceType: result.resource_type,
+          });
+        } catch (error) {
+          console.error(
+            "Cloudinary upload failed for file",
+            file.originalname,
+            error
+          );
+          return sendError(res, "Failed to upload attachments", 500, error);
+        }
+      }
+    }
+
+    // Create message doc with attachments (if any)
     const message = new Message({
       chatId,
       senderId,
       content,
       messageType,
-      attachments,
+      attachments: uploadedFiles,
       replyTo,
+      chatType,
     });
 
     const savedMessage = await message.save();
-    console.log("🔹 Message saved:", savedMessage._id);
 
-    const populatedMessage = {
-      ...savedMessage.toObject(),
-      sender: userData,
-    };
+    const populatedMessage = { ...savedMessage.toObject(), sender: userData };
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Message created successfully",
       data: populatedMessage,
     });
   } catch (err: any) {
+    console.error("❌ Create message error:", err);
     return sendError(res, "Failed to create message", 500, err);
   }
 };
-
-
 // Get messages for a chat with pagination
-export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
+export const getMessagesByChatID = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
+
   try {
     const { error, value } = getMessagesSchema.validate({
       ...req.params,
@@ -158,27 +339,40 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
         errors: error.details.map((detail) => detail.message),
       });
     }
-
+    const { chatType } = req?.body || { type: "private" };
+    console.log("====================================");
+    console.log({ value, body: req?.body?.chatType });
+    console.log("====================================");
     const { chatId, page, limit, before, after, search, messageType } = value;
-    const userId = req.user?.id;
+    const userId = req?.headers["x-user-id"]; //this is set by gateway
 
     // Verify user has access to chat
     try {
       const chatResponse = await axios.get(
-        `${CHATS_SERVICE}/api/chats/${chatId}`,
+        `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
         {
-          headers: { "user-id": userId },
+          headers: {
+            "x-user-id": userId,
+            "x-refresh-token": refreshToken,
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
         }
       );
+      console.log("====================================");
+      console.log(chatResponse);
+      console.log("====================================");
 
-      if (chatResponse?.data?.status !== "success" || !chatResponse?.data?.data) {
+      if (
+        chatResponse?.data?.status !== "success" ||
+        !chatResponse?.data?.data
+      ) {
         return res.status(404).json({
           success: false,
           message: "Chat not found or access denied",
         });
       }
     } catch (error) {
-      sendError(res,"Failed to verify chat access",500,error)
+      return sendError(res, "Failed to verify chat access", 500, error);
     }
 
     // Build query
@@ -232,12 +426,21 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
 
     try {
       const usersPromises = senderIds.map((id) =>
-        axios.get(`${USERS_SERVICE}/people/${id}`)
+        axios.get(`${USERS_SERVICE}/people/${id}`, {
+          headers: {
+            "x-user-id": userId,
+            "x-refresh-token": refreshToken,
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        })
       );
       const usersResponses = await Promise.allSettled(usersPromises);
 
       usersResponses.forEach((result, index) => {
-        if (result.status === "fulfilled" && result.value.data.success) {
+        if (
+          result.status === "fulfilled" &&
+          result.value.data.status === "success"
+        ) {
           usersMap.set(senderIds[index], result.value.data.data);
         }
       });
@@ -285,7 +488,7 @@ export const updateMessage = async (
 ) => {
   try {
     const { messageId } = req.params;
-    const userId = req.user?.id;
+    const userId = req?.headers["x-user-id"] as string;
     if (!userId) {
       return res
         .status(400)
@@ -367,84 +570,93 @@ export const deleteMessage = async (
   res: Response
 ) => {
   try {
+    // 1️⃣ Extract tokens
+    const token =
+      req.cookies?.accessToken ||
+      req.cookies?.refreshToken ||
+      (req.headers?.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization.split(" ")[1]
+        : undefined);
+
+    const refreshToken =
+      req.body?.refreshToken || req.headers["x-refresh-token"];
+
+    if (!token) {
+      return sendError(res, "Unauthorized: Token missing", 401);
+    }
+
+    // 2️⃣ Extract params
     const { messageId } = req.params;
     const { deleteForEveryone } = req.body;
-    const userId = req.user?.id;
-    if (!userId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User ID is required" });
-    }
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const userId = req.headers["x-user-id"] as string;
 
-    if (!userObjectId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid message ID",
-      });
+    console.log("====================================");
+    console.log({ deleteForEveryone, userId });
+    console.log("====================================");
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      return sendError(res, "Invalid user ID", 400);
     }
 
+    if (!mongoose.isValidObjectId(messageId)) {
+      return sendError(res, "Invalid message ID", 400);
+    }
+
+    // 3️⃣ Find message
     const message = await Message.findById(messageId);
-    if (!message) {
-      return res.status(404).json({
-        success: false,
-        message: "Message not found",
-      });
-    }
+    console.log("====================================");
+    console.log({ message });
+    console.log("====================================");
+    if (!message) return sendError(res, "Message not found", 404);
+    if (message.isDeleted)
+      return sendError(res, "Message already deleted", 400);
 
-    if (message.isDeleted) {
-      return res.status(400).json({
-        success: false,
-        message: "Message already deleted",
-      });
-    }
-
-    // Check permissions
+    // 4️⃣ Permission checks
     const isOwner = message.senderId.toString() === userId;
     let canDeleteForEveryone = isOwner;
 
-    // Check if user is admin of the chat (if deleteForEveryone is true)
     if (deleteForEveryone && !isOwner) {
       try {
-        const chatResponse = await axios.get(
-          `${CHATS_SERVICE}/api/chats/${message.chatId}/members/${userId}`
-        );
-        canDeleteForEveryone = chatResponse.data.data?.role === "admin";
-      } catch (error) {
-        canDeleteForEveryone = false;
+        const chatUrl = `${CHATS_SERVICE}/${
+          message.chatType
+        }-chat/${message.chatId.toString()}`;
+        const chatRes = await axios.get(chatUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "x-refresh-token": refreshToken,
+            "x-user-id": userId,
+          },
+        });
+        console.log("====================================");
+        console.log({ chatRes });
+        console.log("====================================");
+        canDeleteForEveryone = chatRes.data?.data?.role === "admin";
+      } catch (err: any) {
+        console.error("Chat admin check failed:", err.message);
+        return sendError(res, "User is not an admin", 403);
       }
     }
 
     if (!isOwner && !canDeleteForEveryone) {
-      return res.status(403).json({
-        success: false,
-        message: "You can only delete your own messages",
-      });
+      return sendError(res, "You can only delete your own messages", 403);
     }
 
-    // Delete message
+    // 5️⃣ Soft delete logic
     message.isDeleted = true;
     message.deletedAt = new Date();
     message.deletedBy = new mongoose.Types.ObjectId(userId);
 
     if (deleteForEveryone && canDeleteForEveryone) {
-      // Delete for everyone - clear content but keep metadata
       message.content = "";
       message.attachments = [];
     }
 
     await message.save();
 
-    res.json({
-      success: true,
-      message: "Message deleted successfully",
-    });
-  } catch (error) {
-    console.error("Delete message error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    // 6️⃣ Success response
+    return sendSuccess(res, null, "Message deleted successfully", 200);
+  } catch (error: any) {
+    console.error("❌ Delete message error:", error.message);
+    return sendError(res, "Internal server error", 500, error);
   }
 };
 
@@ -453,6 +665,15 @@ export const forwardMessage = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
+
   try {
     const { error, value } = forwardMessageSchema.validate(req.body);
     if (error) {
@@ -464,7 +685,7 @@ export const forwardMessage = async (
     }
 
     const { originalMessageId, targetChatIds, senderId } = value;
-    const userId = req.user?.id;
+    const userId = req?.headers["x-user-id"];
 
     if (senderId !== userId) {
       return res.status(403).json({
@@ -486,7 +707,11 @@ export const forwardMessage = async (
     const chatVerifications = await Promise.allSettled(
       targetChatIds.map((chatId: string) =>
         axios.get(`${CHATS_SERVICE}/api/chats/${chatId}`, {
-          headers: { "user-id": userId },
+          headers: {
+            "x-user-id": userId,
+            "x-refresh-token": refreshToken,
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
         })
       )
     );
@@ -542,8 +767,19 @@ export const forwardMessage = async (
 };
 
 // Mark messages as read
+
 export const markAsRead = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    // Extract userId from header (already authenticated)
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
+    // Validate request body
     const { error, value } = markAsReadSchema.validate(req.body);
     if (error) {
       return res.status(400).json({
@@ -553,43 +789,43 @@ export const markAsRead = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    const { messageIds, userId } = value;
+    const { messageIds } = value;
 
-    if (userId !== req.user?.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Invalid user",
-      });
-    }
+    // Convert IDs to ObjectId once
+    const objectIds = messageIds.map(
+      (id: string) => new mongoose.Types.ObjectId(id)
+    );
+    const userObjectId = new mongoose.Types.ObjectId(userId);
 
-    // Update messages - add to readBy if not already read
-    await Message.updateMany(
+    // Update all unread messages for this user
+    const result = await Message.updateMany(
       {
-        _id: {
-          $in: messageIds.map((id: string) => new mongoose.Types.ObjectId(id)),
-        },
-        "readBy.userId": { $ne: new mongoose.Types.ObjectId(userId) },
+        _id: { $in: objectIds },
         isDeleted: false,
+        "readBy.userId": { $ne: userObjectId },
       },
       {
         $addToSet: {
           readBy: {
-            userId: new mongoose.Types.ObjectId(userId),
+            userId: userObjectId,
             readAt: new Date(),
           },
         },
       }
     );
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      message: "Messages marked as read",
+      message: result.modifiedCount
+        ? `${result.modifiedCount} message(s) marked as read`
+        : "No unread messages to update",
     });
   } catch (error) {
     console.error("Mark as read error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error",
+      error: error instanceof Error ? error.message : error,
     });
   }
 };
@@ -597,46 +833,53 @@ export const markAsRead = async (req: AuthenticatedRequest, res: Response) => {
 // Add reaction to message
 export const addReaction = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { error, value } = addReactionSchema.validate(req.body);
+    // ✅ Validate input
+    const { error, value } = addReactionSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
     if (error) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation error",
-        errors: error.details.map((detail) => detail.message),
-      });
+      return sendError(
+        res,
+        "Body validation failed",
+        400,
+        error.details.map((d) => ({
+          field: d.path.join("."),
+          message: d.message,
+        }))
+      );
     }
 
-    const { messageId, userId, emoji } = value;
+    const { messageId, emoji } = value;
+    const userId = req?.headers["x-user-id"] as string;
 
-    if (userId !== req.user?.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Invalid user",
-      });
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      return sendError(res, "Invalid or missing user ID", 400);
     }
 
-    const message = await Message.findById(messageId);
-    if (!message || message.isDeleted) {
-      return res.status(404).json({
-        success: false,
-        message: "Message not found or deleted",
-      });
+    // ✅ Find message (only non-deleted)
+    const message = await Message.findOne({
+      _id: messageId,
+      isDeleted: false,
+    });
+
+    if (!message) {
+      return sendError(res, "Message not found or deleted", 404);
     }
 
-    // Check if user already reacted with this emoji
-    const existingReaction = message.reactions.find(
-      (reaction) =>
-        reaction.userId.toString() === userId && reaction.emoji === emoji
+    // ✅ Check if user already reacted with this emoji
+    const alreadyReacted = message.reactions.some(
+      (r) =>
+        r.userId.toString() === userId &&
+        r.emoji.toLowerCase() === emoji.toLowerCase()
     );
 
-    if (existingReaction) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already reacted with this emoji",
-      });
+    if (alreadyReacted) {
+      return sendError(res, "You already reacted with this emoji", 400);
     }
 
-    // Add reaction
+    // ✅ Add reaction
     message.reactions.push({
       userId: new mongoose.Types.ObjectId(userId),
       emoji,
@@ -645,19 +888,15 @@ export const addReaction = async (req: AuthenticatedRequest, res: Response) => {
 
     await message.save();
 
-    res.json({
-      success: true,
-      message: "Reaction added successfully",
-      data: {
-        reactions: message.reactions,
-      },
-    });
+    // ✅ Return updated reactions
+    return sendSuccess(
+      res,
+      { reactions: message.reactions },
+      "Reaction added successfully"
+    );
   } catch (error) {
-    console.error("Add reaction error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    console.error("❌ Add reaction error:", error);
+    return sendError(res, "Internal server error", 500, error);
   }
 };
 
@@ -667,6 +906,7 @@ export const removeReaction = async (
   res: Response
 ) => {
   try {
+    // Validate request body
     const { error, value } = removeReactionSchema.validate(req.body);
     if (error) {
       return res.status(400).json({
@@ -676,15 +916,18 @@ export const removeReaction = async (
       });
     }
 
-    const { messageId, userId, emoji } = value;
+    const { messageId } = value;
+    const userId = req.headers["x-user-id"] as string;
 
-    if (userId !== req.user?.id) {
-      return res.status(403).json({
+    // Ensure user is authenticated
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: "Invalid user",
+        message: "Unauthorized user",
       });
     }
 
+    // Fetch the message
     const message = await Message.findById(messageId);
     if (!message || message.isDeleted) {
       return res.status(404).json({
@@ -693,24 +936,41 @@ export const removeReaction = async (
       });
     }
 
-    // Remove reaction
-    message.reactions = message.reactions.filter(
-      (reaction) =>
-        !(reaction.userId.toString() === userId && reaction.emoji === emoji)
+    // Check if user has reacted
+    const hasReaction = message.reactions.some(
+      (reaction) => reaction.userId.toString() === userId
     );
 
-    await message.save();
+    if (!hasReaction) {
+      return res.status(400).json({
+        success: false,
+        message: "You haven't reacted to this message",
+      });
+    }
 
-    res.json({
+    // Remove only the user's reaction(s)
+    await Message.updateOne(
+      { _id: messageId },
+      {
+        $pull: {
+          reactions: { userId: new mongoose.Types.ObjectId(userId) },
+        },
+      }
+    );
+
+    // Fetch updated reactions for response
+    const updatedMessage = await Message.findById(messageId, { reactions: 1 });
+
+    return res.json({
       success: true,
-      message: "Reaction removed successfully",
+      message: "Your reaction(s) removed successfully",
       data: {
-        reactions: message.reactions,
+        reactions: updatedMessage?.reactions || [],
       },
     });
   } catch (error) {
     console.error("Remove reaction error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error",
     });
@@ -718,217 +978,211 @@ export const removeReaction = async (
 };
 
 // Search messages
-export const searchMessages = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  const token =
-      req.headers["authorization"] ||
-      req.cookies?.accessToken ||
-      req.cookies?.refreshToken;
-  try {
-    const { error, value } = searchMessagesSchema.validate(req.query);
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation error",
-        errors: error.details.map((detail) => detail.message),
-      });
-    }
+// export const searchMessages = async (
+//   req: AuthenticatedRequest,
+//   res: Response
+// ) => {
+//   try {
+//     // --- Extract and prepare auth info ---
+//     const token =
+//       req.cookies?.accessToken ||
+//       req.cookies?.refreshToken ||
+//       (req.headers.authorization?.startsWith("Bearer ")
+//         ? req.headers.authorization.split(" ")[1]
+//         : undefined);
 
-    const {
-      chatId,
-      query,
-      page,
-      limit,
-      messageType,
-      senderId,
-      dateFrom,
-      dateTo,
-    } = value;
-    const userId = req.user?.id;
+//     const refreshToken =
+//       req.headers["x-refresh-token"] || req.body?.refreshToken;
+//     const userId = req?.headers["x-user-id"] as string;
 
-    // Build search query
-    const searchQuery: any = {
-      $text: { $search: query },
-      isDeleted: false,
-    };
+//     const headers = {
+//       "x-user-id": userId,
+//       "x-refresh-token": refreshToken,
+//       ...(token && { Authorization: `Bearer ${token}` }),
+//     };
 
-    if (chatId) {
-      // Verify access to specific chat
-      try {
-        const chatResponse = await axios.get(
-          `${CHATS_SERVICE}/api/chats/${chatId}`,
-          {
-            headers: { "x-user-id": userId },
-          }
-        );
+//     // --- Validate query params ---
+//     const { error, value } = searchMessagesSchema.validate(req.query);
+//     if (error) {
+//       return sendError(
+//         res,
+//         "Body validation failed",
+//         400,
+//         error.details.map((d) => ({
+//           field: d.path.join("."),
+//           message: d.message,
+//         }))
+//       );
+//     }
 
-        if (!chatResponse.data.success) {
-          return res.status(404).json({
-            success: false,
-            message: "Chat not found or access denied",
-          });
-        }
-      } catch (error) {
-        return res.status(500).json({
-          success: false,
-          message: "Failed to verify chat access",
-        });
-      }
+//     const {
+//       chatId,
+//       query = "",
+//       page = 1,
+//       limit = 20,
+//       messageType,
+//       senderId,
+//       dateFrom,
+//       dateTo,
+//     } = value;
 
-      searchQuery.chatId = new mongoose.Types.ObjectId(chatId);
-    } else {
-      // Search in all accessible chats
-      try {
-        const chatsResponse = await axios.get(
-          `${CHATS_SERVICE}/api/chats`,
-          {
-            headers: { "user-id": userId },
-          }
-        );
+//     const skip = (page - 1) * limit;
+//     const searchQuery: any = { isDeleted: false };
 
-        if (chatsResponse.data.success && chatsResponse.data.data.length > 0) {
-          const accessibleChatIds = chatsResponse.data.data.map(
-            (chat: any) => new mongoose.Types.ObjectId(chat._id)
-          );
-          searchQuery.chatId = { $in: accessibleChatIds };
-        } else {
-          return res.json({
-            success: true,
-            data: {
-              messages: [],
-              pagination: {
-                page,
-                limit,
-                total: 0,
-                totalPages: 0,
-                hasMore: false,
-                hasPrevious: false,
-              },
-            },
-          });
-        }
-      } catch (error) {
-        return res.status(500).json({
-          success: false,
-          message: "Failed to get accessible chats",
-        });
-      }
-    }
+//     // --- Full text search ---
+//     if (query) {
+//       searchQuery.$text = { $search: query };
+//     }
 
-    // Add additional filters
-    if (messageType) {
-      searchQuery.messageType = messageType;
-    }
+//     // --- Chat access check and scope filtering ---
+//     if (chatId) {
+//       // Verify user access to that chat
+//       try {
+//         const { data } = await axios.get(
+//           `${CHATS_SERVICE}/api/chats/${chatId}`,
+//           { headers }
+//         );
+//         if (!data?.success) {
+//           return sendError(res, "Chat not found or access denied", 404);
+//         }
+//       } catch {
+//         return sendError(res, "Failed to verify chat access", 500);
+//       }
 
-    if (senderId) {
-      searchQuery.senderId = new mongoose.Types.ObjectId(senderId);
-    }
+//       searchQuery.chatId = new mongoose.Types.ObjectId(chatId);
+//     } else {
+//       // Fetch accessible chats for user
+//       try {
+//         const { data } = await axios.get(`${CHATS_SERVICE}/api/chats`, {
+//           headers,
+//         });
+//         const accessibleChats = data?.data || [];
 
-    if (dateFrom || dateTo) {
-      searchQuery.createdAt = {};
-      if (dateFrom) searchQuery.createdAt.$gte = new Date(dateFrom);
-      if (dateTo) searchQuery.createdAt.$lte = new Date(dateTo);
-    }
+//         if (!accessibleChats.length) {
+//           return sendSuccess(res, {
+//             messages: [],
+//             pagination: {
+//               page,
+//               limit,
+//               total: 0,
+//               totalPages: 0,
+//               hasMore: false,
+//               hasPrevious: false,
+//             },
+//           });
+//         }
 
-    const skip = (page - 1) * limit;
+//         searchQuery.chatId = {
+//           $in: accessibleChats.map(
+//             (chat: any) => new mongoose.Types.ObjectId(chat._id)
+//           ),
+//         };
+//       } catch {
+//         return sendError(res, "Failed to fetch accessible chats", 500);
+//       }
+//     }
 
-    // Execute search
-    const messages = await Message.find(searchQuery, {
-      score: { $meta: "textScore" },
-    })
-      .sort({ score: { $meta: "textScore" }, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+//     // --- Optional filters ---
+//     if (messageType) searchQuery.messageType = messageType;
+//     if (senderId) searchQuery.senderId = new mongoose.Types.ObjectId(senderId);
 
-    const total = await Message.countDocuments(searchQuery);
+//     if (dateFrom || dateTo) {
+//       searchQuery.createdAt = {};
+//       if (dateFrom) searchQuery.createdAt.$gte = new Date(dateFrom);
+//       if (dateTo) searchQuery.createdAt.$lte = new Date(dateTo);
+//     }
 
-    // Get user data for messages
-    const senderIds = [
-      ...new Set(messages.map((msg) => msg.senderId.toString())),
-    ];
-    const usersMap = new Map();
+//     // --- Query messages ---
+//     const [messages, total] = await Promise.all([
+//       Message.find(searchQuery, { score: { $meta: "textScore" } })
+//         .sort({ score: { $meta: "textScore" }, createdAt: -1 })
+//         .skip(skip)
+//         .limit(limit)
+//         .lean(),
+//       Message.countDocuments(searchQuery),
+//     ]);
 
-    try {
-      const usersPromises = senderIds.map((id) =>
-        axios.get(`${USERS_SERVICE}/people/${id}`,{
-          headers: { "user-id": userId ,Authorization:token},
-        })
-      );
-      const usersResponses = await Promise.allSettled(usersPromises);
+//     // --- Fetch unique sender details in parallel ---
+//     const senderIds = [...new Set(messages.map((m) => m.senderId?.toString()))];
+//     const usersMap = new Map<string, any>();
 
-      usersResponses.forEach((result, index) => {
-        if (result.status === "fulfilled" && result.value.data.success) {
-          usersMap.set(senderIds[index], result.value.data.data);
-        }
-      });
-    } catch (error) {
-      console.error("Error fetching users for search:", error);
-    }
+//     const userRequests = senderIds.map((id) =>
+//       axios.get(`${USERS_SERVICE}/people/${id}`, { headers })
+//     );
 
-    const messagesWithUsers = messages.map((message) => ({
-      ...message,
-      sender: usersMap.get(message.senderId.toString()) || null,
-    }));
+//     const userResponses = await Promise.allSettled(userRequests);
 
-    res.json({
-      success: true,
-      data: {
-        messages: messagesWithUsers,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-          hasMore: skip + messages.length < total,
-          hasPrevious: page > 1,
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Search messages error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
+//     userResponses.forEach((result, i) => {
+//       if (
+//         result.status === "fulfilled" &&
+//         result.value.data?.status === "success"
+//       ) {
+//         usersMap.set(senderIds[i], result.value.data.data);
+//       }
+//     });
 
-// Bulk delete messages
+//     const enrichedMessages = messages.map((msg) => ({
+//       ...msg,
+//       sender: usersMap.get(msg.senderId?.toString()) || null,
+//     }));
+
+//     // --- Send response ---
+//     return sendSuccess(res, {
+//       messages: enrichedMessages,
+//       pagination: {
+//         page,
+//         limit,
+//         total,
+//         totalPages: Math.ceil(total / limit),
+//         hasMore: skip + messages.length < total,
+//         hasPrevious: page > 1,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Search messages error:", error);
+//     return sendError(res, "Internal server error", 500, error);
+//   }
+// };
+// // Bulk delete messages
 export const bulkDeleteMessages = async (
   req: AuthenticatedRequest,
   res: Response
 ) => {
-  const token =
-      req.headers["authorization"] ||
-      req.cookies?.accessToken ||
-      req.cookies?.refreshToken;
   try {
+    // Extract tokens for cross-service auth
+    const token =
+      req.cookies?.accessToken ||
+      req.cookies?.refreshToken ||
+      (req.headers?.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization.split(" ")[1]
+        : undefined);
+
+    const refreshToken =
+      req.headers["x-refresh-token"] || req.body?.refreshToken;
+
     const { error, value } = bulkDeleteSchema.validate(req.body);
     if (error) {
       return res.status(400).json({
         success: false,
         message: "Validation error",
-        errors: error.details.map((detail) => detail.message),
+        errors: error.details.map((d) => d.message),
       });
     }
 
-    const { messageIds, deletedBy, deleteForEveryone } = value;
-    const userId = req.user?.id;
+    const { messageIds, deleteForEveryone } = value;
+    const userId = req.headers["x-user-id"] as string;
 
-    if (deletedBy !== userId) {
-      return res.status(403).json({
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: "Invalid user",
+        message: "Unauthorized: missing user ID",
       });
     }
 
-    // Find messages and check permissions
+    // Fetch messages that are not deleted
     const messages = await Message.find({
       _id: {
-        $in: messageIds.map((id: any) => new mongoose.Types.ObjectId(id)),
+        $in: messageIds.map((id: string) => new mongoose.Types.ObjectId(id)),
       },
       isDeleted: false,
     });
@@ -940,49 +1194,53 @@ export const bulkDeleteMessages = async (
       });
     }
 
-    // Check permissions for each message
-    const deletableMessages = [];
-    const chatAdminMap = new Map();
+    // Permission map to avoid redundant API calls
+    const chatAdminMap = new Map<string, boolean>();
+    const deletableMessages: typeof messages = [];
 
     for (const message of messages) {
       const isOwner = message.senderId.toString() === userId;
       let canDelete = isOwner;
 
-      // Check admin permissions if deleteForEveryone
+      // Admin check if deleteForEveryone requested and not the sender
       if (deleteForEveryone && !isOwner) {
         const chatId = message.chatId.toString();
 
+        // Avoid duplicate network calls
         if (!chatAdminMap.has(chatId)) {
           try {
-            const chatResponse = await axios.get(
-              `${CHATS_SERVICE}/api/chats/${chatId}/members/${userId}`,{
-          headers: { "user-id": userId ,Authorization:token},
-        }
+            const chatRes = await axios.get(
+              `${CHATS_SERVICE}/${message.chatType}-chat/${message?.chatId}`,
+              {
+                headers: {
+                  "x-user-id": userId,
+                  "x-refresh-token": refreshToken,
+                  ...(token && { Authorization: `Bearer ${token}` }),
+                },
+              }
             );
-            const isAdmin = chatResponse.data.data?.role === "admin";
-            chatAdminMap.set(chatId, isAdmin);
-          } catch (error) {
+            chatAdminMap.set(chatId, chatRes.data?.data?.role === "admin");
+          } catch {
             chatAdminMap.set(chatId, false);
           }
         }
 
-        canDelete = chatAdminMap.get(chatId);
+        canDelete = chatAdminMap.get(chatId) ?? false;
       }
 
-      if (canDelete) {
-        deletableMessages.push(message);
-      }
+      if (canDelete) deletableMessages.push(message);
     }
 
     if (deletableMessages.length === 0) {
       return res.status(403).json({
         success: false,
-        message: "No permission to delete any of the selected messages",
+        message:
+          "You do not have permission to delete any of the selected messages",
       });
     }
 
-    // Update messages
-    const updateData: any = {
+    // Build update object
+    const updateData: Partial<IMessage> = {
       isDeleted: true,
       deletedAt: new Date(),
       deletedBy: new mongoose.Types.ObjectId(userId),
@@ -993,14 +1251,15 @@ export const bulkDeleteMessages = async (
       updateData.attachments = [];
     }
 
+    // Apply updates
     await Message.updateMany(
       { _id: { $in: deletableMessages.map((msg) => msg._id) } },
-      updateData
+      { $set: updateData }
     );
 
-    res.json({
+    return res.json({
       success: true,
-      message: `${deletableMessages.length} messages deleted successfully`,
+      message: `${deletableMessages.length} message(s) deleted successfully`,
       data: {
         deletedCount: deletableMessages.length,
         totalRequested: messageIds.length,
@@ -1008,93 +1267,117 @@ export const bulkDeleteMessages = async (
     });
   } catch (error) {
     console.error("Bulk delete error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error",
+      error: error instanceof Error ? error.message : error,
     });
   }
 };
 
-// Get message by ID
-export const getMessageById = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
+export const getMessageByMsgId = async (req: Request, res: Response) => {
   try {
-    let token = req?.headers.authorization || req?.cookies?.accessToken ||req?.cookies?.refreshToken
+    const token =
+      req.cookies?.accessToken ||
+      req.cookies?.refreshToken ||
+      (req.headers.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization.split(" ")[1]
+        : undefined);
+
+    const refreshToken =
+      req?.body?.refreshToken || req?.headers["x-refresh-token"];
+
+    if (!token) {
+      return sendError(res, "Unauthorized: Token missing", 401);
+    }
+
     const { messageId } = req.params;
-    const userId = req.user?.id;
-    if (!userId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User ID is required" });
-    }
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-
-    if (!userObjectId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid message ID",
-      });
+    const userId = req.headers["x-user-id"] as string;
+    console.log("====================================");
+    console.log({ messageId });
+    console.log("====================================");
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+      return sendError(res, "Invalid user ID", 400);
     }
 
-    const message = await Message.findById(messageId).lean();
+    if (!mongoose.isValidObjectId(messageId)) {
+      return sendError(res, "Invalid message ID", 400);
+    }
+
+    // 1️⃣ Fetch message
+    const message = await Message.findById(messageId).select("-__v").exec();
+
+    console.log("====================================");
+    console.log({ message });
+    console.log("====================================");
+
     if (!message || message.isDeleted) {
-      return res.status(404).json({
-        success: false,
-        message: "Message not found",
-      });
+      return sendError(res, "Message not found", 404);
     }
 
-    // Verify access to chat
-    try {
-      const chatResponse = await axios.get(
-        `${CHATS_SERVICE}/api/chats/${message.chatId}`,
-        {
-          headers: { "user-id": userId ,Authorization:token},
-        }
+    // 2️⃣ Prepare headers for downstream services
+    const headers = {
+      "x-user-id": userId,
+      Authorization: `Bearer ${token}`,
+      "x-refresh-token": refreshToken,
+    };
+    console.log("verifying the user access to chat..");
+
+    // 3️⃣ Verify user access to chat
+    let chatType = message?.chatType;
+    let chatVerified = false;
+    console.log("====================================");
+    console.log({ chatType, chatId: message?.chatId });
+    console.log("====================================");
+    if (chatType) {
+      // direct known type || checking the chatType that exists in messageSchema
+      chatVerified = await verifyChatAccess(
+        chatType,
+        message.chatId.toString(),
+        headers
       );
-
-      if (!chatResponse.data.success) {
-        return res.status(404).json({
-          success: false,
-          message: "Chat not found or access denied",
-        });
-      }
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to verify chat access",
-      });
+    } else {
+      // try both types if unknown
+      console.warn(
+        "⚠️ chatType missing in message. Trying both private and group chat endpoints..."
+      );
+      //checking for private
+      chatVerified =
+        (await verifyChatAccess(
+          "private",
+          message.chatId.toString(),
+          headers
+        )) ||
+        //checking for group
+        (await verifyChatAccess("group", message.chatId.toString(), headers));
     }
 
-    // Get sender data
+    if (!chatVerified) {
+      return sendError(res, "Access denied to chat", 403);
+    }
+
+    // 4️⃣ Fetch sender info (non-blocking)
     try {
-      const userResponse = await axios.get(
+      const userRes = await axios.get(
         `${USERS_SERVICE}/people/${message.senderId}`,
-        {
-          headers: {
-      Authorization: token || "", // send the token if needed
-      // "x-user-id": senderId // optional if your service requires it
-    }
-        }
+        { headers }
       );
-      if (userResponse.data?.status =='success') {
-        (message as any).sender = userResponse.data.data;
+      if (userRes.data?.status === "success") {
+        (message as any)._doc.sender = userRes.data.data;
       }
-    } catch (error) {
-      console.error("Error fetching sender data:", error);
+    } catch (err) {
+      console.warn("⚠️ Could not fetch sender info:", err);
     }
 
-    res.json({
-      success: true,
-      data: message,
-    });
-  } catch (error) {
-    console.error("Get message by ID error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    // 5️⃣ Return success
+    return sendSuccess(
+      res,
+      message,
+      "Successfully retrieved message data",
+      200
+    );
+  } catch (error: any) {
+    console.error("❌ Get message by ID error:", error.message);
+    return sendError(res, "Failed to get message by ID", 500, error);
   }
 };

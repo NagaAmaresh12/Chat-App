@@ -27,6 +27,7 @@ app.use(cookieParser());
 //routes
 app.get("/health", (req, res) => {
   res.status(200).json({
+    token: req?.headers?.authorization,
     message: "Chat service is up and running",
   });
 });
