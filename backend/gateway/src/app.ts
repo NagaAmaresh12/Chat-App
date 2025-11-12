@@ -20,8 +20,9 @@ app.use(cors);
 app.use(cookieParser());
 app.use(helmetMiddleware);
 app.use(ratelimiter);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
 
 app.use(
   morgan("combined", {
@@ -69,6 +70,7 @@ io.use(async (socket, next) => {
 
 // ------------------- Socket Events -------------------
 io.on("connection", (socket: Socket) => {
+  console.log("🔌 New connection:", socket.id);
   const { user, token, refreshToken } = socket.data;
   logger.info(`✅ User connected: ${user}${user.id} (${socket.id})`);
 
@@ -84,8 +86,26 @@ io.on("connection", (socket: Socket) => {
   // ------------------- Send Message -------------------
   socket.on("send-message", async (payload) => {
     try {
-      if (!payload.chatId || !payload.content)
-        return socket.emit("error", { message: "Invalid payload" });
+      console.log("📨 Received send-message event:", {
+        chatId: payload?.chatId,
+        chatType: payload?.chatType,
+        messageType: payload?.messageType,
+        contentLength: payload?.content?.length,
+        attachmentsCount: payload?.attachments?.length,
+        userId: user?.id,
+      });
+
+      // ✅ Check for chatId and either content OR attachments
+      if (
+        !payload.chatId ||
+        (!payload.content &&
+          (!payload.attachments || payload.attachments.length === 0))
+      ) {
+        return socket.emit("error", {
+          message:
+            "Invalid payload: chatId and either content or attachments required",
+        });
+      }
 
       const { data } = await axios.post(
         `${MESSAGES_SERVICE_URL}/msg/v1/create`,
@@ -95,6 +115,7 @@ io.on("connection", (socket: Socket) => {
             "x-user-id": user.id,
             Authorization: `Bearer ${token}`,
             "x-refresh-token": refreshToken,
+            "Content-Type": "application/json", // ✅ Add this
           },
         }
       );
@@ -109,12 +130,12 @@ io.on("connection", (socket: Socket) => {
 
       // Confirm to sender
       socket.emit("message-created", { messageId: message._id });
-
-      // Optionally notify others (async)
-      // axios.post(`${NOTIFICATIONS_SERVICE_URL}/notify`, { message }).catch(() => {});
     } catch (err: any) {
       logger.error("Send message error:", err.response?.data || err.message);
-      socket.emit("error", { message: "Failed to send message" });
+      socket.emit("error", {
+        message: "Failed to send message",
+        details: err.response?.data || err.message, // ✅ Add details
+      });
     }
   });
 

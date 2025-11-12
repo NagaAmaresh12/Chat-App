@@ -1,9 +1,9 @@
 import express from "express";
 import { connectToRabbitMQ } from "./config/rabbitMQ.js";
-import { config } from "dotenv";
+import path from "node:path";
 
-config();
-
+import dotenv from "dotenv";
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 const app = express();
 app.get("/health", (req, res) => {
   res.json({

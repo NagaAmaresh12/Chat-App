@@ -33,26 +33,23 @@ let USERS_SERVICE = process.env.USERS_SERVICE!;
 //   res: Response
 // ) => {
 //   try {
-//     console.log("🔹 Creating new message...");
+//     console.log("📩 Creating new message...");
 
-//     // Use the authenticated user ID as senderId
 //     const senderId = req.headers["x-user-id"] as string;
-
-//     if (!senderId) {
+//     if (!senderId)
 //       return res.status(401).json({ success: false, message: "Unauthorized" });
-//     }
 
 //     const token =
-//       req?.cookies?.accessToken ||
-//       (req?.headers?.authorization?.startsWith("Bearer ")
+//       req.cookies?.accessToken ||
+//       (typeof req.headers.authorization === "string" &&
+//       req.headers.authorization.startsWith("Bearer ")
 //         ? req.headers.authorization.split(" ")[1]
 //         : undefined);
+
 //     const refreshToken =
-//       req?.body?.refreshToken || req?.headers["x-refresh-token"];
-//     console.log("====================================");
-//     console.log({ token, refreshToken });
-//     console.log("====================================");
-//     // Validate request body
+//       req.body?.refreshToken || req.headers["x-refresh-token"];
+
+//     // Validate body AFTER multer has populated req.body (multipart/form-data)
 //     const { error, value } = createMessageSchema.validate(req.body);
 //     if (error) {
 //       return res.status(400).json({
@@ -62,20 +59,9 @@ let USERS_SERVICE = process.env.USERS_SERVICE!;
 //       });
 //     }
 
-//     const { chatId, content, messageType, attachments, replyTo, chatType } =
-//       value;
-//     //If you don't get any of these above values even if you pass it, then check the joi validations fields, there are exists or renamed it
-//     console.log("🔹 Incoming message data:", {
-//       chatId,
-//       senderId,
-//       content,
-//       messageType,
-//       attachments,
-//       replyTo,
-//       chatType,
-//     });
+//     const { chatId, content, messageType = "text", replyTo, chatType } = value;
 
-//     // ------------------------- Verify chat -------------------------
+//     // Verify chat (same as you had)
 //     try {
 //       const chatResponse = await axios.get(
 //         `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
@@ -87,18 +73,16 @@ let USERS_SERVICE = process.env.USERS_SERVICE!;
 //           },
 //         }
 //       );
-
-//       if (chatResponse?.data?.status !== "success" || !chatResponse.data.data) {
-//         return res.status(404).json({
-//           success: false,
-//           message: "Chat not found or access denied",
-//         });
+//       if (chatResponse?.data?.status !== "success") {
+//         return res
+//           .status(404)
+//           .json({ success: false, message: "Chat not found or access denied" });
 //       }
 //     } catch (err: any) {
 //       return sendError(res, "Failed to verify chat access", 500, err);
 //     }
 
-//     // ------------------------- Verify user -------------------------
+//     // Verify user
 //     let userData;
 //     try {
 //       const userResponse = await axios.get(
@@ -111,23 +95,17 @@ let USERS_SERVICE = process.env.USERS_SERVICE!;
 //           },
 //         }
 //       );
-
-//       if (
-//         userResponse?.data?.status !== "success" ||
-//         !userResponse?.data?.data
-//       ) {
+//       if (userResponse?.data?.status !== "success") {
 //         return res
 //           .status(404)
 //           .json({ success: false, message: "User not found" });
 //       }
-
 //       userData = userResponse.data.data;
-//       console.log("🔹 Verified user:", userData);
 //     } catch (err: any) {
 //       return sendError(res, "Failed to verify user", 500, err);
 //     }
 
-//     // ------------------------- Verify replyTo message -------------------------
+//     // If replyTo provided, verify original message exists
 //     if (replyTo) {
 //       const originalMessage = await Message.findById(replyTo.messageId);
 //       if (!originalMessage || originalMessage.isDeleted) {
@@ -138,77 +116,96 @@ let USERS_SERVICE = process.env.USERS_SERVICE!;
 //       }
 //     }
 
-//     // ------------------------- Create message -------------------------
+//     // Handle uploaded files (multer memory storage -> req.files)
+//     const files = (req.files as Express.Multer.File[]) ?? [];
+//     const uploadedFiles: Array<any> = [];
+
+//     if (files.length > 0) {
+//       for (const file of files) {
+//         try {
+//           const result = await uploadBufferToCloudinary(file.buffer, {
+//             folder: process.env.CLOUDINARY_UPLOAD_FOLDER || "chat_uploads",
+//             resource_type: "auto",
+//           });
+
+//           uploadedFiles.push({
+//             url: result.secure_url,
+//             publicId: result.public_id,
+//             type: messageType, // required in schema
+//             mimeType: file.mimetype, // required in schema
+//             filename: file.originalname, // required in schema
+//             format: result.format,
+//             size: result.bytes,
+//             resourceType: result.resource_type,
+//           });
+//         } catch (error) {
+//           console.error(
+//             "Cloudinary upload failed for file",
+//             file.originalname,
+//             error
+//           );
+//           return sendError(res, "Failed to upload attachments", 500, error);
+//         }
+//       }
+//     }
+
+//     // Create message doc with attachments (if any)
 //     const message = new Message({
 //       chatId,
 //       senderId,
 //       content,
 //       messageType,
-//       attachments,
+//       attachments: uploadedFiles,
 //       replyTo,
 //       chatType,
 //     });
 
 //     const savedMessage = await message.save();
-//     console.log("🔹 Message saved:", savedMessage._id);
 
-//     const populatedMessage = {
-//       ...savedMessage.toObject(),
-//       sender: userData,
-//     };
+//     const populatedMessage = { ...savedMessage.toObject(), sender: userData };
 
-//     res.status(201).json({
+//     return res.status(201).json({
 //       success: true,
 //       message: "Message created successfully",
 //       data: populatedMessage,
 //     });
 //   } catch (err: any) {
+//     console.error("❌ Create message error:", err);
 //     return sendError(res, "Failed to create message", 500, err);
 //   }
 // };
-export const createMessage = async (
-  req: AuthenticatedRequest,
-  res: Response
-) => {
-  try {
-    console.log("📩 Creating new message...");
 
+// ----------------- Controller -----------------
+export const createMessage = async (req: Request, res: Response) => {
+  try {
     const senderId = req.headers["x-user-id"] as string;
     if (!senderId)
       return res.status(401).json({ success: false, message: "Unauthorized" });
 
-    const token =
-      req.cookies?.accessToken ||
-      (typeof req.headers.authorization === "string" &&
-      req.headers.authorization.startsWith("Bearer ")
-        ? req.headers.authorization.split(" ")[1]
-        : undefined);
-
-    const refreshToken =
-      req.body?.refreshToken || req.headers["x-refresh-token"];
-
-    // Validate body AFTER multer has populated req.body (multipart/form-data)
+    // Validate request body
     const { error, value } = createMessageSchema.validate(req.body);
-    if (error) {
+    if (error)
       return res.status(400).json({
         success: false,
         message: "Validation error",
         errors: error.details.map((d) => d.message),
       });
-    }
 
-    const { chatId, content, messageType = "text", replyTo, chatType } = value;
+    const {
+      chatId,
+      chatType,
+      messageType,
+      content,
+      attachments = [],
+      replyTo,
+    } = value;
 
-    // Verify chat (same as you had)
+    // ----------------- Verify chat -----------------
     try {
       const chatResponse = await axios.get(
-        `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
+        `${process.env.CHATS_SERVICE}/${chatType}-chat/${chatId}`,
         {
-          headers: {
-            "x-user-id": senderId,
-            "x-refresh-token": refreshToken,
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
+          headers: { "x-user-id": senderId },
         }
       );
       if (chatResponse?.data?.status !== "success") {
@@ -220,98 +217,62 @@ export const createMessage = async (
       return sendError(res, "Failed to verify chat access", 500, err);
     }
 
-    // Verify user
-    let userData;
-    try {
-      const userResponse = await axios.get(
-        `${USERS_SERVICE}/people/${senderId}`,
-        {
-          headers: {
-            "x-user-id": senderId,
-            "x-refresh-token": refreshToken,
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-        }
-      );
-      if (userResponse?.data?.status !== "success") {
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found" });
-      }
-      userData = userResponse.data.data;
-    } catch (err: any) {
-      return sendError(res, "Failed to verify user", 500, err);
-    }
-
-    // If replyTo provided, verify original message exists
+    // ----------------- Verify replyTo message -----------------
     if (replyTo) {
       const originalMessage = await Message.findById(replyTo.messageId);
-      if (!originalMessage || originalMessage.isDeleted) {
+      if (!originalMessage || originalMessage.isDeleted)
         return res.status(404).json({
           success: false,
           message: "Original message not found or deleted",
         });
-      }
     }
 
-    // Handle uploaded files (multer memory storage -> req.files)
-    const files = (req.files as Express.Multer.File[]) ?? [];
-    const uploadedFiles: Array<any> = [];
-
-    if (files.length > 0) {
-      for (const file of files) {
-        try {
-          const result = await uploadBufferToCloudinary(file.buffer, {
-            folder: process.env.CLOUDINARY_UPLOAD_FOLDER || "chat_uploads",
-            resource_type: "auto",
-          });
-
-          uploadedFiles.push({
-            url: result.secure_url,
-            publicId: result.public_id,
-            type: messageType, // required in schema
-            mimeType: file.mimetype, // required in schema
-            filename: file.originalname, // required in schema
-            format: result.format,
-            size: result.bytes,
-            resourceType: result.resource_type,
-          });
-        } catch (error) {
-          console.error(
-            "Cloudinary upload failed for file",
-            file.originalname,
-            error
-          );
-          return sendError(res, "Failed to upload attachments", 500, error);
-        }
-      }
+    // ----------------- Validate attachments against messageType -----------------
+    if (
+      (messageType === "text" || messageType === "emoji") &&
+      attachments.length > 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Text/emoji messages cannot have attachments",
+      });
     }
 
-    // Create message doc with attachments (if any)
+    if (
+      messageType !== "text" &&
+      messageType !== "emoji" &&
+      attachments.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Media messages must have attachments",
+      });
+    }
+
+    // ----------------- Create message -----------------
     const message = new Message({
       chatId,
+      chatType,
       senderId,
       content,
       messageType,
-      attachments: uploadedFiles,
+      attachments,
       replyTo,
-      chatType,
     });
 
     const savedMessage = await message.save();
 
-    const populatedMessage = { ...savedMessage.toObject(), sender: userData };
-
     return res.status(201).json({
       success: true,
       message: "Message created successfully",
-      data: populatedMessage,
+      data: savedMessage,
     });
   } catch (err: any) {
     console.error("❌ Create message error:", err);
     return sendError(res, "Failed to create message", 500, err);
   }
 };
+
 // Get messages for a chat with pagination
 export const getMessagesByChatID = async (
   req: AuthenticatedRequest,

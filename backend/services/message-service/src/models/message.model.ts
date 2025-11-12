@@ -12,7 +12,7 @@ export interface IAttachment {
 export interface IReplyTo {
   messageId: mongoose.Types.ObjectId;
   senderId: mongoose.Types.ObjectId;
-  content: string;
+  content?: string;
   messageType: "text" | "media" | "emoji";
 }
 
@@ -27,7 +27,7 @@ export interface IMessage extends Document {
   chatId: mongoose.Types.ObjectId;
   chatType: "private" | "group"; // ✅ Added here
   senderId: mongoose.Types.ObjectId;
-  content: string;
+  content?: string;
   messageType: "text" | "image" | "video" | "audio" | "document" | "emoji";
   attachments: IAttachment[];
   replyTo?: IReplyTo;
@@ -114,9 +114,7 @@ const MessageSchema = new Schema<IMessage>(
     },
     content: {
       type: String,
-      // required: function (this: IMessage) {
-      //   return this.messageType === "text" || this.messageType === "emoji";
-      // },
+
       maxlength: 4000,
     },
     messageType: {

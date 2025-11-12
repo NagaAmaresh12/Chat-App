@@ -9,18 +9,18 @@ const objectIdValidation = Joi.string().custom((value, helpers) => {
   return value;
 }, "ObjectId validation");
 
-// Attachment validation schema
-const attachmentSchema = Joi.object({
-  type: Joi.string().valid("image", "video", "audio", "document").required(),
-  url: Joi.string().uri().required(),
-  filename: Joi.string().min(1).max(255).required(),
-  size: Joi.number()
-    .positive()
-    .max(100 * 1024 * 1024)
-    .required(), // Max 100MB
-  mimeType: Joi.string().required(),
-  thumbnailUrl: Joi.string().uri().optional(),
-});
+// Attachment validation schema -- OLD
+// const attachmentSchema = Joi.object({
+//   type: Joi.string().valid("image", "video", "audio", "document").required(),
+//   url: Joi.string().uri().required(),
+//   filename: Joi.string().min(1).max(255).required(),
+//   size: Joi.number()
+//     .positive()
+//     .max(100 * 1024 * 1024)
+//     .required(), // Max 100MB
+//   mimeType: Joi.string().required(),
+//   thumbnailUrl: Joi.string().uri().optional(),
+// });
 
 // Reply to schema
 const replyToSchema = Joi.object({
@@ -43,7 +43,32 @@ export const deleteMessageSchemaByMsgID = Joi.object({
   deleteForEveryone: Joi.boolean(),
 });
 
-// Create message validation
+// Create message validation -- OLD
+// export const createMessageSchema = Joi.object({
+//   chatId: objectIdValidation.required(),
+//   chatType: Joi.string().valid("private", "group").required(),
+//   messageType: Joi.string()
+//     .valid("text", "image", "video", "audio", "document", "emoji")
+//     .default("text"),
+
+//   content: Joi.string().max(4000).optional(),
+
+//   // Don't require attachments here — multer handles them
+//   attachments: Joi.any().optional(),
+
+//   replyTo: replyToSchema.optional(),
+// });
+
+// Attachment validation schema -- NEW
+export const attachmentSchema = Joi.object({
+  url: Joi.string().uri().required(),
+  filename: Joi.string().required(),
+  size: Joi.number().required(),
+  mimeType: Joi.string().required(),
+  type: Joi.string().valid("image", "video", "audio", "document").required(),
+  thumbnailUrl: Joi.string().uri().optional(),
+});
+// Create message validation -- NEW
 export const createMessageSchema = Joi.object({
   chatId: objectIdValidation.required(),
   chatType: Joi.string().valid("private", "group").required(),
@@ -51,13 +76,28 @@ export const createMessageSchema = Joi.object({
     .valid("text", "image", "video", "audio", "document", "emoji")
     .default("text"),
 
-  content: Joi.string().max(4000).optional(),
+  // ✅ Fix: Allow empty string OR make it truly optional when not present
+  content: Joi.string()
+    .allow("", null) // Allow empty string and null
+    .max(4000)
+    .optional(),
 
-  // Don't require attachments here — multer handles them
-  attachments: Joi.any().optional(),
-
+  attachments: Joi.array().items(attachmentSchema).optional(),
   replyTo: replyToSchema.optional(),
-});
+})
+  // ✅ Add custom validation: must have either content or attachments
+  .custom((value, helpers) => {
+    const hasContent = value.content && value.content.trim().length > 0;
+    const hasAttachments = value.attachments && value.attachments.length > 0;
+
+    if (!hasContent && !hasAttachments) {
+      return helpers.error("any.custom", {
+        message: "Must provide either content or attachments",
+      });
+    }
+
+    return value;
+  });
 
 // Update message validation
 export const updateMessageSchema = Joi.object({
