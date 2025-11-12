@@ -1,11 +1,9 @@
-import { Button } from "@/components/ui/button.tsx";
+import LoginPage from "@/pages/LoginPage.tsx";
 
 function App() {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center">
-      <Button className="" variant={"secondary"}>
-        Click me
-      </Button>
+    <div className="relative bg-amber-300 min-h-screen w-screen flex items-center justify-center">
+      <LoginPage />
     </div>
   );
 }

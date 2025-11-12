@@ -13,8 +13,19 @@ if (!isValid(USERS_SERVICE_URL)) {
 
   throw new AppError("ORIGIN IS NOT FOUND IN API GATEWAY", 500);
 }
+
+const allowedOrigins = [
+  "http://localhost:5173", // your Vite frontend
+  "https://your-production-domain.com",
+];
 const corsMiddleware = cors({
-  origin: "*", //[USER_SERVICE_URL || "http://localhost:3000"]
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true,
 });

@@ -1,0 +1,65 @@
+src/
+│
+├── assets/                  # Static images, icons, fonts
+│   └── logo.svg
+│
+├── components/              # Reusable UI components (buttons, inputs, modals)
+│   ├── ui/                  # Shadcn-generated components
+│   ├── chat/                # Chat-specific UI parts (message bubble, chat header)
+│   ├── sidebar/             # Left panel (user list, profile button)
+│   └── common/              # Shared across app (loader, avatar, etc.)
+│
+├── features/                # Feature-specific folders (Redux slice + UI + logic)
+│   ├── auth/                # Login, signup, logout
+│   ├── chat/                # Chat messages, typing indicators, socket logic
+│   └── user/                # Profile, user status, list
+│
+├── pages/                   # Route-based components
+│   ├── LoginPage.tsx
+│   ├── ProfilePage.tsx
+│   ├── ChatPage.tsx         # Main WhatsApp-like chat UI
+│   └── NotFoundPage.tsx
+│
+├── redux/                   # Centralized store setup
+│   ├── store.ts             # createStore or configureStore
+│   ├── hooks.ts             # useAppSelector, useAppDispatch
+│   └── rootReducer.ts
+│
+├── services/                # API calls and socket connections
+│   ├── api/
+│   │   ├── axiosInstance.ts # Preconfigured axios client
+│   │   ├── authApi.ts       # Auth-related API calls
+│   │   ├── chatApi.ts       # Chat-related API calls
+│   │   └── userApi.ts       # User-related API calls
+│   └── socket/
+│       └── socketClient.ts  # Socket.IO setup for real-time chat
+│
+├── utils/                   # Helper functions
+│   ├── formatDate.ts
+│   ├── getInitials.ts
+│   └── storage.ts           # LocalStorage helpers
+│
+├── lib/                     # Third-party configs (zod, shadcn, validation, etc.)
+│   ├── validation/
+│   │   ├── authSchema.ts    # Zod validation for login/signup
+│   │   ├── chatSchema.ts
+│   │   └── profileSchema.ts
+│   └── constants.ts         # Common constants (API_URL, roles, etc.)
+│
+├── types/                   # Global TypeScript types/interfaces
+│   ├── user.ts
+│   ├── message.ts
+│   └── chat.ts
+│
+├── hooks/                   # Custom reusable React hooks
+│   ├── useAuth.ts
+│   ├── useChat.ts
+│   └── useSocket.ts
+│
+├── routes/                  # Route definitions and protected routes
+│   ├── AppRouter.tsx
+│   └── ProtectedRoute.tsx
+│
+├── App.tsx                  # Root app component
+├── main.tsx                 # ReactDOM.render (entry point)
+└── index.css                # Tailwind + shadcn base styles
