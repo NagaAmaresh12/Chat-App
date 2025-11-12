@@ -1,68 +1,61 @@
 import { io } from "socket.io-client";
-import fs from "fs";
 import path from "path";
+import { compressImage } from "./utils/compressFile.js";
+import uploadToCloudinary from "./utils/uploadToCloudinary.js";
 
-const ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTEwOGE2NWUzMDk0ZTcxOWI1YTA0ZjQiLCJlbWFpbCI6Im5hZ2FhbWFyZXNoa2FubmVAZ21haWwuY29tIiwidXNlcm5hbWUiOiJuYWdhYW1hcmVzaGthbm5lIiwidG9rZW5UeXBlIjoiYWNjZXNzIiwiaWF0IjoxNzYyODg3ODA0LCJleHAiOjE3NjI4ODg3MDR9.YMRWWc9ImuivFdvCP6KsLZu__VPZ7FczUmFpXWqiyFk";
-const REFRESH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTEwOGE2NWUzMDk0ZTcxOWI1YTA0ZjQiLCJlbWFpbCI6Im5hZ2FhbWFyZXNoa2FubmVAZ21haWwuY29tIiwidG9rZW5UeXBlIjoicmVmcmVzaCIsInVzZXJuYW1lIjoibmFnYWFtYXJlc2hrYW5uZSIsImlhdCI6MTc2Mjg4NzgwNCwiZXhwIjoxNzYzNDkyNjA0fQ.yX_E0zxBFtuyywaBHontinIhWeEetoo4wLYdZWw5yNE";
-const USER_ID = "YOUR_USER_ID";
+const SERVER_URL = "http://localhost:8080";
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
+const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
+const CHAT_ID = "6911dd310ac5869f4212c794";
 
-const socket = io("http://localhost:8080", {
+const socket = io(SERVER_URL, {
     auth: { token: ACCESS_TOKEN, refreshToken: REFRESH_TOKEN },
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 2000,
 });
 
-socket.on("connect", () => console.log("✅ Connected", socket.id));
-socket.on("new-message", (msg) => console.log("📩 New message:", msg));
-socket.on("reaction-updated", (msg) => console.log("👍 Reaction updated:", msg));
-socket.on("error", (err) => console.error("❌ Socket error:", err));
+socket.on("connect", () => {
+    console.log(`✅ Connected (socketId: ${socket.id})`);
+    socket.emit("join", CHAT_ID);
+});
 
-// -------------------- Send text message --------------------
-const sendTextMessage = (chatId, content) => {
-    // wrap text as a single-element attachments array to mimic form-data
-    socket.emit("send-message", {
-        chatId,
-        chatType: "group",
-        messageType: "text",
-        content,
-        attachments: [
-            {
-                filename: "message.txt", // dummy filename
-                data: Buffer.from(content, "utf-8").toString("base64"),
-            },
-        ],
-        xUserId: USER_ID,
-        authorization: `Bearer ${ACCESS_TOKEN}`,
-        xRefreshToken: REFRESH_TOKEN,
-    });
-};
-
-// -------------------- Send media message --------------------
-const sendMediaMessage = (chatId, filePath, messageType = "image") => {
+async function sendCompressedAndUpload(chatId, filePath, caption = "") {
     try {
-        const fileBuffer = fs.readFileSync(filePath);
-        const fileName = path.basename(filePath);
+        const compressedPath = await compressImage(filePath);
+        const url = await uploadToCloudinary(compressedPath);
 
-        socket.emit("send-message", {
+        const payload = {
             chatId,
             chatType: "group",
-            messageType,
-            content: fileName,
-            attachments: [
-                {
-                    filename: fileName,
-                    data: fileBuffer.toString("base64"),
-                },
-            ],
-            xUserId: USER_ID,
-            authorization: `Bearer ${ACCESS_TOKEN}`,
-            xRefreshToken: REFRESH_TOKEN,
-        });
+            messageType: "image",
+            content: caption || "Image",
+            attachments: [{ filename: path.basename(filePath), url }],
+        };
 
-        console.log(`📤 Media message sent: ${fileName}`);
+        socket.emit("send-message", payload);
+        console.log("✅ Sent message with Cloudinary URL:", url);
     } catch (err) {
-        console.error("❌ Failed to send media message:", err);
+        console.error("❌ Failed to send compressed image:", err.message);
     }
-};
+}
+// Send Text Message
+// function sendTextMessage(chatId, content) {
+//     if (!chatId || !content) return console.error("⚠️ Invalid chatId or content.");
 
-// -------------------- Example usage --------------------
-setTimeout(() => sendTextMessage("6911dd310ac5869f4212c794", "Hello via Socket.IO!"), 2000);
-// setTimeout(() => sendMediaMessage("6911dd310ac5869f4212c794", "./test-image.jpg"), 4000);
+//     const payload = {
+//         chatId,
+//         chatType: "group",
+//         messageType: "text",
+//         content: content.trim(),
+//     };
+
+//     socket.emit("send-message", payload);
+//     console.log(`📤 Sent text message: "${content}"`);
+// }
+
+// Example usage
+setTimeout(() => {
+    const sourcePath = path.join(path.resolve(), 'images', 'tanjiro.jpeg');
+    sendCompressedAndUpload(CHAT_ID, sourcePath, "Check this out 👇");
+}, 2000);

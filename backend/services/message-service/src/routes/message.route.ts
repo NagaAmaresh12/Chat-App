@@ -51,7 +51,8 @@ const conditionalMulter = (
 router.post(
   "/create",
   rateLimiter({ windowMs: 15 * 60 * 1000, max: 100 }),
-  conditionalMulter,
+  // conditionalMulter,
+  upload.array("attachments", 10),
   validateJoiBody(createMessageSchema),
   createMessage
 );
