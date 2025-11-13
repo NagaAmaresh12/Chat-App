@@ -9,7 +9,8 @@ config();
 interface IMailMessage {
   to: string;
   subject: string;
-  text: string;
+  text?: string;
+  html?: string;
 }
 
 const protocol = process.env.RABBITMQ_PROTOCOL!;
@@ -74,7 +75,14 @@ export const connectToRabbitMQ = async (): Promise<void> => {
         auth: { user, pass },
       });
 
-      const response = await transporter.sendMail(MailMessage);
+      const response = await transporter.sendMail({
+        from: `"Mucchatlu 💬" <${user}>`,
+        to: MailMessage.to,
+        subject: MailMessage.subject,
+        text: MailMessage.text || "",
+        html: MailMessage.html || "",
+      });
+
       console.log("Mail sent successfully:", response);
 
       channel.ack(message); // ✅ acknowledge only on success

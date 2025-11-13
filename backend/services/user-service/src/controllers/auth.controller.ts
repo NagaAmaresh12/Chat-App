@@ -5,6 +5,7 @@ import { User } from "../models/user.model.js";
 import { isValid } from "../utils/validation.js";
 import { AppError } from "../utils/api.error.js";
 import { generateOTP } from "../utils/otp.js";
+import { generateOtpEmailTemplate } from "../utils/emailTemplates.js";
 import {
   deleteRedisKey,
   getRedisValue,
@@ -75,10 +76,8 @@ export const login = async (req: Request, res: Response) => {
     console.log("====================================");
     const message = {
       to: email,
-      subject: "Your One-Time Password (OTP) for Verification",
-      text: `Your OTP is ${otp}. It is valid for ${
-        DEFAULT_OTP_EXPIRY_SECONDS / 60
-      } minutes.`,
+      subject: "🔐 Your Mucchatlu OTP Code",
+      html: generateOtpEmailTemplate(otp, username),
     };
     console.log("Message", message);
 

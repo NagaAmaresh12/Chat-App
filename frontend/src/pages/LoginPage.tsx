@@ -14,8 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import axiosInstance from "@/lib/axios";
 import { confirmOTPSchema, sendOTPSchema } from "@/lib/validation/authSchema";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { sendOTP, verifyOTP } from "@/features/auth/authThunks";
+import { Navigate, useNavigate } from "react-router-dom";
 
 // ✅ Validation Schemas
 
@@ -27,7 +29,10 @@ export default function LoginPage() {
   const [otp, setOtp] = useState<string[]>(Array(4).fill(""));
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const { user } = useAppSelector((state) => state.auth);
+  console.log({ user });
 
+  const navigate = useNavigate();
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // ✅ Forms setup
@@ -40,18 +45,45 @@ export default function LoginPage() {
     resolver: zodResolver(confirmOTPSchema),
     defaultValues: { OTP: "" },
   });
-
+  const dispatch = useAppDispatch();
   // ✅ Send OTP Handler
   const handleSendOTP = async (values: SendOTPData) => {
     setLoading(true);
     try {
-      const res = await axiosInstance.post("/users/auth/login", values);
-      console.log("✅ OTP Sent:", res.data);
+      const res = await dispatch(sendOTP(values));
+      console.log("✅ OTP Sent:", res);
       setOtpSent(true);
     } catch (err: any) {
       console.error("❌ OTP Send Failed:", err.response?.data || err.message);
     } finally {
       setLoading(false);
+    }
+  };
+  // ✅ Verify OTP Handler
+  const handleVerifyOTP = async () => {
+    setVerifying(true);
+    try {
+      const otpCode = otp.join("");
+      const { username, email } = formEmail.getValues();
+
+      const res = await dispatch(
+        verifyOTP({
+          username,
+          email,
+          otp: otpCode,
+        })
+      ).unwrap();
+
+      console.log("✅ OTP Verified:", res);
+      // ✅ Redirect to welcome page after successful verification
+      navigate("/", { replace: true });
+    } catch (err: any) {
+      console.error(
+        "❌ OTP Verification Failed:",
+        err.response?.data || err.message
+      );
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -108,33 +140,7 @@ export default function LoginPage() {
   }, [otpSent]);
   const allDigitsFilled = otp.every((v) => v !== "");
 
-  // ✅ Verify OTP
-  const handleVerifyOTP = async () => {
-    setVerifying(true);
-    try {
-      const otpCode = otp.join("");
-      const { username, email } = formEmail.getValues();
-
-      const res = await axiosInstance.post("/users/auth/verify-otp", {
-        username,
-        email,
-        otp: otpCode,
-      });
-
-      console.log("✅ OTP Verified:", res.data);
-      localStorage.setItem("accessToken", res.data.accessToken);
-      localStorage.setItem("refreshToken", res.data.refreshToken);
-    } catch (err: any) {
-      console.error(
-        "❌ OTP Verification Failed:",
-        err.response?.data || err.message
-      );
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  return (
+  return !user ? (
     <div className="flex flex-col md:flex-row min-h-screen w-screen bg-amber-100">
       {/* Left Section */}
       <div className="flex flex-1 flex-col justify-center px-6 md:px-16 bg-white shadow-lg">
@@ -272,5 +278,7 @@ export default function LoginPage() {
         <h2 className="text-white text-4xl font-semibold">Welcome Back 👋</h2>
       </div>
     </div>
+  ) : (
+    <Navigate to="/" />
   );
 }

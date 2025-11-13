@@ -172,6 +172,9 @@ const regenerateTokens = async (
       res.setHeader("set-cookie", setCookieHeader);
       console.log("✅ Forwarded Set-Cookie headers:", setCookieHeader);
     }
+    console.log("=============== New Tokens Created=====================");
+    console.log({ newAccessToken, newRefreshToken });
+    console.log("====================================");
 
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   } catch (error: any) {

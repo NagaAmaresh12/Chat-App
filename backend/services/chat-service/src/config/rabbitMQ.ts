@@ -6,7 +6,8 @@ config();
 interface IMailMessage {
   to: string;
   subject: string;
-  text: string;
+  text?: string;
+  html?: string;
 }
 
 const protocol = process.env.PROTOCOL as string;

@@ -1,8 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { login } from "./authThunks";
-import type { AuthState } from "./authTypes";
-
+import {
+  rehydrateAuth,
+  sendOTP,
+  verifyOTP,
+} from "@/features/auth/authThunks.ts";
+import type { AuthState } from "@/types/authTypes";
+import Cookies from "js-cookie";
 const initialState: AuthState = {
+  id: null,
   user: null,
   accessToken: null,
   refreshToken: null,
@@ -15,31 +20,65 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout: (state) => {
+      state.id = null;
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
-      localStorage.clear();
+      Cookies.remove("accessToken");
+      Cookies.remove("refreshToken");
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, (state) => {
+      // 🔹 Send OTP
+      .addCase(sendOTP?.pending, (state) => {
         state.status = "loading";
       })
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(sendOTP?.fulfilled, (state) => {
         state.status = "succeeded";
-        state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken || null;
-
-        localStorage.setItem("user", JSON.stringify(action.payload.user));
-        localStorage.setItem("accessToken", action.payload.accessToken);
-        if (action.payload.refreshToken)
-          localStorage.setItem("refreshToken", action.payload.refreshToken);
+        state.error = null;
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(sendOTP?.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.payload as string;
+        state.error = action?.payload || "Failed to send OTP";
+      })
+
+      // 🔹 Verify OTP
+      .addCase(verifyOTP?.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(verifyOTP?.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.error = null;
+        state.id = action?.payload?.id;
+        state.user = action?.payload?.user; // ✅ FIXED
+        state.accessToken = action?.payload?.accessToken;
+        state.refreshToken = action?.payload?.refreshToken || null;
+      })
+
+      .addCase(verifyOTP?.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action?.payload || "Failed to verify OTP";
+      })
+      // 🔹 Rehydrate Auth
+      .addCase(rehydrateAuth.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(rehydrateAuth.fulfilled, (state, action) => {
+        console.log({ action });
+
+        state.status = "succeeded";
+        state.id = action?.payload.id;
+        state.user = action?.payload.user;
+        state.accessToken = action?.payload.accessToken;
+        state.refreshToken = action?.payload.refreshToken || null;
+      })
+      .addCase(rehydrateAuth.rejected, (state) => {
+        state.status = "failed";
+        state.id = null;
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
       });
   },
 });
