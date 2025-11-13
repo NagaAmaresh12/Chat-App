@@ -1,8 +1,7 @@
 // src/features/chat/chatSlice.ts
 import { createSlice } from "@reduxjs/toolkit";
-import type { ChatState } from "@/types/chatTypes";
-import { fetchAllChats } from "@/features/chat/chatChunks.ts";
-
+import type { ChatState } from "@/types/chatTypes.ts";
+import { fetchChatsPage } from "@/features/chat/chatThunks.ts";
 const initialState: ChatState = {
   chats: [],
   users: [],
@@ -10,6 +9,9 @@ const initialState: ChatState = {
   selectedUser: null,
   status: "idle",
   error: null,
+  page: 1,
+  totalPages: 1,
+  hasMore: true,
 };
 
 const chatSlice = createSlice({
@@ -25,14 +27,20 @@ const chatSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchAllChats.pending, (state) => {
+      .addCase(fetchChatsPage.pending, (state) => {
         state.status = "loading";
       })
-      .addCase(fetchAllChats.fulfilled, (state, action) => {
+      .addCase(fetchChatsPage.fulfilled, (state, action) => {
+        console.log("====================================");
+        console.log({ chatAction: action });
+        console.log("====================================");
         state.status = "succeeded";
-        state.chats = action.payload; // set sorted chats
+        state.chats = action.payload.chats;
+        state.page = action.payload.page;
+        // state.totalPages = action.payload.totalPages;
+        state.hasMore = action.payload.hasMore;
       })
-      .addCase(fetchAllChats.rejected, (state, action) => {
+      .addCase(fetchChatsPage.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload as string;
       });

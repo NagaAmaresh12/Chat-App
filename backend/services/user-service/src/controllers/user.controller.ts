@@ -39,9 +39,17 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
   console.log("====================================");
   try {
     const users = await User.find({}, "_id username email bio isOnline");
+    const safeUsers = users.map((user) => ({
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      bio: user.bio,
+      isOnline: user.isOnline,
+      avatar: user.avatar,
+    }));
 
     console.log({
-      users,
+      safeUsers,
     });
     console.log(
       "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
@@ -70,11 +78,70 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
-    sendSuccess(res, users, "Fetched All Users Successfully", 200);
+    sendSuccess(res, safeUsers, "Fetched All Users Successfully", 200);
   } catch (error) {
     sendError(res, "Failed to Fetch All Users", 500, error);
   }
 };
+export const getAllUsersPage = async (req: AuthRequest, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    // Fetch users with pagination
+    const [users, totalUsers] = await Promise.all([
+      User.find({}, "_id username email bio isOnline")
+        .sort({ isOnline: -1, lastSeen: -1 }) // online users first
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(),
+    ]);
+    const safeUsers = users.map((user) => ({
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      bio: user.bio,
+      isOnline: user.isOnline,
+      avatar: user.avatar,
+    }));
+
+    // ✅ Handle token refresh cookies (same logic you had before)
+    if (req?.accessToken && req?.refreshToken) {
+      res.cookie("accessToken", req?.accessToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie("refreshToken", req?.refreshToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
+
+    return sendSuccess(
+      res,
+      {
+        safeUsers,
+        total: totalUsers,
+        page,
+        limit,
+        totalPages: Math.ceil(totalUsers / limit),
+        hasNextPage: page * limit < totalUsers,
+      },
+      "Fetched users successfully",
+      200
+    );
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return sendError(res, "Failed to fetch users", 500, error);
+  }
+};
+
 export const getUserByID = async (req: AuthRequest, res: Response) => {
   console.log("Gettin user by ID...");
   let token = req?.headers?.authorization;
@@ -155,6 +222,14 @@ export const getUsersByBatch = async (req: AuthRequest, res: Response) => {
         refreshToken: req?.refreshToken,
       }
     );
+    const safeUsers = users.map((user) => ({
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      bio: user.bio,
+      isOnline: user.isOnline,
+      avatar: user.avatar,
+    }));
 
     if (req?.accessToken && req?.refreshToken) {
       console.log(
@@ -178,7 +253,7 @@ export const getUsersByBatch = async (req: AuthRequest, res: Response) => {
     return res.status(200).json({
       status: "success",
       count: users.length,
-      users,
+      safeUsers,
     });
   } catch (error) {
     console.error("Error in getUsersByBatch:", error);
@@ -198,7 +273,14 @@ export const updateUserByID = async (req: AuthRequest, res: Response) => {
   Object.assign(user, req.body);
 
   await user.save();
-
+  const safeUser = {
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    bio: user.bio,
+    isOnline: user.isOnline,
+    avatar: user.avatar,
+  };
   // if new tokens exist (because access expired)
   if (req.accessToken && req.refreshToken) {
     res.cookie("accessToken", req.accessToken, {
@@ -216,5 +298,5 @@ export const updateUserByID = async (req: AuthRequest, res: Response) => {
     });
   }
 
-  return sendSuccess(res, user, "User updated successfully", 200);
+  return sendSuccess(res, safeUser, "User updated successfully", 200);
 };

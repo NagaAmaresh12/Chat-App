@@ -7,8 +7,8 @@ config();
 
 const PORT = process.env.PORT;
 if (!PORT) {
-  throw new AppError("Invalid Port at Notification Service");
+  throw new AppError("Invalid Port at Socket Service");
 }
 app.listen(PORT, () => {
-  logger.info(`Notification Server is running on Port${PORT}`);
+  logger.info(`Socket Server is running on Port${PORT}`);
 });

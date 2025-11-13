@@ -181,12 +181,18 @@ export const verifyOTP = async (req: Request, res: Response) => {
 // -----------------------------
 export const me = (req: AuthRequest, res: AuthResponse) => {
   const user = req.user;
+  let avatar = "";
   if (!user) return sendError(res, "User not found in request", 400);
-
+  if (user?.avatar) {
+    avatar = user?.avatar;
+  }
   const userData = {
     id: user._id,
     name: user.username,
     email: user.email,
+    url: avatar,
+    isOnline: user?.isOnline,
+    bio: user?.bio,
   };
   console.log(
     "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
@@ -230,7 +236,7 @@ interface DecodedToken {
   tokenType?: "access" | "refresh";
 }
 
-export const verifyToken = (req: Request, res: Response) => {
+export const verifyToken = (req: AuthRequest, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
@@ -264,7 +270,9 @@ export const verifyToken = (req: Request, res: Response) => {
         id: decoded.userId,
         email: decoded.email,
         username: decoded.username,
-        role: decoded.role,
+        isOnline: req?.user?.isOnline,
+        bio: req?.user.bio,
+        avatar: req?.user?.avatar,
       },
     });
   } catch (err) {

@@ -1,21 +1,13 @@
-// ========== MainLayout.tsx (Check for issues) ==========
-import SidebarComp from "@/pages/layout/SidebarComp";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import SidebarComp from "@/components/sidebar/SidebarComp";
+import { Outlet } from "react-router-dom";
 
-export default function MainLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function MainLayout() {
   return (
-    <SidebarProvider>
-      <div className="flex h-screen">
-        <SidebarComp />
-        <main className="flex-1 overflow-hidden">
-          <SidebarTrigger className="m-2" />
-          {children}
-        </main>
-      </div>
-    </SidebarProvider>
+    <div className="flex h-screen w-screen overflow-hidden">
+      <SidebarComp />
+      <main className="flex-1 overflow-hidden bg-amber-600">
+        <Outlet />
+      </main>
+    </div>
   );
 }

@@ -1,0 +1,21 @@
+import axiosInstance from "@/lib/axios";
+import { createAsyncThunk } from "@reduxjs/toolkit";
+
+export const uploadFileThunk = createAsyncThunk(
+  "message/uploadFile",
+  async (formData: FormData, { rejectWithValue }) => {
+    try {
+      console.log("====================================");
+      console.log("Request Comes till messageThunks");
+
+      console.log({ formData });
+      console.log("====================================");
+      const res = await axiosInstance.post("/sockets/files/uploads", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data; // expected { url, fileType, size }
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);

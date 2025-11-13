@@ -13,6 +13,7 @@ import {
   bulkDeleteSchema,
   searchMessagesSchema,
   removeReactionSchema,
+  getAllChatsByUserIDSchema,
 } from "../utils/joi.validate.js";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { verifyChatAccess } from "../utils/verifyChatAccess.js";

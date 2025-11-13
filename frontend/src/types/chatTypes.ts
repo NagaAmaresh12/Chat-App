@@ -14,12 +14,15 @@ export interface Chat {
 }
 
 export interface ChatState {
-  chats: Chat[]; // All chats
-  users: User[]; // All users (if needed)
+  chats: Chat[];
+  users: User[];
   selectedChat: Chat | null;
   selectedUser: User | null;
-  status?: "idle" | "loading" | "succeeded" | "failed"; // optional for API status
-  error?: string | null;
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
+  page: number;
+  totalPages: number;
+  hasMore: boolean;
 }
 
 export interface User {

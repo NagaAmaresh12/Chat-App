@@ -1,8 +1,13 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/lib/axios.ts";
 import type { AuthResponse } from "@/types/authTypes.ts";
-import { setAccessToken, setRefreshToken } from "@/utils/tokenUtils";
+import {
+  clearTokens,
+  setAccessToken,
+  setRefreshToken,
+} from "@/utils/tokenUtils";
 import Cookies from "js-cookie";
+import { logout } from "@/features/auth/authSlice.ts";
 
 interface SendOTPData {
   username: string;
@@ -73,17 +78,13 @@ export const rehydrateAuth = createAsyncThunk<
   { rejectValue: string }
 >("auth/rehydrateAuth", async (_, { rejectWithValue }) => {
   try {
-    // Call backend to get new accessToken and user info
-    // Cookies.remove("accessToken");
-    // Cookies.remove("refreshToken");
-
     const { data } = await axiosInstance.get("/users/auth/me", {
       withCredentials: true,
     });
     console.log(
       "============= Send a request for New TOKENS======================="
     );
-    console.log({ data });
+    console.log({ medata: data });
     console.log("====================================");
     return {
       id: data?.data?.id,
@@ -101,3 +102,23 @@ export const rehydrateAuth = createAsyncThunk<
     );
   }
 });
+// No payload needed for logout
+export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
+  "auth/logoutUser",
+  async (_, { rejectWithValue }) => {
+    try {
+      clearTokens();
+      logout();
+      const res = await axiosInstance.post("/users/auth/logout");
+      console.log("====================================");
+      console.log({ res });
+      console.log("====================================");
+      if (res.data.status !== "success") {
+        return rejectWithValue(res.data.message || "Logout failed");
+      }
+      return; // no payload needed
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || "Logout failed");
+    }
+  }
+);

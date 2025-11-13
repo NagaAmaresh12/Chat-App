@@ -6,7 +6,7 @@ import App from "./App.tsx";
 import { Provider } from "react-redux";
 import { store } from "@/redux/store.ts";
 import { BrowserRouter } from "react-router-dom";
-import { SidebarProvider } from "./components/ui/sidebar.tsx";
+import { Toaster } from "sonner";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -14,6 +14,7 @@ createRoot(document.getElementById("root")!).render(
     <Provider store={store}>
       <BrowserRouter>
         <App />
+        <Toaster richColors position="top-right" />
       </BrowserRouter>
     </Provider>
     {/* </SidebarProvider> */}

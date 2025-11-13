@@ -123,7 +123,7 @@ export const getArchivedChatsByUserID = async (
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };
-
+//The original
 export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
   const userId = req?.headers["x-user-id"];
   const token =
@@ -223,6 +223,132 @@ export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
       {
         chats: chatList,
         count: chatList.length,
+      },
+      "Chats retrieved successfully",
+      200
+    );
+  } catch (error) {
+    console.error("Error getting chats:", error);
+    return sendError(res, "Failed to retrieve chats", 500, error);
+  }
+};
+
+//Testing
+export const getAllChatsByUserIDPage = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  const userId = req?.headers["x-user-id"];
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const skip = (page - 1) * limit;
+
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
+
+  try {
+    // 1️⃣ Fetch chatParticipants with pagination
+    const chatParticipants = await ChatParticipant.find({
+      userId,
+      isArchived: { $ne: true },
+    })
+      .sort({ isPinned: -1, updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // 2️⃣ Get chatIds
+    const chatIds = chatParticipants.map((cp) => cp.chatId);
+
+    // 3️⃣ Fetch chats
+    const chats = await Chat.find({ _id: { $in: chatIds } })
+      .populate("lastMessage")
+      .lean();
+
+    // 4️⃣ Collect user IDs for private chats
+    const allUserIds = new Set<string>();
+    chats.forEach((chat) => {
+      chat.participants.forEach((p) => {
+        if (p.isActive) allUserIds.add(p.user.toString());
+      });
+    });
+
+    // 5️⃣ Fetch user details
+    const users = await fetchUserDetails(
+      Array.from(allUserIds),
+      token,
+      refreshToken
+    );
+    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+    // 6️⃣ Build chat list
+    const chatList = chatParticipants
+      .map((cp) => {
+        const chat = chats.find(
+          (c) => c._id.toString() === cp.chatId.toString()
+        );
+        if (!chat) return null;
+
+        const isGroup = chat.type === "group";
+        let chatName = "";
+        let chatImage = "";
+
+        if (isGroup) {
+          chatName = chat?.groupName || "Unnamed Group";
+          chatImage = chat?.groupAvatar || "/default-group.png";
+        } else {
+          const otherParticipant = chat.participants.find(
+            (p) => p.user.toString() !== userId
+          );
+          const otherUser = otherParticipant
+            ? userMap.get(otherParticipant.user.toString())
+            : null;
+
+          chatName = otherUser?.username || "Unknown User";
+          chatImage = otherUser?.avatar || "/default-avatar.png";
+        }
+
+        const lastMessage = chat.lastMessage
+          ? {
+              text: chat?.lastMessage || "",
+              createdAt: chat?.lastActivity || "",
+            }
+          : null;
+
+        return {
+          chatId: chat?._id,
+          type: chat?.type,
+          chatName,
+          chatImage,
+          lastMessage,
+          unreadCount: cp?.unreadCount,
+          isPinned: cp?.isPinned,
+          isArchived: cp.isArchived,
+          isMuted: cp.isMuted,
+          lastReadMessageId: cp?.lastReadMessageId,
+        };
+      })
+      .filter(Boolean);
+
+    // 7️⃣ Total count (for frontend infinite scroll)
+    const total = await ChatParticipant.countDocuments({
+      userId,
+      isArchived: { $ne: true },
+    });
+
+    return sendSuccess(
+      res,
+      {
+        chats: chatList,
+        page,
+        limit,
+        total,
+        hasMore: skip + chatList.length < total,
       },
       "Chats retrieved successfully",
       200

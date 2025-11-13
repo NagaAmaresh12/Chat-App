@@ -1,13 +1,5 @@
-// ========== Settings.tsx ==========
-// import SettingsPage from "@/pages/SettingsPage";
-
 const Settings = () => {
-  return (
-    <div className="w-full h-full overflow-y-auto">
-      {/* <SettingsPage /> */}
-      <h1>Settings</h1>
-    </div>
-  );
+  return <div>Settings</div>;
 };
 
 export default Settings;

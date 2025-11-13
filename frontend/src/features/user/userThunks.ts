@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/lib/axios.ts";
 import type { UserProfile } from "@/types/userTypes.ts";
-import type { User } from "@/types/authTypes";
+import type { User } from "@/types/authTypes.ts";
 
 export const fetchUserProfile = createAsyncThunk<
   UserProfile,
@@ -48,3 +48,31 @@ export const fetchAllUsers = createAsyncThunk<User[]>(
     }
   }
 );
+
+// src/features/auth/authThunks.ts
+
+interface EditProfilePayload {
+  userId: string;
+  name?: string;
+  bio?: string;
+  email?: string;
+  avatar?: string; // if updating avatar
+}
+
+export const editProfile = createAsyncThunk<
+  User, // return type
+  EditProfilePayload, // input payload
+  { rejectValue: string }
+>("auth/editProfile", async (payload, { rejectWithValue }) => {
+  try {
+    const { userId, ...data } = payload;
+    const res = await axiosInstance.patch(`/users/people/edit/${userId}`, data);
+
+    // Assuming API returns updated user object in res.data
+    return res.data.data;
+  } catch (err: any) {
+    return rejectWithValue(
+      err.response?.data?.message || "Failed to update profile"
+    );
+  }
+});

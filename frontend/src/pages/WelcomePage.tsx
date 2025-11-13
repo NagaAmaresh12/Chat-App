@@ -19,7 +19,7 @@ const WelcomePage: React.FC = () => {
   console.log({ data });
   console.log("====================================");
   return (
-    <main className="min-h-screen w-[100vw] bg-gradient-to-br from-[#0f1724] to-[#12263b] text-white flex items-center justify-center">
+    <main className="min-h-screen w-screen bg-gradient-to-br from-[#0f1724] to-[#12263b] text-white flex items-center justify-center">
       <div className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           {/* Left: Branding + CTA */}
@@ -49,23 +49,30 @@ const WelcomePage: React.FC = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mt-4">
-              <button
+              <Button
                 onClick={() => navigate("/login")}
                 className="px-6 py-3 rounded-full bg-gradient-to-r from-[#1E90FF] to-[#00BFFF] shadow-lg hover:scale-[1.02] transform transition"
                 aria-label="Login to Mucchatlu"
               >
                 Log in
-              </button>
+              </Button>
+              <Button
+                onClick={() => handleLogout()}
+                className="px-6 py-3 rounded-full bg-gradient-to-r from-[#ff741e] to-[#ff2600] shadow-lg hover:scale-[1.02] transform transition"
+                aria-label="Login to Mucchatlu"
+              >
+                Logout
+              </Button>
 
               <Button
-                onClick={() => navigate("/users")}
+                onClick={() => navigate("/app/users")}
                 className="px-6 py-3 rounded-full border border-white/20 text-black/90 hover:bg-white/5 transition"
                 aria-label="Explore chats"
               >
                 Explore users
               </Button>
               <Button
-                onClick={() => navigate("/chats")}
+                onClick={() => navigate("/app/chats")}
                 className="px-6 py-3 rounded-full border border-white/20 text-black/90 hover:bg-white/5 transition"
                 aria-label="Explore chats"
               >

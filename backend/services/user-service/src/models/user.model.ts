@@ -141,22 +141,23 @@ userSchema.index({ createdAt: -1 });
 userSchema.methods.generateTokens = function () {
   const user = this;
 
-   if(!process.env.JWT_SECRET_KEY){
-      console.error("No JWT_SECRET_KEY",{JWT_SECRET_KEY:process.env.JWT_SECRET_KEY})
-      return
-    }
+  if (!process.env.JWT_SECRET_KEY) {
+    console.error("No JWT_SECRET_KEY", {
+      JWT_SECRET_KEY: process.env.JWT_SECRET_KEY,
+    });
+    return;
+  }
 
   const accessToken = jwt.sign(
-  {
-    userId: this._id,
-    email: this.email,
-    username: user.username,
-    tokenType: "access"
-  },
-  process.env.JWT_SECRET_KEY!,
-  { expiresIn: "15m" }
-);
-
+    {
+      userId: this._id,
+      email: this.email,
+      username: user.username,
+      tokenType: "access",
+    },
+    process.env.JWT_SECRET_KEY!,
+    { expiresIn: "15m" }
+  );
 
   const refreshToken = jwt.sign(
     {

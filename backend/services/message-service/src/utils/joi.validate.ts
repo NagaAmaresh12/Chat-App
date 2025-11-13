@@ -131,6 +131,11 @@ export const getMessagesSchema = Joi.object({
     .valid("text", "image", "video", "audio", "document", "emoji")
     .optional(),
 });
+export const getAllChatsByUserIDSchema = Joi.object({
+  page: Joi.number().min(1).default(1),
+  limit: Joi.number().min(1).max(100).default(20),
+  search: Joi.string().allow("").optional(),
+});
 
 // Delete message validation
 export const deleteMessageSchema = Joi.object({

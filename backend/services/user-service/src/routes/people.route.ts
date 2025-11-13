@@ -5,12 +5,13 @@ import {
   getAllUsers,
   updateUserByID,
   getUsersByBatch,
+  getAllUsersPage,
 } from "../controllers/user.controller.js";
 
 const router = Router();
 
 // Step 1: Send OTP to email ✅[TEST WITH POSTMAN]
-router.get("/all", authenticate, getAllUsers);
+router.get("/all", authenticate, getAllUsersPage);
 
 router.get("/:userID", authenticate, getUserByID); //✅[TEST WITH POSTMAN]
 router.post("/batch", authenticate, getUsersByBatch); //req.body array of users

@@ -3,6 +3,7 @@ import {
   fetchUserProfile,
   updateUserProfile,
   fetchAllUsers,
+  editProfile,
 } from "@/features/user/userThunks.ts";
 import type { UserState } from "@/types/userTypes.ts";
 
@@ -65,6 +66,17 @@ const userSlice = createSlice({
       .addCase(fetchAllUsers.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message || "Failed to fetch users";
+      })
+      .addCase(editProfile.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(editProfile.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.user = action.payload; // update user with new data
+      })
+      .addCase(editProfile.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload || "Failed to update profile";
       });
   },
 });

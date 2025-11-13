@@ -76,7 +76,7 @@ export default function LoginPage() {
 
       console.log("✅ OTP Verified:", res);
       // ✅ Redirect to welcome page after successful verification
-      navigate("/", { replace: true });
+      navigate("/home", { replace: true });
     } catch (err: any) {
       console.error(
         "❌ OTP Verification Failed:",
