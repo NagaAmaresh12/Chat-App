@@ -33,21 +33,42 @@ export const updateUserProfile = createAsyncThunk<
   }
 });
 
-export const fetchAllUsers = createAsyncThunk<User[]>(
-  "users/fetchAllUsers",
-  async (_, { rejectWithValue }) => {
-    try {
-      const { data } = await axiosInstance.get("/users/people/all");
-      console.log({ dataNew: data });
+export const fetchAllUsers = createAsyncThunk<
+  {
+    users: User[];
+    page: number;
+    totalPages: number;
+    hasMore: boolean;
+    total: number;
+    limit: number;
+    remaining: number;
+  },
+  { page: number; limit: number }
+>("users/fetchAllUsers", async ({ page, limit }, { rejectWithValue }) => {
+  try {
+    const res = await axiosInstance.get("/users/people/all", {
+      params: { page, limit },
+    });
 
-      return data.data; // ✅ return only the array
-    } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch users"
-      );
-    }
+    const total = res.data.data.count;
+    const remaining = Math.max(total - page * limit, 0);
+    const hasMore = page * limit < total;
+
+    return {
+      users: res?.data?.data?.users,
+      page,
+      limit,
+      total,
+      hasMore,
+      remaining,
+      totalPages: Math.ceil(total / limit),
+    };
+  } catch (err: any) {
+    return rejectWithValue(
+      err.response?.data?.message || "Failed to fetch users"
+    );
   }
-);
+});
 
 // src/features/auth/authThunks.ts
 

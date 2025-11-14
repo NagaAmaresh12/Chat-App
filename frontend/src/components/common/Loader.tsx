@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 const Loader = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100">
+    <div className="flex flex-col items-center justify-center h-screen w-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100">
       {/* Chat bubbles animation */}
       <div className="flex space-x-2 mb-6">
         <motion.span

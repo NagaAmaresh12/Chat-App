@@ -166,6 +166,8 @@ async function handleRefreshToken(token: string, req: Request, res: Response) {
 
     if (fromBrowser) setCookieTokens(res, newAccess, newRefresh);
     else {
+      res.removeHeader("x-access-token");
+      res.removeHeader("x-refresh-token");
       res.setHeader("x-access-token", newAccess);
       res.setHeader("x-refresh-token", newRefresh);
     }
@@ -187,21 +189,36 @@ function setCookieTokens(
   refreshToken: string
 ) {
   const isProd = process.env.NODE_ENV === "production";
+  // Clear both cookies
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/", // ✅ important
+  });
 
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/", // ✅ must match path of original cookie
+  });
+
+  // Optionally re-set new cookies if needed
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isProd, // set to true in production (https)
+    secure: process.env.NODE_ENV === "production",
+    path: "/", // ✅ add this to make future clears predictable
     maxAge: 15 * 60 * 1000,
-    path: "/",
   });
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isProd, // set to true in production (https)
+    secure: process.env.NODE_ENV === "production",
+    path: "/", // ✅ consistent path
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
   });
 }
 

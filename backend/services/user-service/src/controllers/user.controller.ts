@@ -33,54 +33,70 @@ interface IUserSemi {
 }
 
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
-  let token = req?.headers?.authorization;
-  console.log("====================================");
-  console.log({ token });
-  console.log("====================================");
   try {
-    const users = await User.find({}, "_id username email bio isOnline");
+    // ✅ Extract pagination params from query
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    // ✅ Fetch users with pagination
+    const users = await User.find({}, "_id username email bio isOnline avatar")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // optional, newest first
+
+    // ✅ Total count
+    const total = await User.countDocuments();
+
+    // ✅ Pagination meta
+    const hasMore = page * limit < total;
+
+    // ✅ Sanitize user data
     const safeUsers = users.map((user) => ({
       id: user._id,
       username: user.username,
       email: user.email,
       bio: user.bio,
       isOnline: user.isOnline,
-      avatar: user.avatar,
+      avatar: user.avatar || null,
     }));
 
-    console.log({
-      safeUsers,
-    });
-    console.log(
-      "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",
-      {
-        accessToken: req?.accessToken,
-        refreshToken: req?.refreshToken,
-      }
-    );
-
+    // ✅ Token refresh logic should happen in middleware
+    // Here, only reuse tokens if middleware attached them
     if (req?.accessToken && req?.refreshToken) {
-      console.log(
-        "since new tokens generated and received from req. and setting both token in cookies in res"
-      );
-
-      res.cookie("accessToken", req?.accessToken, {
-        httpOnly: true,
-        sameSite: "lax", // or "strict" in production
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 15 * 60 * 1000,
-      });
-
-      res.cookie("refreshToken", req?.refreshToken, {
+      res.cookie("accessToken", req.accessToken, {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie("refreshToken", req.refreshToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
-    sendSuccess(res, safeUsers, "Fetched All Users Successfully", 200);
+
+    // ✅ Send paginated response
+    return sendSuccess(
+      res,
+      {
+        users: safeUsers,
+        total,
+        page,
+        limit,
+        hasMore,
+      },
+      "Fetched Users Successfully",
+      200
+    );
   } catch (error) {
-    sendError(res, "Failed to Fetch All Users", 500, error);
+    console.error("❌ getAllUsers error:", error);
+    return sendError(res, "Failed to fetch users", 500, error);
   }
 };
 export const getAllUsersPage = async (req: AuthRequest, res: Response) => {
@@ -103,15 +119,32 @@ export const getAllUsersPage = async (req: AuthRequest, res: Response) => {
       email: user.email,
       bio: user.bio,
       isOnline: user.isOnline,
-      avatar: user.avatar,
+      avatar: user.avatar || "",
     }));
 
     // ✅ Handle token refresh cookies (same logic you had before)
     if (req?.accessToken && req?.refreshToken) {
+      // Clear both cookies
+      res.clearCookie("accessToken", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/", // ✅ important
+      });
+
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/", // ✅ must match path of original cookie
+      });
+
+      // Optionally re-set new cookies if needed
       res.cookie("accessToken", req?.accessToken, {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
+        path: "/", // ✅ add this to make future clears predictable
         maxAge: 15 * 60 * 1000,
       });
 
@@ -119,6 +152,7 @@ export const getAllUsersPage = async (req: AuthRequest, res: Response) => {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
+        path: "/", // ✅ consistent path
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
@@ -126,12 +160,13 @@ export const getAllUsersPage = async (req: AuthRequest, res: Response) => {
     return sendSuccess(
       res,
       {
-        safeUsers,
-        total: totalUsers,
+        users: safeUsers,
         page,
         limit,
+        total: totalUsers,
+        hasMore: page * limit < totalUsers,
+        remaining: Math.max(totalUsers - page * limit),
         totalPages: Math.ceil(totalUsers / limit),
-        hasNextPage: page * limit < totalUsers,
       },
       "Fetched users successfully",
       200
@@ -235,11 +270,27 @@ export const getUsersByBatch = async (req: AuthRequest, res: Response) => {
       console.log(
         "since new tokens generated and received from req. and setting both token in cookies in res"
       );
+      // Clear both cookies
+      res.clearCookie("accessToken", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/", // ✅ important
+      });
 
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/", // ✅ must match path of original cookie
+      });
+
+      // Optionally re-set new cookies if needed
       res.cookie("accessToken", req?.accessToken, {
         httpOnly: true,
-        sameSite: "lax", // or "strict" in production
+        sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
+        path: "/", // ✅ add this to make future clears predictable
         maxAge: 15 * 60 * 1000,
       });
 
@@ -247,13 +298,14 @@ export const getUsersByBatch = async (req: AuthRequest, res: Response) => {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
+        path: "/", // ✅ consistent path
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }
     return res.status(200).json({
       status: "success",
       count: users.length,
-      safeUsers,
+      users: safeUsers,
     });
   } catch (error) {
     console.error("Error in getUsersByBatch:", error);
@@ -283,17 +335,35 @@ export const updateUserByID = async (req: AuthRequest, res: Response) => {
   };
   // if new tokens exist (because access expired)
   if (req.accessToken && req.refreshToken) {
-    res.cookie("accessToken", req.accessToken, {
+    // Clear both cookies
+    res.clearCookie("accessToken", {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ important
+    });
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ must match path of original cookie
+    });
+
+    // Optionally re-set new cookies if needed
+    res.cookie("accessToken", req?.accessToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ add this to make future clears predictable
       maxAge: 15 * 60 * 1000,
     });
 
-    res.cookie("refreshToken", req.refreshToken, {
+    res.cookie("refreshToken", req?.refreshToken, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ consistent path
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }

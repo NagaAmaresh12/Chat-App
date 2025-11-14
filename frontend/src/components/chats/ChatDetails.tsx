@@ -60,9 +60,10 @@ const ChatDetails = () => {
     <section className="h-full w-1/4 border-r bg-background flex flex-col">
       {/* Header */}
       <div className="p-4 border-b">
-        <h1 className="text-xl font-semibold">Mucchatlu</h1>
+        <h1 className="text-xl font-semibold">
+          Muchhatlu <h2 className="text-sm my-4">(Chats)</h2>
+        </h1>
       </div>
-
       {/* Search */}
       <div className="relative p-3">
         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -77,10 +78,37 @@ const ChatDetails = () => {
       {/* Tabs */}
       <div className="px-3 pb-2">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="groups">Groups</TabsTrigger>
-            <TabsTrigger value="unread">Unread</TabsTrigger>
+          <TabsList className="grid grid-cols-3 w-full ">
+            <TabsTrigger
+              value="all"
+              className={
+                activeTab == "all"
+                  ? "bg-blue-300! text-white! border-none! outline-none!"
+                  : "bg-white! text-gray-700! border-none! outline-none!"
+              }
+            >
+              All
+            </TabsTrigger>
+            <TabsTrigger
+              value="groups"
+              className={
+                activeTab == "groups"
+                  ? "bg-blue-300! text-white! border-none! outline-none!"
+                  : "bg-white! text-gray-700! border-none! outline-none!"
+              }
+            >
+              Groups
+            </TabsTrigger>
+            <TabsTrigger
+              value="unread"
+              className={
+                activeTab == "unread"
+                  ? "bg-blue-300! text-white! border-none! outline-none!"
+                  : "bg-white! text-gray-700! border-none! outline-none!"
+              }
+            >
+              Unread
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -96,7 +124,9 @@ const ChatDetails = () => {
             data={filteredByTab}
             endReached={loadMore}
             overscan={200}
-            itemContent={(index, chat) => <ChatListItem chat={chat} />}
+            itemContent={(index, chat) => (
+              <ChatListItem key={chat?.chatId} chat={chat} />
+            )}
             components={{
               Footer: () =>
                 loading ? (

@@ -169,6 +169,7 @@ const regenerateTokens = async (
     // Forward Set-Cookie headers if present
     const setCookieHeader = refreshResponse.headers["set-cookie"];
     if (setCookieHeader) {
+      res.removeHeader("set-cookie");
       res.setHeader("set-cookie", setCookieHeader);
       console.log("✅ Forwarded Set-Cookie headers:", setCookieHeader);
     }

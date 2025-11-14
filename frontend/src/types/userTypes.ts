@@ -1,10 +1,10 @@
 export interface UserProfile {
-  _id: string;
+  id: string;
   username: string;
   email: string;
   avatar?: string;
   bio?: string;
-  status?: "online" | "offline";
+  isOnline?: "online" | "offline";
 }
 
 export interface UserState {
@@ -12,4 +12,10 @@ export interface UserState {
   allUsers: UserProfile[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+  total: number;
+  totalPages: number;
+  remaining: number;
 }

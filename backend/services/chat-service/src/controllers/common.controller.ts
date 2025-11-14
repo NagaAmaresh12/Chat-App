@@ -336,19 +336,33 @@ export const getAllChatsByUserIDPage = async (
       .filter(Boolean);
 
     // 7️⃣ Total count (for frontend infinite scroll)
-    const total = await ChatParticipant.countDocuments({
+    const totalChats = await ChatParticipant.countDocuments({
       userId,
       isArchived: { $ne: true },
     });
+    //page, and limit won't change seperatly, infrontend we can fix per page(per request) how many items we want(limit) and for next page or next request, limit will not change.
+    //     If you fetched 10 per page, and total is 23:
 
+    // Page 1: 1 * 10 < 23 → true ✅ =>hasMore = true
+
+    // Page 2: 2 * 10 < 23 → true ✅=>hasMore = true
+
+    // Page 3: 3 * 10 < 23 → false ❌=>hasMore = false
+
+    // So page 3 will be the last.
+    // Calculate hasMore properly
+    const hasMore = page * limit < totalChats;
+    // 8️⃣ Return response
     return sendSuccess(
       res,
       {
         chats: chatList,
         page,
         limit,
-        total,
-        hasMore: skip + chatList.length < total,
+        total: totalChats,
+        hasMore,
+        remaining: Math.max(totalChats - page * limit, 0), // extra info: remaining items
+        totalPages: Math.ceil(totalChats / limit),
       },
       "Chats retrieved successfully",
       200

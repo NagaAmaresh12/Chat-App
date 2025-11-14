@@ -21,8 +21,11 @@ export interface ChatState {
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
   page: number;
-  totalPages: number;
+  limit: number;
+  total: number;
   hasMore: boolean;
+  remaining: number;
+  totalPages: number;
 }
 
 export interface User {

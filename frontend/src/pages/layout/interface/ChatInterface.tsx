@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
-import ChatPlaceholder from "../placeholder/ChatPlaceholder";
+import ChatPlaceholder from "@/pages/layout/placeholder/ChatPlaceholder.tsx";
 import ChatDetails from "@/components/chats/ChatDetails";
 
 const ChatInterface = () => {

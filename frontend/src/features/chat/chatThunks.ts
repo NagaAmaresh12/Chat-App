@@ -3,23 +3,35 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/lib/axios.ts";
 import type { Chat } from "@/types/chatTypes";
 
-// src/features/chat/chatThunks.ts
 export const fetchChatsPage = createAsyncThunk<
-  { chats: Chat[]; page: number; totalPages: number; hasMore: boolean },
+  {
+    chats: Chat[];
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+    remaining: number;
+    totalPages: number;
+  },
   { page: number; limit: number }
 >("chat/fetchChatsPage", async ({ page, limit }, { rejectWithValue }) => {
   try {
     const res = await axiosInstance.get("/chats/common/all-chats", {
       params: { page, limit },
     });
-    console.log("====================================");
-    console.log({ chatRes: res, page, limit });
-    console.log("====================================");
+
+    const total = res.data.data.count;
+    const remaining = Math.max(total - page * limit, 0);
+    const hasMore = page * limit < total;
+
     return {
       chats: res.data.data.chats,
-      page: res.data.data.page,
-      hasMore: res.data.data.hasMore,
-      totalPages: Math.ceil(res.data.data.count / limit),
+      page,
+      limit,
+      total,
+      hasMore,
+      remaining,
+      totalPages: Math.ceil(total / limit),
     };
   } catch (err: any) {
     return rejectWithValue(

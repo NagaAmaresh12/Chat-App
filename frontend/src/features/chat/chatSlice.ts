@@ -10,8 +10,11 @@ const initialState: ChatState = {
   status: "idle",
   error: null,
   page: 1,
-  totalPages: 1,
+  limit: 0,
+  total: 0,
   hasMore: true,
+  remaining: 0,
+  totalPages: 1,
 };
 
 const chatSlice = createSlice({
@@ -31,14 +34,14 @@ const chatSlice = createSlice({
         state.status = "loading";
       })
       .addCase(fetchChatsPage.fulfilled, (state, action) => {
-        console.log("====================================");
-        console.log({ chatAction: action });
-        console.log("====================================");
-        state.status = "succeeded";
-        state.chats = action.payload.chats;
+        if (action.payload.page === 1) {
+          state.chats = action.payload.chats;
+        } else {
+          state.chats = [...state.chats, ...action.payload.chats];
+        }
         state.page = action.payload.page;
-        // state.totalPages = action.payload.totalPages;
         state.hasMore = action.payload.hasMore;
+        state.status = "succeeded";
       })
       .addCase(fetchChatsPage.rejected, (state, action) => {
         state.status = "failed";

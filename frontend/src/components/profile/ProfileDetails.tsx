@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/form.tsx";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { uploadFileThunk } from "@/features/messages/messageThunks.ts"; // 👈 new thunk
+import { uploadFileThunk } from "@/features/message/messageThunks"; // 👈 new thunk
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Name too long"),
@@ -113,6 +113,10 @@ const ProfileDetails = () => {
     <section className="w-1/4 bg-amber-50 p-6 space-y-10">
       {/* Avatar + Status */}
       <div className="flex flex-col items-center gap-4 relative">
+        <div className="flex items-center justify-between w-full">
+          <h2 className="text-lg my-4 font-semibold">Profile</h2>{" "}
+          <span>{""}</span>
+        </div>
         <div className="relative group">
           <Avatar className="w-32 h-32 transition-all duration-200 group-hover:brightness-90 group-hover:cursor-pointer">
             <AvatarImage
@@ -224,9 +228,9 @@ const ProfileDetails = () => {
       </Form>
 
       {/* Separator */}
-      <div className="flex items-center gap-2 my-6">
+      <div className="flex items-center gap-2 mt-30">
         <Separator className="flex-1" />
-        <h1 className="font-semibold text-sm">Mucchatlu</h1>
+        <h1 className="font-semibold text-sm! ">Mucchatlu</h1>
         <Separator className="flex-1" />
       </div>
     </section>

@@ -6,7 +6,6 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "@/utils/tokenUtils";
-import Cookies from "js-cookie";
 import { logout } from "@/features/auth/authSlice.ts";
 
 interface SendOTPData {

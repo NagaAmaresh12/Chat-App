@@ -151,16 +151,37 @@ export const verifyOTP = async (req: Request, res: Response) => {
     };
     user.isOnline = true;
     await user.save();
-
-    res.cookie("accessToken", accessToken, {
-      maxAge: TOKEN_EXPIRY_MS,
+    //clear Cookies before You set New Ones
+    // Clear both cookies
+    res.clearCookie("accessToken", {
       httpOnly: true,
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ important
     });
-    res.cookie("refreshToken", refreshToken, {
-      maxAge: TOKEN_EXPIRY_MS,
+
+    res.clearCookie("refreshToken", {
       httpOnly: true,
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ must match path of original cookie
+    });
+
+    // Optionally re-set new cookies if needed
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ add this to make future clears predictable
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ consistent path
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     const userResponse = {
@@ -207,11 +228,27 @@ export const me = (req: AuthRequest, res: AuthResponse) => {
     console.log(
       "since new tokens generated and received from req. and setting both token in cookies in res......"
     );
+    // Clear both cookies
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ important
+    });
 
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ must match path of original cookie
+    });
+
+    // Optionally re-set new cookies if needed
     res.cookie("accessToken", req?.accessToken, {
       httpOnly: true,
-      sameSite: "lax", // or "strict" in production
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ add this to make future clears predictable
       maxAge: 15 * 60 * 1000,
     });
 
@@ -219,6 +256,7 @@ export const me = (req: AuthRequest, res: AuthResponse) => {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ consistent path
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
@@ -335,20 +373,39 @@ export const refreshToken = async (req: Request, res: Response) => {
     user.refreshToken = { token: newRefreshToken, createdAt: new Date() };
     await user.save();
 
-    // 🧩 5️⃣ Set new cookies (browser + Postman)
-    res.cookie("accessToken", accessToken, {
-      maxAge: TOKEN_EXPIRY_MS,
+    // Clear both cookies
+    res.clearCookie("accessToken", {
       httpOnly: true,
-      sameSite: "none",
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-    });
-    res.cookie("refreshToken", newRefreshToken, {
-      maxAge: TOKEN_EXPIRY_MS,
-      httpOnly: true,
-      sameSite: "none",
-      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ important
     });
 
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ must match path of original cookie
+    });
+
+    // Optionally re-set new cookies if needed
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ add this to make future clears predictable
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/", // ✅ consistent path
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.removeHeader("x-access-token");
+    res.removeHeader("x-refresh-token");
     // 🧩 6️⃣ Also return tokens in headers for Gateway/microservices
     res.setHeader("x-access-token", accessToken);
     res.setHeader("x-refresh-token", newRefreshToken);
@@ -388,8 +445,10 @@ export const logout = async (req: AuthRequest, res: AuthResponse) => {
       accessToken: res.accessToken,
       refreshToken: res.refreshToken,
     });
-
+    res.removeHeader("x-access-token");
+    res.removeHeader("x-refresh-token");
     res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
     const key = `otp=${user?.email}`;
     await deleteRedisKey(key);
     return sendSuccess(res, null, "Logout successful", 200);

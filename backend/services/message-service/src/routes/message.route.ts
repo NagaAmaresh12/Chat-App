@@ -28,7 +28,6 @@ import {
   markAsReadSchema,
   addReactionSchema,
   bulkDeleteSchema,
-  getAllChatsByUserIDSchema,
 } from "../utils/joi.validate.js";
 import { upload } from "../middlewares/upload.js";
 
@@ -60,17 +59,12 @@ router.post(
 );
 
 // Get messages for a chat with pagination
-router.get(
-  "/chatId/:chatId",
+router.post(
+  "/chatId",
   validateJoiBody(getMessageSchemaByChatID),
   // rateLimiter({ windowMs: 15 * 60 * 1000, max: 200 }), // 200 requests per 15 minutes
   getMessagesByChatID
 );
-// router.get(
-//   "/all-chats",
-//   validateJoiBody(getAllChatsByUserIDSchema),
-//   getAllChatsByUserID
-// );
 
 // Get single message by ID
 router.get(

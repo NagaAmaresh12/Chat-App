@@ -12,6 +12,12 @@ const initialState: UserState = {
   allUsers: [], // For global users or contacts
   status: "idle",
   error: null,
+  page: 0,
+  limit: 0,
+  hasMore: false,
+  total: 0,
+  remaining: 0,
+  totalPages: 0,
 };
 
 const userSlice = createSlice({
@@ -61,7 +67,7 @@ const userSlice = createSlice({
         console.log({ action });
 
         state.status = "succeeded";
-        state.allUsers = action.payload;
+        state.allUsers = action.payload.users; // ✅ fixed
       })
       .addCase(fetchAllUsers.rejected, (state, action) => {
         state.status = "failed";
@@ -72,7 +78,7 @@ const userSlice = createSlice({
       })
       .addCase(editProfile.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.user = action.payload; // update user with new data
+        state.currentUser = action.payload; // ✅ fixed
       })
       .addCase(editProfile.rejected, (state, action) => {
         state.status = "failed";

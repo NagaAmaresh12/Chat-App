@@ -14,15 +14,17 @@ import {
   searchMessagesSchema,
   removeReactionSchema,
   getAllChatsByUserIDSchema,
+  getMessageSchemaByChatID,
 } from "../utils/joi.validate.js";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { verifyChatAccess } from "../utils/verifyChatAccess.js";
 import { uploadBufferToCloudinary } from "../utils/uploadBufferToCloudinary.js";
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     [key: string]: any;
   };
+  validated?: any; // 👈 Add this
 }
 
 let CHATS_SERVICE = process.env.CHATS_SERVICE!;
@@ -285,13 +287,15 @@ export const getMessagesByChatID = async (
     (req?.headers?.authorization?.startsWith("Bearer ")
       ? req.headers.authorization.split(" ")[1]
       : undefined);
+
   const refreshToken =
     req?.body?.refreshToken || req?.headers["x-refresh-token"];
 
   try {
-    const { error, value } = getMessagesSchema.validate({
+    // ✅ Validate input
+    const { error, value } = getMessageSchemaByChatID.validate({
       ...req.params,
-      ...req.query,
+      ...req.body, // <--- include POST body
     });
 
     if (error) {
@@ -301,14 +305,19 @@ export const getMessagesByChatID = async (
         errors: error.details.map((detail) => detail.message),
       });
     }
-    const { chatType } = req?.body || { type: "private" };
     console.log("====================================");
-    console.log({ value, body: req?.body?.chatType });
+    console.log({ body: req.body });
     console.log("====================================");
+    const chatType = req?.body?.chatType || "private";
     const { chatId, page, limit, before, after, search, messageType } = value;
-    const userId = req?.headers["x-user-id"]; //this is set by gateway
+    const userId = req?.headers["x-user-id"]; // set by gateway
 
-    // Verify user has access to chat
+    // ✅ Sanitize pagination values
+    const safePage = Math.max(1, parseInt(page) || 1);
+    const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), 100);
+    const skip = (safePage - 1) * safeLimit;
+
+    // ✅ Verify user access to chat
     try {
       const chatResponse = await axios.get(
         `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
@@ -320,9 +329,6 @@ export const getMessagesByChatID = async (
           },
         }
       );
-      console.log("====================================");
-      console.log(chatResponse);
-      console.log("====================================");
 
       if (
         chatResponse?.data?.status !== "success" ||
@@ -337,50 +343,47 @@ export const getMessagesByChatID = async (
       return sendError(res, "Failed to verify chat access", 500, error);
     }
 
-    // Build query
+    // ✅ Build query
     const query: any = {
       chatId: new mongoose.Types.ObjectId(chatId),
       isDeleted: false,
     };
 
-    // Add cursor-based pagination
+    // ✅ Add cursor-based pagination
     if (before) {
       const beforeMessage = await Message.findById(before);
-      if (beforeMessage) {
-        query.createdAt = { $lt: beforeMessage.createdAt };
-      }
+      if (beforeMessage) query.createdAt = { $lt: beforeMessage.createdAt };
     }
-
     if (after) {
       const afterMessage = await Message.findById(after);
-      if (afterMessage) {
-        query.createdAt = { $gt: afterMessage.createdAt };
-      }
+      if (afterMessage) query.createdAt = { $gt: afterMessage.createdAt };
     }
 
-    // Add search functionality
-    if (search) {
-      query.$text = { $search: search };
+    // ✅ Search filter
+    if (search) query.$text = { $search: search };
+
+    // ✅ Filter by message type
+    if (messageType) query.messageType = messageType;
+
+    // ✅ Fetch messages (cursor vs offset pagination)
+    let messages;
+    if (before || after) {
+      messages = await Message.find(query)
+        .sort({ createdAt: -1 })
+        .limit(safeLimit)
+        .lean();
+    } else {
+      messages = await Message.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(safeLimit)
+        .lean();
     }
 
-    // Filter by message type
-    if (messageType) {
-      query.messageType = messageType;
-    }
-
-    const skip = (page - 1) * limit;
-
-    // Get messages with pagination
-    const messages = await Message.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
-
-    // Get total count
+    // ✅ Count total for offset pagination
     const total = await Message.countDocuments(query);
 
-    // Get user data for all unique sender IDs
+    // ✅ Fetch sender user data
     const senderIds = [
       ...new Set(messages.map((msg) => msg.senderId.toString())),
     ];
@@ -396,6 +399,7 @@ export const getMessagesByChatID = async (
           },
         })
       );
+
       const usersResponses = await Promise.allSettled(usersPromises);
 
       usersResponses.forEach((result, index) => {
@@ -406,32 +410,51 @@ export const getMessagesByChatID = async (
           usersMap.set(senderIds[index], result.value.data.data);
         }
       });
+
+      // ✅ Log warning if no users resolved
+      if (usersMap.size === 0) {
+        console.warn("No users resolved successfully for chat:", chatId);
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
     }
 
-    // Attach user data to messages
+    // ✅ Attach user info to messages
     const messagesWithUsers = messages.map((message) => ({
       ...message,
       sender: usersMap.get(message.senderId.toString()) || null,
     }));
 
-    // Calculate pagination info
-    const hasMore = skip + messages.length < total;
-    const hasPrevious = page > 1;
-
+    // ✅ Pagination info
+    const hasMore =
+      before || after
+        ? messages.length === safeLimit
+        : skip + messages.length < total;
+    const hasPrevious = safePage > 1;
+    console.log("====================================");
+    console.log({
+      data: {
+        messages: messagesWithUsers,
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.ceil(total / safeLimit),
+        hasMore,
+        hasPrevious,
+      },
+    });
+    console.log("====================================");
+    // ✅ Send final response
     res.json({
       success: true,
       data: {
         messages: messagesWithUsers,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-          hasMore,
-          hasPrevious,
-        },
+        page: safePage,
+        limit: safeLimit,
+        total,
+        totalPages: Math.ceil(total / safeLimit),
+        hasMore,
+        hasPrevious,
       },
     });
   } catch (error) {

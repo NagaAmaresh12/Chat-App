@@ -1,5 +1,6 @@
 // src/pages/WelcomePage.tsx
 import { Button } from "@/components/ui/button";
+import LogoutButton from "@/features/auth/LogoutButton";
 import { useAppSelector } from "@/redux/hooks";
 import React from "react";
 import { useNavigate } from "react-router-dom";
@@ -56,13 +57,11 @@ const WelcomePage: React.FC = () => {
               >
                 Log in
               </Button>
-              <Button
-                onClick={() => handleLogout()}
-                className="px-6 py-3 rounded-full bg-gradient-to-r from-[#ff741e] to-[#ff2600] shadow-lg hover:scale-[1.02] transform transition"
-                aria-label="Login to Mucchatlu"
-              >
-                Logout
-              </Button>
+              <LogoutButton
+                className={
+                  "px-6 py-3 rounded-full bg-gradient-to-r from-[#ffa51e] to-[#ff0000] shadow-lg hover:scale-[1.02] transform transition"
+                }
+              />
 
               <Button
                 onClick={() => navigate("/app/users")}

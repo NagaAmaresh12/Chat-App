@@ -1,11 +1,11 @@
 import { Outlet, useLocation } from "react-router-dom";
-import UserPlaceholder from "@/pages/layout/interface/UserInterface.tsx";
+import UserPlaceholder from "@/pages/layout/placeholder/MessagePlaceholder";
 import UserDetails from "@/components/users/UserDetails.tsx";
 
 const UserInterface = () => {
   const { pathname } = useLocation();
   return (
-    <section className="w-full h-screen bg-amber-700">
+    <section className="flex-1 h-screen bg-amber-700 flex">
       <UserDetails />
       {pathname && pathname == "/app/users" ? <UserPlaceholder /> : <Outlet />}
     </section>

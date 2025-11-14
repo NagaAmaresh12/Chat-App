@@ -1,3 +1,5 @@
+import { AuthenticatedRequest } from "controllers/message.controller";
+import { NextFunction } from "express";
 import Joi from "joi";
 import mongoose from "mongoose";
 
@@ -31,8 +33,16 @@ const replyToSchema = Joi.object({
 });
 
 export const getMessageSchemaByChatID = Joi.object({
-  chatType: Joi.string().valid("private", "group"),
+  chatId: Joi.string().required(),
+  page: Joi.number().min(1).default(1),
+  limit: Joi.number().min(1).max(100).default(20),
+  chatType: Joi.string().valid("private", "group").default("private"),
+  before: Joi.string().optional(),
+  after: Joi.string().optional(),
+  search: Joi.string().optional(),
+  messageType: Joi.string().optional(),
 });
+
 export const getMessageSchemaByMsgID = Joi.object({
   chatType: Joi.string().valid("private", "group"),
 });
