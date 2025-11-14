@@ -15,9 +15,9 @@ export interface Chat {
 
 export interface ChatState {
   chats: Chat[];
-  users: User[];
+  // users: User[];
   selectedChat: Chat | null;
-  selectedUser: User | null;
+  // selectedUser: User | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
   page: number;
@@ -28,10 +28,8 @@ export interface ChatState {
   totalPages: number;
 }
 
-export interface User {
+export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  avatar?: string;
-  bio?: string;
 }

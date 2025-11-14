@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
   fetchUserProfile,
-  updateUserProfile,
+  // updateUserProfile,
   fetchAllUsers,
   editProfile,
 } from "@/features/user/userThunks.ts";
@@ -46,18 +46,18 @@ const userSlice = createSlice({
         state.error = action.payload || "Failed to fetch user profile";
       })
 
-      // 🔹 Update profile
-      .addCase(updateUserProfile.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(updateUserProfile.fulfilled, (state, action) => {
-        state.status = "succeeded";
-        state.currentUser = action.payload;
-      })
-      .addCase(updateUserProfile.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload || "Failed to update user profile";
-      })
+      // // 🔹 Update profile
+      // .addCase(updateUserProfile.pending, (state) => {
+      //   state.status = "loading";
+      // })
+      // .addCase(updateUserProfile.fulfilled, (state, action) => {
+      //   state.status = "succeeded";
+      //   state.currentUser = action.payload;
+      // })
+      // .addCase(updateUserProfile.rejected, (state, action) => {
+      //   state.status = "failed";
+      //   state.error = action.payload || "Failed to update user profile";
+      // })
 
       // 🔹 Fetch all users
       .addCase(fetchAllUsers.pending, (state) => {

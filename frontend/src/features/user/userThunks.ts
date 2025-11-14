@@ -9,7 +9,7 @@ export const fetchUserProfile = createAsyncThunk<
   { rejectValue: string }
 >("user/fetchProfile", async (_, { rejectWithValue }) => {
   try {
-    const { data } = await axiosInstance.get("/users/me");
+    const { data } = await axiosInstance.get("/users/auth/me");
     return data.user;
   } catch (err: any) {
     return rejectWithValue(
@@ -18,20 +18,20 @@ export const fetchUserProfile = createAsyncThunk<
   }
 });
 
-export const updateUserProfile = createAsyncThunk<
-  UserProfile,
-  Partial<UserProfile>,
-  { rejectValue: string }
->("user/updateProfile", async (updates, { rejectWithValue }) => {
-  try {
-    const { data } = await axiosInstance.put("/users/update", updates);
-    return data.user;
-  } catch (err: any) {
-    return rejectWithValue(
-      err.response?.data?.message || "Failed to update profile"
-    );
-  }
-});
+// export const updateUserProfile = createAsyncThunk<
+//   UserProfile,
+//   Partial<UserProfile>,
+//   { rejectValue: string }
+// >("user/updateProfile", async (updates, { rejectWithValue }) => {
+//   try {
+//     const { data } = await axiosInstance.put("/users/people/edit", updates);
+//     return data.user;
+//   } catch (err: any) {
+//     return rejectWithValue(
+//       err.response?.data?.message || "Failed to update profile"
+//     );
+//   }
+// });
 
 export const fetchAllUsers = createAsyncThunk<
   {

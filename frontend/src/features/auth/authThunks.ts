@@ -48,7 +48,9 @@ export const verifyOTP = createAsyncThunk<
     console.log({ res });
 
     const data = res.data.data; // <- your real data is inside `data`
-
+    console.log("====================================");
+    console.log({ data });
+    console.log("====================================");
     // store tokens locally
     setAccessToken(data?.accessToken);
     if (data?.refreshToken) setRefreshToken(data?.refreshToken);

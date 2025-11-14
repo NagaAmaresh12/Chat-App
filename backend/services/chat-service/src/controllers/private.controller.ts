@@ -385,16 +385,13 @@ const populateChatWithMinimalUserData = async (
     // Make batch request to user service for minimal user data
     const userPromises = userIds.map(async (userId: string) => {
       try {
-        const response = await axios.get(
-          `${USER_SERVICE}/users/${userId}/minimal`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "x-refresh-token": refreshToken,
-            },
-            timeout: 5000,
-          }
-        );
+        const response = await axios.get(`${USER_SERVICE}/users/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "x-refresh-token": refreshToken,
+          },
+          timeout: 5000,
+        });
         return response.data.data;
       } catch (error) {
         console.error(`Error fetching user ${userId}:`, error);

@@ -9,19 +9,15 @@ import {
 } from "@/features/message/messageSlice.ts";
 import type { IMessage } from "@/types/messageTypes.ts";
 
-const ChatDetails = () => {
+const MessageDetails = () => {
+  let chatType: "private" | "group" = "private";
   const { chatId } = useParams();
+  let newChatId: string | null = null; // default to null
   if (chatId) {
-    const ChatIdWithGroupType = chatId?.split("-");
-    console.log("====================================");
-    console.log({
-      chatType: ChatIdWithGroupType[0],
-      chatId: ChatIdWithGroupType[1],
-    });
-    console.log("====================================");
+    const ChatIdWithGroupType = chatId.split("-");
+    chatType = ChatIdWithGroupType[0] === "group" ? "group" : "private";
+    newChatId = ChatIdWithGroupType[1] ?? null;
   }
-  const chatType = ChatIdWithGroupType[0];
-  const newChatId = ChatIdWithGroupType[1];
   const dispatch = useAppDispatch();
   const { messages, page, totalPages, loading } = useAppSelector(
     (state: any) => state.message
@@ -39,7 +35,7 @@ const ChatDetails = () => {
     dispatch(
       fetchMsgsByChatId({ chatId: newChatId, page: 1, limit: 20, chatType })
     );
-  }, [newChatId, chatType]);
+  }, [newChatId, chatType, dispatch]);
 
   // Infinite scroll – load older messages
   const handleScroll = () => {
@@ -48,7 +44,12 @@ const ChatDetails = () => {
 
     if (container.scrollTop === 0 && !loading && page < totalPages) {
       dispatch(
-        fetchMsgsByChatId({ chatId: chatId!, page: page + 1, limit: 20 })
+        fetchMsgsByChatId({
+          chatId: chatId!,
+          page: page + 1,
+          limit: 20,
+          chatType,
+        })
       );
     }
   };
@@ -70,7 +71,7 @@ const ChatDetails = () => {
       {loading && page === 1 && <p>Loading messages...</p>}
 
       {messages.map((msg: IMessage) => (
-        <div key={msg._id} className="py-1">
+        <div key={msg._id} className="py-1 bg-blue-900">
           <p>{msg.content}</p>
         </div>
       ))}
@@ -80,4 +81,4 @@ const ChatDetails = () => {
   );
 };
 
-export default ChatDetails;
+export default MessageDetails;

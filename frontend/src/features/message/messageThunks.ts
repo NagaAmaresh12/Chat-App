@@ -26,10 +26,12 @@ export const fetchMsgsByChatId = createAsyncThunk<
 >(
   "messages/fetchByChatId",
   async ({ chatId, page = 1, limit = 20, chatType }) => {
-    const response = await axiosInstance.post(
-      `/messages/msg/v1/chatId/${chatId}`,
-      { page, limit, chatType }
-    );
+    const response = await axiosInstance.post(`/messages/msg/v1/chatId`, {
+      chatId,
+      page,
+      limit,
+      chatType,
+    });
     console.log("====================================");
     console.log({ responseFromMsg: response.data.data });
     console.log("====================================");

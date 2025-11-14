@@ -2,9 +2,9 @@ export interface UserProfile {
   id: string;
   username: string;
   email: string;
-  avatar?: string;
   bio?: string;
   isOnline?: "online" | "offline";
+  avatar?: string;
 }
 
 export interface UserState {
@@ -16,6 +16,6 @@ export interface UserState {
   limit: number;
   hasMore: boolean;
   total: number;
-  totalPages: number;
   remaining: number;
+  totalPages: number;
 }

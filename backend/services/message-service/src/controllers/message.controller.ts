@@ -277,6 +277,379 @@ export const createMessage = async (req: Request, res: Response) => {
 };
 
 // Get messages for a chat with pagination
+// export const getMessagesByChatID = async (
+//   req: AuthenticatedRequest,
+//   res: Response
+// ) => {
+//   const token =
+//     req?.cookies?.accessToken ||
+//     req?.cookies?.refreshToken ||
+//     (req?.headers?.authorization?.startsWith("Bearer ")
+//       ? req.headers.authorization.split(" ")[1]
+//       : undefined);
+
+//   const refreshToken =
+//     req?.body?.refreshToken || req?.headers["x-refresh-token"];
+
+//   try {
+//     // ✅ Validate input
+//     const { error, value } = getMessageSchemaByChatID.validate({
+//       ...req.params,
+//       ...req.body, // <--- include POST body
+//     });
+
+//     if (error) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Validation error",
+//         errors: error.details.map((detail) => detail.message),
+//       });
+//     }
+//     console.log("====================================");
+//     console.log({ body: req.body });
+//     console.log("====================================");
+//     const chatType = req?.body?.chatType || "private";
+//     const { chatId, page, limit, before, after, search, messageType } = value;
+//     const userId = req?.headers["x-user-id"]; // set by gateway
+
+//     // ✅ Sanitize pagination values
+//     const safePage = Number(page) > 0 ? Number(page) : 1;
+//     const safeLimit =
+//       Number(limit) > 0 && Number(limit) <= 100 ? Number(limit) : 20;
+//     const skip = (safePage - 1) * safeLimit;
+
+//     // ✅ Verify user access to chat
+//     try {
+//       const chatResponse = await axios.get(
+//         `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
+//         {
+//           headers: {
+//             "x-user-id": userId,
+//             "x-refresh-token": refreshToken,
+//             ...(token && { Authorization: `Bearer ${token}` }),
+//           },
+//         }
+//       );
+
+//       if (
+//         chatResponse?.data?.status !== "success" ||
+//         !chatResponse?.data?.data
+//       ) {
+//         return res.status(404).json({
+//           success: false,
+//           message: "Chat not found or access denied",
+//         });
+//       }
+//     } catch (error) {
+//       return sendError(res, "Failed to verify chat access", 500, error);
+//     }
+
+//     // ✅ Build query
+//     const query: any = {
+//       chatId: new mongoose.Types.ObjectId(chatId),
+//       isDeleted: false,
+//     };
+//     const beforeId = before?.trim() || null;
+//     const afterId = after?.trim() || null;
+//     let messages;
+//     // ✅ Search filter
+//     if (search) query.$text = { $search: search };
+
+//     // ✅ Filter by message type
+//     if (messageType) query.messageType = messageType;
+
+//     if (beforeId || afterId) {
+//       if (beforeId) {
+//         const beforeMessage = await Message.findById(beforeId);
+//         if (beforeMessage) query.createdAt = { $lt: beforeMessage.createdAt };
+//       }
+//       if (afterId) {
+//         const afterMessage = await Message.findById(afterId);
+//         if (afterMessage) query.createdAt = { $gt: afterMessage.createdAt };
+//       }
+//       messages = await Message.find(query)
+//         .sort({ createdAt: -1 })
+//         .limit(safeLimit)
+//         .lean();
+//     } else {
+//       messages = await Message.find(query)
+//         .sort({ createdAt: -1 })
+//         .skip(skip)
+//         .limit(safeLimit)
+//         .lean();
+//     }
+
+//     // ✅ Count total for offset pagination
+//     const total = await Message.countDocuments(query);
+
+//     // ✅ Fetch sender user data
+//     const senderIds = [
+//       ...new Set(messages.map((msg) => msg.senderId.toString())),
+//     ];
+//     const usersMap = new Map();
+
+//     try {
+//       const usersPromises = senderIds.map((id) =>
+//         axios.get(`${USERS_SERVICE}/people/${id}`, {
+//           headers: {
+//             "x-user-id": userId,
+//             "x-refresh-token": refreshToken,
+//             ...(token && { Authorization: `Bearer ${token}` }),
+//           },
+//         })
+//       );
+
+//       const usersResponses = await Promise.allSettled(usersPromises);
+
+//       usersResponses.forEach((result, index) => {
+//         if (
+//           result.status === "fulfilled" &&
+//           result.value.data.status === "success"
+//         ) {
+//           usersMap.set(senderIds[index], result.value.data.data);
+//         }
+//       });
+
+//       // ✅ Log warning if no users resolved
+//       if (usersMap.size === 0) {
+//         console.warn("No users resolved successfully for chat:", chatId);
+//       }
+//     } catch (error) {
+//       console.error("Error fetching users:", error);
+//     }
+
+//     // ✅ Attach user info to messages
+//     const messagesWithUsers = messages.map((message) => ({
+//       ...message,
+//       sender: usersMap.get(message.senderId.toString()) || null,
+//     }));
+
+//     // ✅ Pagination info
+//     const hasMore =
+//       before || after
+//         ? messages.length === safeLimit
+//         : skip + messages.length < total;
+//     const hasPrevious = safePage > 1;
+//     console.log("====================================");
+//     console.log({
+//       data: {
+//         messages: messagesWithUsers,
+//         page: safePage,
+//         limit: safeLimit,
+//         total,
+//         totalPages: Math.ceil(total / safeLimit),
+//         hasMore,
+//         hasPrevious,
+//       },
+//     });
+//     console.log("====================================");
+//     // ✅ Send final response
+//     res.json({
+//       success: true,
+//       data: {
+//         messages: messagesWithUsers,
+//         page: safePage,
+//         limit: safeLimit,
+//         total,
+//         totalPages: Math.ceil(total / safeLimit),
+//         hasMore,
+//         hasPrevious,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Get messages error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };export const getMessagesByChatID = async (
+//   req: AuthenticatedRequest,
+//   res: Response
+// ) => {
+//   const token =
+//     req?.cookies?.accessToken ||
+//     req?.cookies?.refreshToken ||
+//     (req?.headers?.authorization?.startsWith("Bearer ")
+//       ? req.headers.authorization.split(" ")[1]
+//       : undefined);
+
+//   const refreshToken =
+//     req?.body?.refreshToken || req?.headers["x-refresh-token"];
+
+//   try {
+//     // ✅ Validate input
+//     const { error, value } = getMessageSchemaByChatID.validate({
+//       ...req.params,
+//       ...req.body, // <--- include POST body
+//     });
+
+//     if (error) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Validation error",
+//         errors: error.details.map((detail) => detail.message),
+//       });
+//     }
+//     console.log("====================================");
+//     console.log({ body: req.body });
+//     console.log("====================================");
+//     const chatType = req?.body?.chatType || "private";
+//     const { chatId, page, limit, before, after, search, messageType } = value;
+//     const userId = req?.headers["x-user-id"]; // set by gateway
+
+//     // ✅ Sanitize pagination values
+//     const safePage = Number(page) > 0 ? Number(page) : 1;
+//     const safeLimit =
+//       Number(limit) > 0 && Number(limit) <= 100 ? Number(limit) : 20;
+//     const skip = (safePage - 1) * safeLimit;
+
+//     // ✅ Verify user access to chat
+//     try {
+//       const chatResponse = await axios.get(
+//         `${CHATS_SERVICE}/${chatType}-chat/${chatId}`,
+//         {
+//           headers: {
+//             "x-user-id": userId,
+//             "x-refresh-token": refreshToken,
+//             ...(token && { Authorization: `Bearer ${token}` }),
+//           },
+//         }
+//       );
+
+//       if (
+//         chatResponse?.data?.status !== "success" ||
+//         !chatResponse?.data?.data
+//       ) {
+//         return res.status(404).json({
+//           success: false,
+//           message: "Chat not found or access denied",
+//         });
+//       }
+//     } catch (error) {
+//       return sendError(res, "Failed to verify chat access", 500, error);
+//     }
+
+//     // ✅ Build query
+//     const query: any = {
+//       chatId: new mongoose.Types.ObjectId(chatId),
+//       isDeleted: false,
+//     };
+//     const beforeId = before?.trim() || null;
+//     const afterId = after?.trim() || null;
+//     let messages;
+//     // ✅ Search filter
+//     if (search) query.$text = { $search: search };
+
+//     // ✅ Filter by message type
+//     if (messageType) query.messageType = messageType;
+
+//     if (beforeId || afterId) {
+//       if (beforeId) {
+//         const beforeMessage = await Message.findById(beforeId);
+//         if (beforeMessage) query.createdAt = { $lt: beforeMessage.createdAt };
+//       }
+//       if (afterId) {
+//         const afterMessage = await Message.findById(afterId);
+//         if (afterMessage) query.createdAt = { $gt: afterMessage.createdAt };
+//       }
+//       messages = await Message.find(query)
+//         .sort({ createdAt: -1 })
+//         .limit(safeLimit)
+//         .lean();
+//     } else {
+//       messages = await Message.find(query)
+//         .sort({ createdAt: -1 })
+//         .skip(skip)
+//         .limit(safeLimit)
+//         .lean();
+//     }
+
+//     // ✅ Count total for offset pagination
+//     const total = await Message.countDocuments(query);
+
+//     // ✅ Fetch sender user data
+//     const senderIds = [
+//       ...new Set(messages.map((msg) => msg.senderId.toString())),
+//     ];
+//     const usersMap = new Map();
+
+//     try {
+//       const usersPromises = senderIds.map((id) =>
+//         axios.get(`${USERS_SERVICE}/people/${id}`, {
+//           headers: {
+//             "x-user-id": userId,
+//             "x-refresh-token": refreshToken,
+//             ...(token && { Authorization: `Bearer ${token}` }),
+//           },
+//         })
+//       );
+
+//       const usersResponses = await Promise.allSettled(usersPromises);
+
+//       usersResponses.forEach((result, index) => {
+//         if (
+//           result.status === "fulfilled" &&
+//           result.value.data.status === "success"
+//         ) {
+//           usersMap.set(senderIds[index], result.value.data.data);
+//         }
+//       });
+
+//       // ✅ Log warning if no users resolved
+//       if (usersMap.size === 0) {
+//         console.warn("No users resolved successfully for chat:", chatId);
+//       }
+//     } catch (error) {
+//       console.error("Error fetching users:", error);
+//     }
+
+//     // ✅ Attach user info to messages
+//     const messagesWithUsers = messages.map((message) => ({
+//       ...message,
+//       sender: usersMap.get(message.senderId.toString()) || null,
+//     }));
+
+//     // ✅ Pagination info
+//     const hasMore =
+//       before || after
+//         ? messages.length === safeLimit
+//         : skip + messages.length < total;
+//     const hasPrevious = safePage > 1;
+//     console.log("====================================");
+//     console.log({
+//       data: {
+//         messages: messagesWithUsers,
+//         page: safePage,
+//         limit: safeLimit,
+//         total,
+//         totalPages: Math.ceil(total / safeLimit),
+//         hasMore,
+//         hasPrevious,
+//       },
+//     });
+//     console.log("====================================");
+//     // ✅ Send final response
+//     res.json({
+//       success: true,
+//       data: {
+//         messages: messagesWithUsers,
+//         page: safePage,
+//         limit: safeLimit,
+//         total,
+//         totalPages: Math.ceil(total / safeLimit),
+//         hasMore,
+//         hasPrevious,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Get messages error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
 export const getMessagesByChatID = async (
   req: AuthenticatedRequest,
   res: Response
@@ -295,7 +668,7 @@ export const getMessagesByChatID = async (
     // ✅ Validate input
     const { error, value } = getMessageSchemaByChatID.validate({
       ...req.params,
-      ...req.body, // <--- include POST body
+      ...req.body,
     });
 
     if (error) {
@@ -305,16 +678,18 @@ export const getMessagesByChatID = async (
         errors: error.details.map((detail) => detail.message),
       });
     }
+
     console.log("====================================");
     console.log({ body: req.body });
     console.log("====================================");
+
     const chatType = req?.body?.chatType || "private";
     const { chatId, page, limit, before, after, search, messageType } = value;
-    const userId = req?.headers["x-user-id"]; // set by gateway
+    const userId = req?.headers["x-user-id"];
 
-    // ✅ Sanitize pagination values
-    const safePage = Math.max(1, parseInt(page) || 1);
-    const safeLimit = Math.min(Math.max(1, parseInt(limit) || 20), 100);
+    // ✅ Sanitize pagination values - FIXED: Ensure proper number conversion
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.min(100, Math.max(1, Number(limit) || 20));
     const skip = (safePage - 1) * safeLimit;
 
     // ✅ Verify user access to chat
@@ -349,30 +724,40 @@ export const getMessagesByChatID = async (
       isDeleted: false,
     };
 
-    // ✅ Add cursor-based pagination
-    if (before) {
-      const beforeMessage = await Message.findById(before);
-      if (beforeMessage) query.createdAt = { $lt: beforeMessage.createdAt };
-    }
-    if (after) {
-      const afterMessage = await Message.findById(after);
-      if (afterMessage) query.createdAt = { $gt: afterMessage.createdAt };
-    }
-
     // ✅ Search filter
     if (search) query.$text = { $search: search };
 
     // ✅ Filter by message type
     if (messageType) query.messageType = messageType;
 
-    // ✅ Fetch messages (cursor vs offset pagination)
     let messages;
-    if (before || after) {
+    const beforeId = before?.trim() || null;
+    const afterId = after?.trim() || null;
+
+    // ✅ FIXED: Handle cursor-based pagination separately
+    if (beforeId || afterId) {
+      // Cursor-based pagination
+      if (beforeId) {
+        const beforeMessage = await Message.findById(beforeId);
+        if (beforeMessage) {
+          query.createdAt = {
+            ...query.createdAt,
+            $lt: beforeMessage.createdAt,
+          };
+        }
+      }
+      if (afterId) {
+        const afterMessage = await Message.findById(afterId);
+        if (afterMessage) {
+          query.createdAt = { ...query.createdAt, $gt: afterMessage.createdAt };
+        }
+      }
       messages = await Message.find(query)
         .sort({ createdAt: -1 })
         .limit(safeLimit)
         .lean();
     } else {
+      // ✅ FIXED: Offset-based pagination (default)
       messages = await Message.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -380,7 +765,7 @@ export const getMessagesByChatID = async (
         .lean();
     }
 
-    // ✅ Count total for offset pagination
+    // ✅ Count total for pagination metadata
     const total = await Message.countDocuments(query);
 
     // ✅ Fetch sender user data
@@ -411,7 +796,6 @@ export const getMessagesByChatID = async (
         }
       });
 
-      // ✅ Log warning if no users resolved
       if (usersMap.size === 0) {
         console.warn("No users resolved successfully for chat:", chatId);
       }
@@ -427,10 +811,11 @@ export const getMessagesByChatID = async (
 
     // ✅ Pagination info
     const hasMore =
-      before || after
+      beforeId || afterId
         ? messages.length === safeLimit
         : skip + messages.length < total;
-    const hasPrevious = safePage > 1;
+    const hasPrevious = safePage > 1 && !beforeId && !afterId;
+
     console.log("====================================");
     console.log({
       data: {
@@ -444,6 +829,7 @@ export const getMessagesByChatID = async (
       },
     });
     console.log("====================================");
+
     // ✅ Send final response
     res.json({
       success: true,
@@ -465,7 +851,6 @@ export const getMessagesByChatID = async (
     });
   }
 };
-
 // Update/Edit a message
 export const updateMessage = async (
   req: AuthenticatedRequest,
