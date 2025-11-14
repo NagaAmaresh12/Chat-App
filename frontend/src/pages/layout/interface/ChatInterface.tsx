@@ -7,7 +7,7 @@ const ChatInterface = () => {
   return (
     <section className="flex-1 h-screen bg-amber-700 flex">
       <ChatDetails />
-      <main className="">
+      <main className="flex-1 h-screen">
         {" "}
         {pathname && pathname == "/app/chats" ? (
           <ChatPlaceholder />

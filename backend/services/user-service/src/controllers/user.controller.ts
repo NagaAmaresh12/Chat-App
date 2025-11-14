@@ -1,4 +1,4 @@
-import { User } from "../models/user.model.js";
+import { IUser, User } from "../models/user.model.js";
 import { Request, Response } from "express";
 import { AuthRequest } from "../controllers/auth.controller.js";
 import { isValid } from "../utils/validation.js";
@@ -312,61 +312,51 @@ export const getUsersByBatch = async (req: AuthRequest, res: Response) => {
     return sendError(res, "Something went wrong while fetching users.", 500);
   }
 };
+// PATCH /edit/:userID
 export const updateUserByID = async (req: AuthRequest, res: Response) => {
   const { userID } = req.params;
 
+  // Validate userID
   if (!isValid(userID!)) return sendError(res, "Invalid UserId", 400);
 
-  const user = await User.findById(userID);
-  if (!user) return sendError(res, "User does not exist", 404);
+  try {
+    // Find user
+    const user = await User.findById(userID);
+    if (!user) return sendError(res, "User does not exist", 404);
 
-  // apply body values directly
-  // only update the fields which exist in req.body
-  Object.assign(user, req.body);
+    // Update only fields that exist in req.body
+    const updatableFields: Partial<IUser> = {};
+    if (req.body.username) updatableFields.username = req.body.username;
+    if (req.body.email) updatableFields.email = req.body.email;
+    if (req.body.bio !== undefined || req.body.bio !== "")
+      updatableFields.bio = req.body.bio;
+    if (req.body.avatar) updatableFields.avatar = req.body.avatar;
 
-  await user.save();
-  const safeUser = {
-    id: user._id,
-    username: user.username,
-    email: user.email,
-    bio: user.bio,
-    isOnline: user.isOnline,
-    avatar: user.avatar,
-  };
-  // if new tokens exist (because access expired)
-  if (req.accessToken && req.refreshToken) {
-    // Clear both cookies
-    res.clearCookie("accessToken", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/", // ✅ important
-    });
+    Object.assign(user, updatableFields);
 
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/", // ✅ must match path of original cookie
-    });
+    await user.save();
 
-    // Optionally re-set new cookies if needed
-    res.cookie("accessToken", req?.accessToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/", // ✅ add this to make future clears predictable
-      maxAge: 15 * 60 * 1000,
-    });
+    // Create a sanitized object
+    const safeUsers = {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      bio: user.bio,
+      avatar: user.avatar,
+      isOnline: user.isOnline,
+      // lastSeen: user.lastSeen,
+      // displayName: user.displayName,
+    };
 
-    res.cookie("refreshToken", req?.refreshToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/", // ✅ consistent path
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // Return as `users` in response
+    return sendSuccess(
+      res,
+      { users: safeUsers },
+      "User updated successfully",
+      200
+    );
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return sendError(res, "Internal server error", 500, error);
   }
-
-  return sendSuccess(res, safeUser, "User updated successfully", 200);
 };

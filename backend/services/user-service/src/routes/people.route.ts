@@ -7,6 +7,8 @@ import {
   getUsersByBatch,
   getAllUsersPage,
 } from "../controllers/user.controller.js";
+import { validateBody } from "../middlewares/validation.middleware.js";
+import { updateUserSchema } from "../utils/joi.validate.js";
 
 const router = Router();
 
@@ -15,6 +17,11 @@ router.get("/all", authenticate, getAllUsersPage);
 
 router.get("/:userID", authenticate, getUserByID); //✅[TEST WITH POSTMAN]
 router.post("/batch", authenticate, getUsersByBatch); //req.body array of users
-router.patch("/edit/:userID", authenticate, updateUserByID); // ✅[TEST WITH POSTMAN]
+router.patch(
+  "/edit/:userID",
+  authenticate,
+  validateBody(updateUserSchema), // validate only fields that are present
+  updateUserByID
+);
 
 export default router;

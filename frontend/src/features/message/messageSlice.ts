@@ -12,6 +12,7 @@ interface MessageState {
   loading: boolean;
   error: string | null;
   currentChatId: string | null;
+  hasMore: boolean;
 }
 
 const initialState: MessageState = {
@@ -23,6 +24,7 @@ const initialState: MessageState = {
   loading: false,
   error: null,
   currentChatId: null,
+  hasMore: true,
 };
 
 const messageSlice = createSlice({
@@ -49,7 +51,12 @@ const messageSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchMsgsByChatId.fulfilled, (state, action) => {
-        const { messages, page, totalPages, totalMessages } = action.payload;
+        const {
+          messages,
+          page,
+          totalPages,
+          total: totalMessages,
+        } = action.payload;
 
         // On page = 1 (new chat loaded), replace
         if (page === 1) {
@@ -58,12 +65,16 @@ const messageSlice = createSlice({
           // For infinite scroll append older messages
           state.messages = [...state.messages, ...messages];
         }
-
+        console.log("====================================");
+        console.log({ messages: action.payload });
+        console.log("====================================");
         state.page = page;
         state.totalPages = totalPages;
         state.totalMessages = totalMessages;
+        state.hasMore = action.payload.hasMore; // ← Make sure this is set
         state.loading = false;
       })
+
       .addCase(fetchMsgsByChatId.rejected, (state, action) => {
         state.error = action.error.message || "Failed to fetch messages";
         state.loading = false;
