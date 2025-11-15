@@ -32,7 +32,7 @@ const ChatDetails = () => {
   // Initial fetch
   useEffect(() => {
     if (!chats || chats.length === 0) {
-      dispatch(fetchChatsPage({ page: 1, limit: PAGE_LIMIT }));
+      dispatch(fetchChatsPage({ page: 1, limit: PAGE_LIMIT })).unwrap();
     }
   }, [dispatch]);
 
@@ -50,7 +50,7 @@ const ChatDetails = () => {
   // Load more function
   const loadMore = () => {
     if (!loading && hasMore) {
-      dispatch(fetchChatsPage({ page: page + 1, limit: PAGE_LIMIT }));
+      dispatch(fetchChatsPage({ page: page + 1, limit: PAGE_LIMIT })).unwrap();
     }
   };
   console.log("====================================");

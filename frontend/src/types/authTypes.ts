@@ -3,9 +3,6 @@
 //   name: string;
 //   email: string;
 
-import type { AuthUser } from "./chatTypes";
-import type { UserProfile } from "./userTypes";
-
 // }
 
 export interface AuthResponse {
@@ -18,6 +15,7 @@ export interface AuthResponse {
 export interface AuthState {
   id: string | null;
   user: AuthUser | null;
+  otpSent: boolean;
   accessToken: string | null;
   refreshToken: string | null;
   status: "idle" | "loading" | "succeeded" | "failed";
@@ -27,4 +25,11 @@ export interface AuthState {
 export interface LoginCredentials {
   username: string;
   email: string;
+}
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  accessToken: string;
 }

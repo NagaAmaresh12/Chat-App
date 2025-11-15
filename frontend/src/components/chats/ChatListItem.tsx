@@ -1,66 +1,72 @@
-import { cn } from "@/lib/utils";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
-import { BellOff, Pin } from "lucide-react";
-import type { Chat } from "@/types/chatTypes";
-import { Button } from "../ui/button";
-import { Link } from "react-router-dom";
+// ============================================================
+// 8. Updated ChatListItem with Unread Count
+// ============================================================
+// src/components/chats/ChatListItem.tsx
+import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
+import type { Chat } from "@/types/chatTypes.ts";
+import noImage from "@/assets/noImage.jpg";
 
-const ChatListItem = ({ chat }: { chat: Chat }) => {
+interface ChatListItemProps {
+  chat: Chat;
+}
+
+const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    const chatType = chat.type === "group" ? "group" : "private";
+    navigate(`/chats/${chatType}-${chat.chatId}`);
+  };
+
+  const getTimeAgo = (date: string) => {
+    try {
+      return formatDistanceToNow(new Date(date), { addSuffix: false });
+    } catch {
+      return "";
+    }
+  };
+
   return (
-    <Button
-      asChild
-      className={cn(
-        "flex items-center gap-3 w-[22vw] h-20 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors bg-amber-600 my-5 mx-3"
-      )}
+    <div
+      onClick={handleClick}
+      className="flex items-center p-3 hover:bg-accent cursor-pointer border-b transition-colors"
     >
-      <Link to={`${chat?.type}-${chat?.chatId}`}>
-        {/* Avatar */}
-        <Avatar className="w-12 h-12">
-          <AvatarImage
-            src={chat.chatImage || "/default-avatar.png"}
-            alt={chat.chatName}
-          />
-          <AvatarFallback>{chat.chatName.charAt(0)}</AvatarFallback>
-        </Avatar>
+      <Avatar className="w-12 h-12 flex-shrink-0">
+        <AvatarImage src={chat?.chatImage || noImage} />
+        <AvatarFallback>
+          {chat.chatName?.charAt(0).toUpperCase() || "?"}
+        </AvatarFallback>
+      </Avatar>
 
-        {/* Chat info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm truncate">{chat.chatName}</h4>
-
-            <div className="flex items-center gap-1">
-              {/* Pinned */}
-              {chat.isPinned && <Pin className="w-4 h-4 text-gray-400" />}
-              {/* Muted */}
-              {chat.isMuted && <BellOff className="w-4 h-4 text-gray-400" />}
-              {/* Last message time */}
-              <span className="text-xs text-gray-400">
-                {chat.time || "Now"}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-1">
-            {/* Last message */}
-            <p className="text-xs text-gray-500 truncate">
-              {chat.lastMessage || "No messages yet"}
-            </p>
-
-            {/* Unread badge */}
-            {chat.unreadCount > 0 && (
-              <Badge variant="destructive" className="text-xs px-1 py-0.5">
-                {chat.unreadCount}
-              </Badge>
-            )}
-          </div>
+      <div className="flex-1 ml-3 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold truncate">{chat.chatName}</h3>
+          {chat.lastMessage?.createdAt && (
+            <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+              {getTimeAgo(chat.lastMessageTime)}
+            </span>
+          )}
         </div>
-      </Link>
-    </Button>
+
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground truncate flex-1">
+            {chat.lastMessage || "No messages yet"}
+          </p>
+
+          {chat.unreadCount > 0 && (
+            <Badge
+              variant="default"
+              className="ml-2 flex-shrink-0 bg-green-600 hover:bg-green-700"
+            >
+              {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+            </Badge>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

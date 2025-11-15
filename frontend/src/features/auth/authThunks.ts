@@ -7,6 +7,7 @@ import {
   setRefreshToken,
 } from "@/utils/tokenUtils";
 import { logout } from "@/features/auth/authSlice.ts";
+import { toast } from "sonner";
 
 interface SendOTPData {
   username: string;
@@ -29,6 +30,14 @@ export const sendOTP = createAsyncThunk<
 >("auth/sendOTP", async (payload, { rejectWithValue }) => {
   try {
     const res = await axiosInstance.post("/users/auth/login", payload);
+    console.log("====================================");
+    console.log("User login response", { res });
+    if (res?.data?.status == "success") {
+      toast.success(`${res?.data?.message}`);
+    } else {
+      toast.error("error");
+    }
+    console.log("====================================");
     return res.data; // expected: { message: "OTP sent successfully" }
   } catch (err: any) {
     return rejectWithValue(err.response?.data?.message || "Failed to send OTP");
@@ -79,7 +88,7 @@ export const rehydrateAuth = createAsyncThunk<
   { rejectValue: string }
 >("auth/rehydrateAuth", async (_, { rejectWithValue }) => {
   try {
-    const { data } = await axiosInstance.get("/users/auth/me", {
+    const { data } = await axiosInstance.get("/users/auth/refresh-token", {
       withCredentials: true,
     });
     console.log(

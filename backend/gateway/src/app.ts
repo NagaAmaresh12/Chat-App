@@ -7,7 +7,7 @@ import axios from "axios";
 import { Server, Socket } from "socket.io";
 import cors from "./middlewares/cors.js";
 import { helmetMiddleware } from "./middlewares/helmet.js";
-import { ratelimiter } from "./middlewares/rate.limiter.js";
+import { rateLimiter } from "./middlewares/rate.limiter.js";
 import routes from "./routes/index.js";
 import { logger } from "./utils/logger.js";
 
@@ -19,7 +19,7 @@ const app = express();
 app.use(cors);
 app.use(cookieParser());
 app.use(helmetMiddleware);
-app.use(ratelimiter);
+// app.use(rateLimiter);
 
 // app.use(express.json());
 // app.use(express.urlencoded({ extended: true }));

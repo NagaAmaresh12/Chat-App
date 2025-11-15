@@ -1,0 +1,25 @@
+// ============================================================
+// 12. Backend Socket Events (Reference for Gateway)
+// ============================================================
+/*
+Expected Socket Events from Backend:
+
+SERVER TO CLIENT:
+- "new_message" → { message: IMessage }
+- "user_typing" → { chatId, userId, username }
+- "user_stopped_typing" → { chatId, userId }
+- "message_delivered" → { messageId }
+- "message_read" → { messageId, chatId }
+
+CLIENT TO SERVER:
+- "join_chat" → { chatId }
+- "leave_chat" → { chatId }
+- "send_message" → { chatId, content, messageType, attachments }
+- "typing" → { chatId }
+- "stop_typing" → { chatId }
+- "mark_as_read" → { chatId, messageIds[] }
+
+AUTHENTICATION:
+Socket connection should include:
+auth: { token, userId }
+*/

@@ -1,26 +1,35 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import AppRoutes from "@/routes/AppRouter.tsx";
-import { rehydrateAuth, logoutUser } from "./features/auth/authThunks.ts";
-import { logout, isLoading } from "@/features/auth/authSlice.ts";
-import Loader from "./components/common/Loader.tsx";
+import { rehydrateAuth } from "@/features/auth/authThunks.ts";
+import Loader from "@/components/common/Loader.tsx";
+import { useSocket } from "@/hooks/useSocket.ts";
 
 function App() {
-  const dispatch = useAppDispatch();
   const { user, status } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+
+  const { socket } = useSocket(); // ✅ FIXED correct destructuring
+
+  // --- Rehydrate User ---
   useEffect(() => {
-    const rehydrate = async () => {
-      if (!user) {
-        try {
-          const result = await dispatch(rehydrateAuth()).unwrap();
-          console.log("✅ Auth rehydrated:", result);
-        } catch (error) {
-          console.error("❌ Failed to rehydrate:", error);
-        }
-      }
-    };
-    rehydrate();
-  }, [dispatch]);
+    if (!user) {
+      dispatch(rehydrateAuth())
+        .unwrap()
+        .then((result) => console.log("✅ Auth rehydrated:", result))
+        .catch((error) => console.error("❌ Failed to rehydrate:", error));
+    }
+  }, [dispatch, user]);
+
+  // --- Debug socket status ---
+  useEffect(() => {
+    if (!socket) return;
+
+    console.log("🔌 Socket connected?", socket.connected);
+  }, [socket]); // ✅ use socket, not user
+
+  if (status === "loading") return <Loader />;
+
   return <AppRoutes />;
 }
 

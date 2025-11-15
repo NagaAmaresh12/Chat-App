@@ -105,6 +105,8 @@ export const getArchivedChatsByUserID = async (
           isPinned: cp?.isPinned,
           isArchived: cp?.isArchived,
           lastReadMessageId: cp?.lastReadMessageId,
+          lastMessageType: chat?.lastMessageType || "text",
+          lastActivity: chat?.lastActivity,
         };
       })
       .filter(Boolean);
@@ -213,6 +215,7 @@ export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
           isPinned: cp?.isPinned,
           isArchived: cp.isArchived,
           isMuted: cp.isMuted,
+          lastMessageType: chat?.lastMessageType || "text",
           lastReadMessageId: cp?.lastReadMessageId,
         };
       })
@@ -330,7 +333,8 @@ export const getAllChatsByUserIDPage = async (
           isPinned: cp?.isPinned,
           isArchived: cp.isArchived,
           isMuted: cp.isMuted,
-          lastReadMessageId: cp?.lastReadMessageId,
+          lastMessageType: chat?.lastMessageType || "text",
+          lastReadMessageId: cp?.lastReadMessageId || "undefined",
         };
       })
       .filter(Boolean);

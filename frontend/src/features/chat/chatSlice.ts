@@ -1,12 +1,14 @@
-// src/features/chat/chatSlice.ts
+// ============================================================
+// 3. Updated Chat Slice - src/features/chat/chatSlice.ts
+// ============================================================
 import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ChatState } from "@/types/chatTypes.ts";
 import { fetchChatsPage } from "@/features/chat/chatThunks.ts";
+
 const initialState: ChatState = {
   chats: [],
-  users: [],
   selectedChat: null,
-  selectedUser: null,
   status: "idle",
   error: null,
   page: 1,
@@ -24,8 +26,53 @@ const chatSlice = createSlice({
     setSelectedChat: (state, action) => {
       state.selectedChat = action.payload;
     },
-    setSelectedUser: (state, action) => {
-      state.selectedUser = action.payload;
+    // setSelectedUser: (state, action) => {
+    //   state.selectedUser = action.payload;
+    // },
+
+    // Update chat when new message arrives
+    updateChatOnNewMessage: (
+      state,
+      action: PayloadAction<{
+        chatId: string;
+        lastMessage: any;
+      }>
+    ) => {
+      const { chatId, lastMessage } = action.payload;
+      const chatIndex = state.chats.findIndex((c) => c.chatId === chatId);
+
+      if (chatIndex !== -1) {
+        const chat = state.chats[chatIndex];
+
+        // Update last message and timestamp
+        chat.lastMessage = lastMessage.content;
+        chat.lastMessageTime = lastMessage.createdAt;
+        chat.lastMessageType = lastMessage.messageType;
+
+        // Move chat to top
+        state.chats.splice(chatIndex, 1);
+        state.chats.unshift(chat);
+      }
+    },
+
+    // Increment unread count
+    incrementUnreadCount: (state, action: PayloadAction<string>) => {
+      const chatId = action.payload;
+      const chat = state.chats.find((c) => c.chatId === chatId);
+
+      if (chat) {
+        chat.unreadCount = (chat.unreadCount || 0) + 1;
+      }
+    },
+
+    // Reset unread count when user opens chat
+    resetUnreadCount: (state, action: PayloadAction<string>) => {
+      const chatId = action.payload;
+      const chat = state.chats.find((c) => c.chatId === chatId);
+
+      if (chat) {
+        chat.unreadCount = 0;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -50,5 +97,12 @@ const chatSlice = createSlice({
   },
 });
 
-export const { setSelectedChat, setSelectedUser } = chatSlice.actions;
+export const {
+  setSelectedChat,
+  setSelectedUser,
+  updateChatOnNewMessage,
+  incrementUnreadCount,
+  resetUnreadCount,
+} = chatSlice.actions;
+
 export default chatSlice.reducer;

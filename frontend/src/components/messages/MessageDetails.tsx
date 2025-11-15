@@ -1,4 +1,6 @@
-//  MessageDetails.tsx
+// ============================================================
+// 5. Updated MessageDetails.tsx with Socket Integration
+// ============================================================
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchMsgsByChatId } from "@/features/message/messageThunks.ts";
@@ -6,13 +8,17 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks.ts";
 import {
   resetMessages,
   setCurrentChatId,
+  clearTypingUsers,
 } from "@/features/message/messageSlice.ts";
+import { resetUnreadCount } from "@/features/chat/chatSlice.ts";
 import type { IMessage } from "@/types/messageTypes.ts";
 import MessageItem from "@/features/message/MessageItem.tsx";
 import {
   getMessageDayLabel,
   getDateLabelSortValue,
 } from "@/utils/DateGroupFormate";
+import { socketService } from "@/services/socket/socketService.ts";
+import TypingIndicator from "@/components/messages/TypingIndicator.tsx";
 
 const MessageDetails = () => {
   let chatType: "private" | "group" = "private";
@@ -26,26 +32,40 @@ const MessageDetails = () => {
   }
 
   const dispatch = useAppDispatch();
-  const { messages, page, hasMore, loading } = useAppSelector(
+  const { messages, page, hasMore, loading, typingUsers } = useAppSelector(
     (state: any) => state.message
   );
+  const { user } = useAppSelector((state: any) => state.auth);
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const previousScrollHeight = useRef(0);
   const isLoadingMore = useRef(false);
+  const prevChatIdRef = useRef<string | null>(null);
 
   // Load messages when chatId changes
   useEffect(() => {
     if (!newChatId) return;
 
+    // Leave previous chat room
+    if (prevChatIdRef.current && prevChatIdRef.current !== newChatId) {
+      socketService.leaveChat(prevChatIdRef.current);
+      dispatch(clearTypingUsers(prevChatIdRef.current));
+    }
+
     setIsInitialLoad(true);
     dispatch(resetMessages());
     dispatch(setCurrentChatId(newChatId));
+    dispatch(resetUnreadCount(newChatId));
+
+    // Join new chat room
+    socketService.joinChat(newChatId);
 
     dispatch(
       fetchMsgsByChatId({ chatId: newChatId, page: 1, limit: 20, chatType })
     );
+
+    prevChatIdRef.current = newChatId;
   }, [newChatId, chatType, dispatch]);
 
   // Scroll to bottom on initial load or new messages
@@ -54,19 +74,19 @@ const MessageDetails = () => {
     if (!container) return;
 
     if (isInitialLoad && messages.length > 0) {
-      // Initial load - scroll to bottom
       setTimeout(() => {
         container.scrollTop = container.scrollHeight;
         setIsInitialLoad(false);
       }, 100);
     } else if (!isLoadingMore.current && !isInitialLoad) {
-      // New message arrived - scroll to bottom
       const isNearBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight <
         100;
 
       if (isNearBottom) {
-        container.scrollTop = container.scrollHeight;
+        setTimeout(() => {
+          container.scrollTop = container.scrollHeight;
+        }, 50);
       }
     }
   }, [messages, isInitialLoad]);
@@ -76,7 +96,6 @@ const MessageDetails = () => {
     const container = messageContainerRef.current;
     if (!container) return;
 
-    // Check if scrolled to top
     if (
       container.scrollTop < 100 &&
       !loading &&
@@ -94,7 +113,6 @@ const MessageDetails = () => {
           chatType,
         })
       ).then(() => {
-        // Maintain scroll position after loading older messages
         setTimeout(() => {
           if (container) {
             const newScrollHeight = container.scrollHeight;
@@ -108,7 +126,7 @@ const MessageDetails = () => {
     }
   };
 
-  // Group messages by day and sort oldest to newest (WhatsApp style)
+  // Group messages by day
   const groupedMessages = messages.reduce(
     (acc: Record<string, IMessage[]>, msg: IMessage) => {
       const dayLabel = getMessageDayLabel(msg.createdAt);
@@ -119,20 +137,23 @@ const MessageDetails = () => {
     {}
   );
 
-  // Sort days from oldest to newest
   const sortedDays = Object.keys(groupedMessages).sort((a, b) => {
     const dateA = groupedMessages[a][0]?.createdAt;
     const dateB = groupedMessages[b][0]?.createdAt;
     return getDateLabelSortValue(dateA) - getDateLabelSortValue(dateB);
   });
 
-  // Sort messages within each day from oldest to newest
   sortedDays.forEach((day) => {
     groupedMessages[day].sort(
       (a, b) =>
         getDateLabelSortValue(a.createdAt) - getDateLabelSortValue(b.createdAt)
     );
   });
+
+  // Get typing users for current chat
+  const currentTypingUsers = (typingUsers[newChatId || ""] || []).filter(
+    (u) => u.userId !== user?.id
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -141,14 +162,12 @@ const MessageDetails = () => {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-2 py-2"
       >
-        {/* Loading indicator at top */}
         {loading && hasMore && messages.length > 0 && (
           <div className="text-center text-gray-400 py-2 text-sm">
             Loading older messages...
           </div>
         )}
 
-        {/* Messages grouped by day */}
         {sortedDays.length === 0 && !loading ? (
           <div className="flex items-center justify-center h-full text-center text-gray-400">
             No messages yet. Start the conversation!
@@ -168,11 +187,15 @@ const MessageDetails = () => {
           ))
         )}
 
-        {/* Initial loading */}
         {loading && messages.length === 0 && (
           <div className="flex items-center justify-center h-full text-center text-gray-400">
             Loading messages...
           </div>
+        )}
+
+        {/* Typing Indicator */}
+        {currentTypingUsers.length > 0 && (
+          <TypingIndicator users={currentTypingUsers} />
         )}
       </div>
     </div>

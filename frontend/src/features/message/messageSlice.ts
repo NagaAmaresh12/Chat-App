@@ -1,7 +1,15 @@
+// ============================================================
+// 2. Updated Message Slice - src/features/message/messageSlice.ts
+// ============================================================
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { fetchMsgsByChatId } from "@/features/message/messageThunks.ts";
 import type { IMessage } from "@/types/messageTypes.ts";
+
+interface TypingUser {
+  userId: string;
+  username: string;
+}
 
 interface MessageState {
   messages: IMessage[];
@@ -13,6 +21,7 @@ interface MessageState {
   error: string | null;
   currentChatId: string | null;
   hasMore: boolean;
+  typingUsers: Record<string, TypingUser[]>; // chatId -> users typing
 }
 
 const initialState: MessageState = {
@@ -25,6 +34,7 @@ const initialState: MessageState = {
   error: null,
   currentChatId: null,
   hasMore: true,
+  typingUsers: {},
 };
 
 const messageSlice = createSlice({
@@ -42,6 +52,56 @@ const messageSlice = createSlice({
     setCurrentChatId: (state, action: PayloadAction<string>) => {
       state.currentChatId = action.payload;
     },
+
+    // Add new real-time message
+    addNewMessage: (state, action: PayloadAction<IMessage>) => {
+      const newMessage = action.payload;
+
+      // Only add if it's for the current chat and doesn't already exist
+      if (state.currentChatId === newMessage.chatId) {
+        const exists = state.messages.some((msg) => msg._id === newMessage._id);
+        if (!exists) {
+          state.messages.push(newMessage);
+          state.totalMessages += 1;
+        }
+      }
+    },
+
+    // Update typing status
+    updateTypingStatus: (
+      state,
+      action: PayloadAction<{
+        chatId: string;
+        userId: string;
+        username: string;
+        isTyping: boolean;
+      }>
+    ) => {
+      const { chatId, userId, username, isTyping } = action.payload;
+
+      if (!state.typingUsers[chatId]) {
+        state.typingUsers[chatId] = [];
+      }
+
+      if (isTyping) {
+        // Add user if not already typing
+        const exists = state.typingUsers[chatId].some(
+          (u) => u.userId === userId
+        );
+        if (!exists) {
+          state.typingUsers[chatId].push({ userId, username });
+        }
+      } else {
+        // Remove user from typing
+        state.typingUsers[chatId] = state.typingUsers[chatId].filter(
+          (u) => u.userId !== userId
+        );
+      }
+    },
+
+    clearTypingUsers: (state, action: PayloadAction<string>) => {
+      state.typingUsers[action.payload] = [];
+    },
   },
 
   extraReducers: (builder) => {
@@ -58,23 +118,19 @@ const messageSlice = createSlice({
           total: totalMessages,
         } = action.payload;
 
-        // On page = 1 (new chat loaded), replace
         if (page === 1) {
           state.messages = messages;
         } else {
-          // For infinite scroll append older messages
-          state.messages = [...state.messages, ...messages];
+          // Prepend older messages for infinite scroll
+          state.messages = [...messages, ...state.messages];
         }
-        console.log("====================================");
-        console.log({ messages: action.payload });
-        console.log("====================================");
+
         state.page = page;
         state.totalPages = totalPages;
         state.totalMessages = totalMessages;
-        state.hasMore = action.payload.hasMore; // ← Make sure this is set
+        state.hasMore = action.payload.hasMore;
         state.loading = false;
       })
-
       .addCase(fetchMsgsByChatId.rejected, (state, action) => {
         state.error = action.error.message || "Failed to fetch messages";
         state.loading = false;
@@ -82,6 +138,12 @@ const messageSlice = createSlice({
   },
 });
 
-export const { resetMessages, setCurrentChatId } = messageSlice.actions;
+export const {
+  resetMessages,
+  setCurrentChatId,
+  addNewMessage,
+  updateTypingStatus,
+  clearTypingUsers,
+} = messageSlice.actions;
 
 export default messageSlice.reducer;

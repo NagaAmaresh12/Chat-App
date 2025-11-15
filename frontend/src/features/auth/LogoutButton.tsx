@@ -4,7 +4,7 @@ import { logoutUser } from "@/features/auth/authThunks.ts";
 const LogoutButton = ({ className }: { className: string }) => {
   const dispatch = useAppDispatch();
   const handleLogout = async () => {
-    dispatch(logoutUser());
+    dispatch(logoutUser()).unwrap();
   };
   return (
     <Button variant={"outline"} onClick={handleLogout} className={className}>

@@ -91,11 +91,11 @@ export const login = async (req: Request, res: Response) => {
         "Failed to Publish the message in MailQueue @user-service"
       );
     }
-    // return sendSuccess(res, null, "OTP sent successfully", 200);
-    return res.json({
-      message: "Message send to mail successfully",
-      success: true,
-    });
+    return sendSuccess(res, null, "OTP sent successfully", 200);
+    // return res.json({
+    //   message: "Message send to mail successfully",
+    //   success: true,
+    // });
   } catch (error) {
     return sendError(res, "Failed to generate OTP", 500, error);
   }
@@ -324,54 +324,12 @@ export const verifyToken = (req: AuthRequest, res: Response) => {
 // -----------------------------
 // REFRESH TOKEN
 // -----------------------------
-export const refreshToken = async (req: Request, res: Response) => {
+export const refreshToken = async (req: AuthRequest, res: Response) => {
+  //authMiddleware in user-service will generate newTokens we just take them from request and set in cookies and headers and send response back and don't need to set userData in body because authMiddleware in gateway will gate those tokens and forward our request to /auth/me(next()) and we can set userData in response at /auth/me
   try {
-    // 🧩 1️⃣ Extract token from multiple possible sources
-    const tokenFromCookie = (req as any)?.cookies?.refreshToken;
-    const tokenFromHeader =
-      (req.headers["x-refresh-token"] as string) ||
-      (typeof req.headers.authorization === "string" &&
-      req.headers.authorization.startsWith("Bearer ")
-        ? req.headers.authorization.slice(7)
-        : undefined);
-    const tokenFromBody = req.body?.refreshToken;
-
-    const token = tokenFromCookie || tokenFromHeader || tokenFromBody;
-
-    if (!token) {
-      return sendError(res, "Refresh token not provided", 401);
-    }
-
-    // 🧩 2️⃣ Verify the refresh token
-    let decoded: JwtPayload;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET_KEY) as JwtPayload;
-    } catch (err) {
-      logger?.info("Refresh token verify failed", { err });
-      return sendError(res, "Invalid or expired refresh token", 401);
-    }
-
-    if (decoded.tokenType !== "refresh" || !decoded.userId) {
-      return sendError(res, "Invalid refresh token payload", 401);
-    }
-
-    // 🧩 3️⃣ Find user and validate token
-    const user = await User.findById(decoded.userId);
-    if (!user) return sendError(res, "User not found", 404);
-
-    if (!user.refreshToken || token !== user.refreshToken.token) {
-      logger?.info("Refresh token mismatch", {
-        provided: token,
-        stored: user.refreshToken?.token,
-      });
-      return sendError(res, "Refresh token mismatch. Please login again.", 403);
-    }
-
-    // 🧩 4️⃣ Generate new tokens
-    const { accessToken, refreshToken: newRefreshToken } =
-      user.generateTokens();
-    user.refreshToken = { token: newRefreshToken, createdAt: new Date() };
-    await user.save();
+    const accessToken = req?.accessToken;
+    const refreshToken = req?.refreshToken;
+    const user = req?.user;
 
     // Clear both cookies
     res.clearCookie("accessToken", {
@@ -408,7 +366,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     res.removeHeader("x-refresh-token");
     // 🧩 6️⃣ Also return tokens in headers for Gateway/microservices
     res.setHeader("x-access-token", accessToken);
-    res.setHeader("x-refresh-token", newRefreshToken);
+    res.setHeader("x-refresh-token", refreshToken);
 
     // 🧩 7️⃣ Return in JSON too
     const userResponse = {
@@ -416,7 +374,6 @@ export const refreshToken = async (req: Request, res: Response) => {
       name: user.username,
       email: user.email,
       accessToken,
-      refreshToken: newRefreshToken,
     };
 
     return sendSuccess(res, userResponse, "Token refreshed successfully", 200);

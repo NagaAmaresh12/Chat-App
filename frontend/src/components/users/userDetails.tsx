@@ -28,14 +28,14 @@ const UserDetails = () => {
   // ✅ Initial fetch
   useEffect(() => {
     if (!allUsers || allUsers.length === 0) {
-      dispatch(fetchAllUsers({ page: 1, limit: PAGE_LIMIT }));
+      dispatch(fetchAllUsers({ page: 1, limit: PAGE_LIMIT })).unwrap();
     }
   }, [dispatch, allUsers]);
 
   // ✅ Load more function (memoized to avoid re-renders)
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {
-      dispatch(fetchAllUsers({ page: page + 1, limit: PAGE_LIMIT }));
+      dispatch(fetchAllUsers({ page: page + 1, limit: PAGE_LIMIT })).unwrap();
     }
   }, [dispatch, page, hasMore, loading]);
 
