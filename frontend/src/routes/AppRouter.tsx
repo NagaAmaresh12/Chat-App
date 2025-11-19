@@ -4,15 +4,16 @@ import NotFound from "@/pages/NotFound.tsx";
 import WelcomePage from "@/pages/WelcomePage.tsx";
 import MainLayout from "@/pages/layout/MainLayout.tsx";
 
-import ProfilePage from "@/pages/layout/interface/ProfileInterface";
+import ProfilePage from "@/pages/layout/interface/ProfileInterface.tsx";
 import SettingsView from "@/pages/Settings.tsx";
 import LoginPage from "@/pages/LoginPage.tsx";
 import ChatInterface from "@/pages/layout/interface/ChatInterface";
 import UserInterface from "@/pages/layout/interface/UserInterface.tsx";
 import ProtectedRoute from "@/components/auth/ProtectedRoute.tsx";
-import AuthRedirect from "./AuthRedirect";
-import MessageDetails from "@/components/messages/MessageDetails";
-import UserInfoPage from "@/pages/layout/placeholder/UserInfoPage";
+import AuthRedirect from "./AuthRedirect.tsx";
+import MessageDetails from "@/components/messages/MessageDetails.tsx";
+import UserInfoPage from "@/pages/layout/placeholder/UserInfoPage.tsx";
+import VerifyPage from "@/pages/VerifyPage.tsx";
 
 const AppRoutes = () => {
   return (
@@ -20,6 +21,7 @@ const AppRoutes = () => {
       {/* Public Routes */}
       <Route element={<AuthRedirect />}>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify" element={<VerifyPage />} />
       </Route>
       <Route path="/" element={<Navigate to="/home" />} />
       <Route path="/home" element={<WelcomePage />} />

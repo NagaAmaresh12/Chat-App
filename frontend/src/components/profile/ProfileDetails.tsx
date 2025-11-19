@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { uploadFileThunk } from "@/features/message/messageThunks"; // 👈 new thunk
 
 const profileSchema = z.object({
-  name: z.string().min(1, "Name is required").max(50, "Name too long"),
+  username: z.string().min(1, "Name is required").max(50, "Name too long"),
   bio: z.string().max(200, "Bio too long").optional(),
   email: z
     .string()
@@ -39,7 +39,14 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 const ProfileDetails = () => {
-  const user = useAppSelector((state: any) => state.auth.user);
+  const user = useAppSelector((state: any) => state.user.currentUser);
+  console.log("from profileDetails:", { user });
+  const [newInputData, setnewInputData] = useState({
+    username: user?.username || "",
+    bio: user?.bio || "",
+    email: user?.email || "",
+  });
+
   const dispatch = useAppDispatch();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -48,9 +55,9 @@ const ProfileDetails = () => {
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || "",
-      bio: user?.bio || "",
-      email: user?.email || "",
+      username: newInputData?.username || "",
+      bio: newInputData?.bio || "",
+      email: newInputData?.email || "",
     },
   });
 
@@ -118,12 +125,13 @@ const ProfileDetails = () => {
           <span>{""}</span>
         </div>
         <div className="relative group">
-          <Avatar className="w-32 h-32 transition-all duration-200 group-hover:brightness-90 group-hover:cursor-pointer">
+          <Avatar className="w-32 h-32 transition-all duration-200 group-hover:brightness-50 group-hover:cursor-pointer ">
             <AvatarImage
               src={previewUrl || user?.avatar || "/default-avatar.png"}
+              className="object-cover"
             />
             <AvatarFallback>
-              {user?.name?.charAt(0).toUpperCase() || "U"}
+              {user?.username?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
           <div
@@ -140,7 +148,7 @@ const ProfileDetails = () => {
               <Pencil className="w-4 h-4 text-gray-700" />
             )}
           </div>
-          <input
+          <Input
             type="file"
             ref={fileInputRef}
             className="hidden"
@@ -157,7 +165,7 @@ const ProfileDetails = () => {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
-            name="name"
+            name="username"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Name</FormLabel>
@@ -230,7 +238,7 @@ const ProfileDetails = () => {
       {/* Separator */}
       <div className="flex items-center gap-2 mt-30">
         <Separator className="flex-1" />
-        <h1 className="font-semibold text-sm! ">Mucchatlu</h1>
+        <h1 className="font-semibold text-sm! text-zinc-500">Mucchatlu</h1>
         <Separator className="flex-1" />
       </div>
     </section>

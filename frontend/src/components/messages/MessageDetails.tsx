@@ -21,15 +21,16 @@ import { socketService } from "@/services/socket/socketService.ts";
 import TypingIndicator from "@/components/messages/TypingIndicator.tsx";
 
 const MessageDetails = () => {
-  let chatType: "private" | "group" = "private";
-  const { chatId } = useParams();
-  let newChatId: string | null = null;
+  const params = useParams<{ chatId: string }>();
 
-  if (chatId) {
-    const ChatIdWithGroupType = chatId.split("-");
-    chatType = ChatIdWithGroupType[0] === "group" ? "group" : "private";
-    newChatId = ChatIdWithGroupType[1] ?? null;
-  }
+  // URL format: /group-123 /private-999
+  const raw = params.chatId || "";
+
+  const [type, id] = raw.split("-");
+
+  const chatType: "private" | "group" = type === "group" ? "group" : "private";
+
+  const newChatId = id || null;
 
   const dispatch = useAppDispatch();
   const { messages, page, hasMore, loading, typingUsers } = useAppSelector(

@@ -38,6 +38,10 @@ const userSlice = createSlice({
         state.status = "loading";
       })
       .addCase(fetchUserProfile.fulfilled, (state, action) => {
+        console.log("fetchUserProfile action at userSlice", {
+          payload: action.payload,
+        });
+
         state.status = "succeeded";
         state.currentUser = action.payload;
       })
@@ -78,6 +82,15 @@ const userSlice = createSlice({
       })
       .addCase(editProfile.fulfilled, (state, action) => {
         state.status = "succeeded";
+        console.log({ payload: action.payload });
+        //         payload: {
+        //   avatar: "https://res.cloudinary.com/dalu4afte/image/upload/v1763048063/mucchatlu_chat_uploads/yoai2lr6tdbn8m15afgw.jpg";
+        //   bio: "All i need is Chat☕ and Sunchine🌞";
+        //   email: "nagaamareshkanne@gmail.com";
+        //   id: "69108a65e3094e719b5a04f4";
+        //   isOnline: true;
+        //   username: "Naga Amaresh..";
+        // }
         state.currentUser = action.payload; // ✅ fixed
       })
       .addCase(editProfile.rejected, (state, action) => {

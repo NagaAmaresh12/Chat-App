@@ -1,10 +1,12 @@
 // AuthRedirect.tsx
-import { useAppSelector } from "@/redux/hooks";
+import { useAppSelector } from "@/redux/hooks.ts";
 import { Navigate, Outlet } from "react-router-dom";
 
 const AuthRedirect = () => {
-  const { user } = useAppSelector((state) => state.auth);
-  return user ? <Navigate to="/home" replace /> : <Outlet />;
+  const { currentUser } = useAppSelector((state) => state.user);
+  // console.log("id from authredirect", { id });
+
+  return currentUser ? <Navigate to="/home" replace /> : <Outlet />;
 };
 
 export default AuthRedirect;

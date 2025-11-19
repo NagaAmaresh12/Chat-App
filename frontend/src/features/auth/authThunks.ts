@@ -1,6 +1,10 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/lib/axios.ts";
-import type { AuthResponse } from "@/types/authTypes.ts";
+import type {
+  AuthResponse,
+  SendOTPData,
+  VerifyOTPData,
+} from "@/types/authTypes.ts";
 import {
   clearTokens,
   setAccessToken,
@@ -8,17 +12,7 @@ import {
 } from "@/utils/tokenUtils";
 import { logout } from "@/features/auth/authSlice.ts";
 import { toast } from "sonner";
-
-interface SendOTPData {
-  username: string;
-  email: string;
-}
-
-interface VerifyOTPData {
-  username: string;
-  email: string;
-  otp: string;
-}
+import { clearUserData } from "@/features/user/userSlice.ts";
 
 /**
  * 🔹 Send OTP
@@ -33,7 +27,8 @@ export const sendOTP = createAsyncThunk<
     console.log("====================================");
     console.log("User login response", { res });
     if (res?.data?.status == "success") {
-      toast.success(`${res?.data?.message}`);
+      // toast.success(`${res?.data?.message}`);
+      console.log("OTP Sent Successful !!");
     } else {
       toast.error("error");
     }
@@ -118,6 +113,7 @@ export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
   async (_, { rejectWithValue }) => {
     try {
       clearTokens();
+      clearUserData();
       logout();
       const res = await axiosInstance.post("/users/auth/logout");
       console.log("====================================");

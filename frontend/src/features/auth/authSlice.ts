@@ -26,17 +26,17 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    logout: (state) => {
-      state.id = null;
-      state.user = null;
-      state.accessToken = null;
-      state.refreshToken = null;
-      state.otpSent = false;
-      state.status = "idle";
-      state.error = null;
-      Cookies.remove("accessToken");
-      Cookies.remove("refreshToken");
-    },
+    // logout: (state) => {
+    //   state.id = null;
+    //   state.user = null;
+    //   state.accessToken = null;
+    //   state.refreshToken = null;
+    //   state.otpSent = false;
+    //   state.status = "idle";
+    //   state.error = null;
+    //   Cookies.remove("accessToken");
+    //   Cookies.remove("refreshToken");
+    // },
 
     setOtpSent: (state) => {
       state.otpSent = true;
@@ -90,11 +90,12 @@ const authSlice = createSlice({
         state.error = null;
         // state.otpSent = false; // Reset after successful verification
         state.id = action.payload?.id;
-        state.user = action.payload?.user;
-        state.accessToken = action.payload?.accessToken;
-        state.refreshToken = action.payload?.refreshToken || null;
+        toast.success("Logged In Successfully !!!");
+        // state.user = action.payload?.user;
+        // state.accessToken = action.payload?.accessToken;
+        // state.refreshToken = action.payload?.refreshToken || null;
 
-        toast.success("Login successful!");
+        // toast.success("Login successful!");
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.status = "failed";
@@ -103,7 +104,7 @@ const authSlice = createSlice({
           (action.payload as string) || "Failed to verify OTP";
         state.error = errorMessage;
 
-        toast.error(errorMessage);
+        toast.error(errorMessage || "Failed to Login. Please Try again ...");
       })
 
       // 🔹 Rehydrate Auth

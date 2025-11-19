@@ -33,7 +33,7 @@ const initialState: MessageState = {
   loading: false,
   error: null,
   currentChatId: null,
-  hasMore: true,
+  hasMore: false,
   typingUsers: {},
 };
 

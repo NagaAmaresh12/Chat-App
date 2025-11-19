@@ -186,7 +186,7 @@ export const verifyOTP = async (req: Request, res: Response) => {
 
     const userResponse = {
       id: user._id,
-      name: user.username,
+      username: user.username,
       email: user.email,
       accessToken,
     };
@@ -209,9 +209,9 @@ export const me = (req: AuthRequest, res: AuthResponse) => {
   }
   const userData = {
     id: user._id,
-    name: user.username,
+    username: user.username,
     email: user.email,
-    url: avatar,
+    avatar,
     isOnline: user?.isOnline,
     bio: user?.bio,
   };
@@ -226,44 +226,57 @@ export const me = (req: AuthRequest, res: AuthResponse) => {
 
   if (req?.accessToken && req?.refreshToken) {
     console.log(
-      "since new tokens generated and received from req. and setting both token in cookies in res......"
+      "since new tokens generated and received from req. and setting both token in cookies in res......",
+      { accessToken: req?.accessToken, refreshToken: req?.refreshToken }
     );
     // Clear both cookies
-    res.clearCookie("accessToken", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/", // ✅ important
-    });
+    // res.clearCookie("accessToken", {
+    //   httpOnly: true,
+    //   sameSite: "lax",
+    //   secure: process.env.NODE_ENV === "production",
+    //   path: "/", // ✅ important
+    // });
 
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/", // ✅ must match path of original cookie
-    });
+    // res.clearCookie("refreshToken", {
+    //   httpOnly: true,
+    //   sameSite: "lax",
+    //   secure: process.env.NODE_ENV === "production",
+    //   path: "/", // ✅ must match path of original cookie
+    // });
 
-    // Optionally re-set new cookies if needed
-    res.cookie("accessToken", req?.accessToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/", // ✅ add this to make future clears predictable
-      maxAge: 15 * 60 * 1000,
-    });
+    // // Optionally re-set new cookies if needed
+    // res.cookie("accessToken", req?.accessToken, {
+    //   httpOnly: true,
+    //   sameSite: "lax",
+    //   secure: process.env.NODE_ENV === "production",
+    //   path: "/", // ✅ add this to make future clears predictable
+    //   maxAge: 15 * 60 * 1000,
+    // });
 
-    res.cookie("refreshToken", req?.refreshToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/", // ✅ consistent path
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    // res.cookie("refreshToken", req?.refreshToken, {
+    //   httpOnly: true,
+    //   sameSite: "lax",
+    //   secure: process.env.NODE_ENV === "production",
+    //   path: "/", // ✅ consistent path
+    //   maxAge: 7 * 24 * 60 * 60 * 1000,
+    // });
   }
 
   return sendSuccess(res, userData, "User is authenticated", 200);
 };
-
+//me - output :-
+// {
+//     "status": "success",
+//     "message": "User is authenticated",
+//     "data": {
+//         "id": "6910b0941efc63aac640d550",
+//         "username": "New Name",
+//         "email": "hello@gmail.com",
+//         "avatar": "",
+//         "isOnline": true,
+//         "bio": "Hi Guys, I'm From USA, Dallus"
+//     }
+// }
 //VERIFY-USER BY DECODING TOKEN
 
 interface DecodedToken {
@@ -371,7 +384,7 @@ export const refreshToken = async (req: AuthRequest, res: Response) => {
     // 🧩 7️⃣ Return in JSON too
     const userResponse = {
       id: user._id,
-      name: user.username,
+      username: user.username,
       email: user.email,
       accessToken,
     };

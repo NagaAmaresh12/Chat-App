@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/lib/axios.ts";
 import type { UserProfile } from "@/types/userTypes.ts";
-import type { User } from "@/types/authTypes.ts";
+import { toast } from "sonner";
 
 export const fetchUserProfile = createAsyncThunk<
   UserProfile,
@@ -10,13 +10,29 @@ export const fetchUserProfile = createAsyncThunk<
 >("user/fetchProfile", async (_, { rejectWithValue }) => {
   try {
     const { data } = await axiosInstance.get("/users/auth/me");
-    return data.user;
+    console.log("userData at fetchUserProfile", { data });
+
+    return data?.data;
   } catch (err: any) {
+    toast.message("Please Login!!!");
     return rejectWithValue(
       err.response?.data?.message || "Failed to fetch profile"
     );
   }
 });
+//fetchUserProfile output:-
+// {
+//     "status": "success",
+//     "message": "User is authenticated",
+//     "data": {
+//         "id": "6910b0941efc63aac640d550",
+//         "username": "New Name",
+//         "email": "hello@gmail.com",
+//         "avatar": "",
+//         "isOnline": true,
+//         "bio": "Hi Guys, I'm From USA, Dallus"
+//     }
+// }
 
 // export const updateUserProfile = createAsyncThunk<
 //   UserProfile,
@@ -35,7 +51,7 @@ export const fetchUserProfile = createAsyncThunk<
 
 export const fetchAllUsers = createAsyncThunk<
   {
-    users: User[];
+    users: UserProfile[];
     page: number;
     totalPages: number;
     hasMore: boolean;
@@ -81,7 +97,7 @@ interface EditProfilePayload {
 }
 
 export const editProfile = createAsyncThunk<
-  User, // return type
+  UserProfile, // return type
   EditProfilePayload, // input payload
   { rejectValue: string }
 >("auth/editProfile", async (payload, { rejectWithValue }) => {

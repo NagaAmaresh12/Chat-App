@@ -14,7 +14,7 @@ const initialState: ChatState = {
   page: 1,
   limit: 0,
   total: 0,
-  hasMore: true,
+  hasMore: false,
   remaining: 0,
   totalPages: 1,
 };

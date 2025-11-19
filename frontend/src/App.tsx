@@ -4,22 +4,23 @@ import AppRoutes from "@/routes/AppRouter.tsx";
 import { rehydrateAuth } from "@/features/auth/authThunks.ts";
 import Loader from "@/components/common/Loader.tsx";
 import { useSocket } from "@/hooks/useSocket.ts";
+import { fetchUserProfile } from "./features/user/userThunks";
 
 function App() {
-  const { user, status } = useAppSelector((state) => state.auth);
+  const currentUser = useAppSelector((state) => state.user);
   const dispatch = useAppDispatch();
 
   const { socket } = useSocket(); // ✅ FIXED correct destructuring
 
   // --- Rehydrate User ---
   useEffect(() => {
-    if (!user) {
-      dispatch(rehydrateAuth())
+    if (currentUser.id == null) {
+      dispatch(fetchUserProfile())
         .unwrap()
         .then((result) => console.log("✅ Auth rehydrated:", result))
         .catch((error) => console.error("❌ Failed to rehydrate:", error));
     }
-  }, [dispatch, user]);
+  }, [dispatch, currentUser.id]);
 
   // --- Debug socket status ---
   useEffect(() => {

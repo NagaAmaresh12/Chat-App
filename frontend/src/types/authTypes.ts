@@ -7,7 +7,8 @@
 
 export interface AuthResponse {
   id: string;
-  user: AuthUser;
+  name: string;
+  email: string;
   accessToken: string;
   refreshToken?: string;
 }
@@ -32,4 +33,14 @@ export interface AuthUser {
   name: string;
   email: string;
   accessToken: string;
+}
+export interface SendOTPData {
+  username: string;
+  email: string;
+}
+
+export interface VerifyOTPData {
+  username: string;
+  email: string;
+  otp: string;
 }
