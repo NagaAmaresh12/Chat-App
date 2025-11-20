@@ -9,13 +9,12 @@ import {
   verifyOTP,
 } from "@/features/auth/authThunks.ts";
 import type { AuthState } from "@/types/authTypes";
-import Cookies from "js-cookie";
 import { toast } from "sonner";
 
 const initialState: AuthState = {
   id: null,
   username: null,
-  email: null,
+  email: "",
   otpSent: false,
   accessToken: null,
   refreshToken: null,
@@ -88,9 +87,15 @@ const authSlice = createSlice({
       })
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.status = "succeeded";
+        const { id, username, email, accessToken } = action.payload;
+        console.log({ id, username, email, accessToken });
+
         state.error = null;
         // state.otpSent = false; // Reset after successful verification
-        state = action.payload;
+        state.id = id;
+        state.username = username;
+        state.email = email;
+        state.accessToken = accessToken;
 
         toast.success("Logged In Successfully !!!");
         // state.user = action.payload?.user;

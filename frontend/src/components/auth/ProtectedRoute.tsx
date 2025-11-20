@@ -3,10 +3,10 @@ import { useAppSelector } from "@/redux/hooks.ts";
 
 const ProtectedRoute = () => {
   const location = useLocation();
-  const { currentUser } = useAppSelector((state) => state.user);
+  const { id } = useAppSelector((state) => state.auth);
 
   // If user is not logged in → redirect
-  if (!currentUser) {
+  if (!id) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

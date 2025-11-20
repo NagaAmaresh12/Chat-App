@@ -5,7 +5,7 @@ import UserDetails from "@/components/users/UserDetails.tsx";
 const UserInterface = () => {
   const { pathname } = useLocation();
   return (
-    <section className="flex-1 h-screen bg-amber-700 flex">
+    <section className="flex-1 h-screen bg-zinc-200 flex ">
       <UserDetails />
       {pathname && pathname == "/app/users" ? <UserPlaceholder /> : <Outlet />}
     </section>

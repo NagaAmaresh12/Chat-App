@@ -56,7 +56,7 @@ const UserDetails = () => {
   console.log("👤 Users:", allUsers);
 
   return (
-    <section className="h-full w-1/4 border-r bg-background flex flex-col">
+    <section className="h-full w-[30vw] border-r border-zinc-400 px-4 bg-zinc-100 flex flex-col overflow-x-hidden! ">
       {/* Header */}
       <div className="p-4 border-b">
         <h1 className="text-xl font-semibold">
@@ -81,17 +81,17 @@ const UserDetails = () => {
           value={activeTab}
           onValueChange={(val) => setActiveTab(val as any)}
         >
-          <TabsList className="grid grid-cols-3 w-full">
+          <TabsList className="grid grid-cols-3 w-full gap-2">
             <TabsTrigger
               value="all"
-              className={activeTab === "all" ? "bg-blue-200 text-blue-900" : ""}
+              className={activeTab === "all" ? "bg-blue-400 text-blue-900" : ""}
             >
               All
             </TabsTrigger>
             <TabsTrigger
               value="online"
               className={
-                activeTab === "online" ? "bg-blue-200 text-blue-900" : ""
+                activeTab === "online" ? "bg-blue-400 text-blue-900" : ""
               }
             >
               Online
@@ -99,7 +99,7 @@ const UserDetails = () => {
             <TabsTrigger
               value="offline"
               className={
-                activeTab === "offline" ? "bg-blue-200 text-blue-900" : ""
+                activeTab === "offline" ? "bg-blue-400 text-blue-900" : ""
               }
             >
               Offline

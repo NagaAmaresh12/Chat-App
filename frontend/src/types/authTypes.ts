@@ -7,7 +7,7 @@
 
 export interface AuthResponse {
   id: string;
-  name: string;
+  username: string;
   email: string;
   accessToken: string;
   refreshToken?: string;
@@ -15,11 +15,12 @@ export interface AuthResponse {
 
 export interface AuthState {
   id: string | null;
-  user: AuthUser | null;
-  otpSent: boolean;
+  username: string;
+  email: string;
   accessToken: string | null;
   refreshToken: string | null;
   status: "idle" | "loading" | "succeeded" | "failed";
+  otpSent?: boolean;
   error: string | null;
 }
 

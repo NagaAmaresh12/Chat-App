@@ -4,47 +4,44 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
-import { BellOff, Pin } from "lucide-react";
-
 import type { UserProfile } from "@/types/userTypes.ts";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { Button } from "../ui/button";
 
 const UserListItem = ({ user }: { user: UserProfile }) => {
   return (
     <Button
       asChild
-      className={cn(
-        "flex items-center gap-3 h-18 w-[22vw] rounded-lg cursor-pointer hover:bg-amber-100 transition-colors bg-amber-600 my-5 mx-3"
-      )}
+      variant="ghost"
+      className="w-full p-0 m-0 bg-transparent bg-red-400 shadow shadow-2xl my-2"
     >
-      <Link to={user?.id} className="flex items-center justify-between  gap-2">
-        {/* Avatar */}
-        <Avatar className="w-12 h-12 ">
+      <NavLink
+        to={user.id}
+        className={({ isActive }) =>
+          cn(
+            "flex items-center gap-3 w-[20vw] h-18 rounded-lg cursor-pointer transition-colors px-3 py-2 bg-transparent",
+
+            isActive
+              ? "bg-red-500 text-white"
+              : "bg-amber-600 hover:bg-amber-200"
+          )
+        }
+      >
+        <Avatar className="w-12 h-12 bg-transparent">
           <AvatarImage
-            src={user?.avatar || "/default-avatar.png"}
-            alt={user?.username}
+            src={user.avatar || "/default-avatar.png"}
+            alt={user.username}
           />
-          <AvatarFallback>{user?.username?.charAt(0)}</AvatarFallback>
+          <AvatarFallback>{user.username?.charAt(0)}</AvatarFallback>
         </Avatar>
 
-        {/* Chat info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm truncate">{user?.username}</h4>
-
-            <div className="flex items-center gap-1">{/* Pinned */}</div>
-          </div>
-
-          <div className="flex items-center justify-between mt-1">
-            {/* Last message */}
-            <p className="text-xs text-gray-500 truncate">
-              {user.isOnline ? "Active" : "Offline"}
-            </p>
-          </div>
+          <h4 className="font-medium text-sm truncate">{user.username}</h4>
+          <p className="text-xs text-gray-200 truncate">
+            {user.isOnline ? "Active" : "Offline"}
+          </p>
         </div>
-      </Link>
+      </NavLink>
     </Button>
   );
 };
