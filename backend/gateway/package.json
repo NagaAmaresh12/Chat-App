@@ -6,8 +6,8 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc",
-    "start": "bunx nodemon",
-    "dev": "concurrently \"tsc --watch\" \"bunx nodemon\""
+    "start": "node dist/index.js",
+    "dev": "concurrently \"tsc --watch\" \" dist/index.js\""
   },
   "devDependencies": {
     "@types/axios": "^0.14.4",

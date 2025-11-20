@@ -108,21 +108,23 @@ export const rehydrateAuth = createAsyncThunk<
   }
 });
 // No payload needed for logout
-export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
+export const logoutUser = createAsyncThunk(
   "auth/logoutUser",
   async (_, { rejectWithValue }) => {
     try {
+      const res = await axiosInstance.post("/users/auth/logout");
+      // Call backend first
+
+      // After successful logout → clear frontend state
       clearTokens();
       clearUserData();
       logout();
-      const res = await axiosInstance.post("/users/auth/logout");
-      console.log("====================================");
-      console.log({ res });
-      console.log("====================================");
+
       if (res.data.status !== "success") {
         return rejectWithValue(res.data.message || "Logout failed");
       }
-      return; // no payload needed
+
+      return;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || "Logout failed");
     }

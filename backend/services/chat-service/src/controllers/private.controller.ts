@@ -537,7 +537,15 @@ export const editPrivateChatByChatID = async (
   res: Response
 ) => {
   const { chatID } = req.params;
-  const { isArchived, isMuted, isPinned, isBlocked } = req.body;
+  const {
+    isArchived,
+    isMuted,
+    isPinned,
+    isBlocked,
+    lastMessage,
+    lastMessageAt,
+    lastMessageType,
+  } = req.body;
   const userId = req.headers["x-user-id"];
 
   if (!Types.ObjectId.isValid(chatID!)) {
@@ -556,20 +564,31 @@ export const editPrivateChatByChatID = async (
     if (!chat) {
       return sendError(res, "Chat not found or access denied", 404);
     }
+    // 1️⃣ Update Chat model with last message info
+    const chatUpdates: any = {};
+    if (lastMessage) chatUpdates.lastMessage = lastMessage;
+    if (lastMessageType) chatUpdates.lastMessageType = lastMessageType;
+    if (lastMessageAt) chatUpdates.lastMessageAt = lastMessageAt;
+
+    if (Object.keys(chatUpdates).length > 0) {
+      await Chat.findByIdAndUpdate(chatID, chatUpdates, { new: true });
+    }
 
     // Update user's chat participant settings
-    const updateData: any = {};
-    if (typeof isArchived === "boolean") updateData.isArchived = isArchived;
-    if (typeof isBlocked === "boolean") updateData.isBlocked = isBlocked;
-    if (typeof isMuted === "boolean") updateData.isMuted = isMuted;
+    const participantUpdates: any = {};
+    if (typeof isArchived === "boolean")
+      participantUpdates.isArchived = isArchived;
+    if (typeof isBlocked === "boolean")
+      participantUpdates.isBlocked = isBlocked;
+    if (typeof isMuted === "boolean") participantUpdates.isMuted = isMuted;
     if (typeof isPinned === "boolean") {
-      updateData.isPinned = isPinned;
-      if (isPinned) updateData.pinnedAt = new Date();
+      participantUpdates.isPinned = isPinned;
+      if (isPinned) participantUpdates.pinnedAt = new Date();
     }
 
     const updatedChatParticipant = await ChatParticipant.findOneAndUpdate(
       { chatId: chatID, userId: userId },
-      updateData,
+      participantUpdates,
       { new: true, upsert: true }
     );
 

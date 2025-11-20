@@ -391,6 +391,9 @@ export const editGroupChatByChatID = async (
     isArchived,
     groupSettings,
     isBlocked,
+    lastMessageAt,
+    lastMessage,
+    lastMessageType,
   } = req.body ?? {};
 
   const headerUser = getHeaderValue(req.headers["x-user-id"]);
@@ -439,8 +442,12 @@ export const editGroupChatByChatID = async (
     if (groupSettings && typeof groupSettings === "object") {
       updateData.groupSettings = { ...group.groupSettings, ...groupSettings };
     }
+    // LAST MESSAGE FIELDS
+    if (lastMessage) updateData.lastMessage = lastMessage;
+    if (lastMessageType) updateData.lastMessageType = lastMessageType;
+    if (lastMessageAt) updateData.lastMessageAt = lastMessageAt;
 
-    // ✅ Save group changes if any
+    // ✅ Save group changes if any   // Save group fields + lastMessage fields together
     if (Object.keys(updateData).length > 0) {
       Object.assign(group, updateData);
       await group.save();

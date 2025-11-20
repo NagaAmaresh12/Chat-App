@@ -18,7 +18,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
 
   const handleClick = () => {
     const chatType = chat.type === "group" ? "group" : "private";
-    navigate(`/chats/${chatType}-${chat.chatId}`);
+    navigate(`/app/chats/${chatType}-${chat.chatId}`);
   };
 
   const getTimeAgo = (date: string) => {
@@ -44,9 +44,9 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
       <div className="flex-1 ml-3 min-w-0">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold truncate">{chat.chatName}</h3>
-          {chat.lastMessage?.createdAt && (
+          {chat.lastMessage && (
             <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-              {getTimeAgo(chat.lastMessageTime)}
+              {getTimeAgo(chat.lastMessageAt)}
             </span>
           )}
         </div>

@@ -1,7 +1,7 @@
 // src/features/chat/chatThunks.ts
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/lib/axios.ts";
-import type { Chat } from "@/types/chatTypes";
+import type { Chat } from "@/types/chatTypes.ts";
 
 export const fetchChatsPage = createAsyncThunk<
   {
@@ -23,6 +23,7 @@ export const fetchChatsPage = createAsyncThunk<
     const total = res.data.data.count;
     const remaining = Math.max(total - page * limit, 0);
     const hasMore = page * limit < total;
+    console.log("Chats:", res.data);
 
     return {
       chats: res.data.data.chats,

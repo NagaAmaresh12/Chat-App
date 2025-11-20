@@ -26,6 +26,8 @@ export const fetchMsgsByChatId = createAsyncThunk<
 >(
   "messages/fetchByChatId",
   async ({ chatId, page = 1, limit = 20, chatType }) => {
+    console.log({ chatId, chatType, page, limit });
+
     const response = await axiosInstance.post(`/messages/msg/v1/chatId`, {
       chatId,
       page,

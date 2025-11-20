@@ -14,7 +14,8 @@ import { toast } from "sonner";
 
 const initialState: AuthState = {
   id: null,
-  user: null,
+  username: null,
+  email: null,
   otpSent: false,
   accessToken: null,
   refreshToken: null,
@@ -89,7 +90,8 @@ const authSlice = createSlice({
         state.status = "succeeded";
         state.error = null;
         // state.otpSent = false; // Reset after successful verification
-        state.id = action.payload?.id;
+        state = action.payload;
+
         toast.success("Logged In Successfully !!!");
         // state.user = action.payload?.user;
         // state.accessToken = action.payload?.accessToken;

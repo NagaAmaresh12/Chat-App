@@ -36,9 +36,9 @@ export interface IChat extends Document {
   groupDescription?: string;
   groupAvatar?: string;
   groupSettings?: GroupSettings;
-  lastMessage?: Types.ObjectId;
+  lastMessage?: string;
   lastMessageType?: "Text" | "Photo" | "docs" | "video";
-
+  lastMessageAt?: Date;
   lastActivity?: Date;
   isArchived?: { user: Types.ObjectId; archivedAt?: Date }[];
   isMuted?: { user: Types.ObjectId; mutedAt?: Date }[];
@@ -113,9 +113,14 @@ const chatSchema = new Schema<IChat>(
       },
     },
     lastMessage: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Message",
     },
+    lastMessageAt: {
+      type: Date,
+      default: null,
+    },
+
     lastMessageType: {
       type: String,
       enum: ["Text", "Photo", "docs", "video"],

@@ -264,6 +264,23 @@ export const createMessage = async (req: Request, res: Response) => {
     });
 
     const savedMessage = await message.save();
+    // ----------------- Update chat metadata -----------------
+    try {
+      await axios.patch(
+        `${process.env.CHATS_SERVICE}/${chatType}-chat/edit/${chatId}`,
+        {
+          // WHAT YOU SEND TO CHAT SERVICE
+          lastMessage: savedMessage.content,
+          lastMessageType: savedMessage.messageType,
+          lastMessageAt: savedMessage.createdAt,
+          // lastMessageSender: savedMessage.senderId,
+          // lastMessageId: savedMessage._id,
+        },
+        { headers: { "x-user-id": senderId } }
+      );
+    } catch (err) {
+      console.error("⚠️ Failed to update chat metadata:", err);
+    }
 
     return res.status(201).json({
       success: true,

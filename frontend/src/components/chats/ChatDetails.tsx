@@ -32,9 +32,9 @@ const ChatDetails = () => {
   // Initial fetch
   useEffect(() => {
     if (!chats || chats.length === 0) {
-      dispatch(fetchChatsPage({ page: 1, limit: PAGE_LIMIT })).unwrap();
+      dispatch(fetchChatsPage({ page: 1, limit: PAGE_LIMIT }));
     }
-  }, [dispatch]);
+  }, [dispatch, chats]);
 
   // Filter chats
   const filteredChats = (chats || []).filter((chat: Chat) =>

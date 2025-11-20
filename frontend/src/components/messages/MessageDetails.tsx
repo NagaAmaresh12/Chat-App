@@ -1,7 +1,7 @@
 // ============================================================
 // 5. Updated MessageDetails.tsx with Socket Integration
 // ============================================================
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { fetchMsgsByChatId } from "@/features/message/messageThunks.ts";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks.ts";
@@ -27,8 +27,10 @@ const MessageDetails = () => {
   const raw = params.chatId || "";
 
   const [type, id] = raw.split("-");
-
-  const chatType: "private" | "group" = type === "group" ? "group" : "private";
+  const chatType = useMemo(
+    () => (type === "group" ? "group" : "private"),
+    [type]
+  );
 
   const newChatId = id || null;
 
@@ -48,23 +50,27 @@ const MessageDetails = () => {
   useEffect(() => {
     if (!newChatId) return;
 
-    // Leave previous chat room
+    // If switching chats → leave old room
     if (prevChatIdRef.current && prevChatIdRef.current !== newChatId) {
       socketService.leaveChat(prevChatIdRef.current);
       dispatch(clearTypingUsers(prevChatIdRef.current));
     }
 
-    setIsInitialLoad(true);
+    // Prepare new chat
     dispatch(resetMessages());
     dispatch(setCurrentChatId(newChatId));
     dispatch(resetUnreadCount(newChatId));
 
-    // Join new chat room
+    // Join socket room
     socketService.joinChat(newChatId);
 
+    // Load page 1
     dispatch(
       fetchMsgsByChatId({ chatId: newChatId, page: 1, limit: 20, chatType })
     );
+
+    // Only set this AFTER all reset logic
+    setIsInitialLoad(true);
 
     prevChatIdRef.current = newChatId;
   }, [newChatId, chatType, dispatch]);

@@ -8,9 +8,14 @@ const LogoutButton = ({ className }: { className: string }) => {
   const handleLogout = async () => {
     console.log("Clicked on LogoutButton");
 
-    dispatch(logoutUser()).unwrap();
-    navigate("/login");
+    try {
+      await dispatch(logoutUser()).unwrap(); // ⬅ wait for API
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
+
   return (
     <Button variant={"outline"} onClick={handleLogout} className={className}>
       Logout

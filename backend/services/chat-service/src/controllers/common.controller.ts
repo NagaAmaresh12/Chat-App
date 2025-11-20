@@ -197,26 +197,24 @@ export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
         }
 
         // Last message details
-        const lastMessage = chat.lastMessage
-          ? {
-              text: chat?.lastMessage || "",
-              createdAt: chat?.lastActivity || "",
-              // status: chat.lastMessage?.status, // e.g., sent, delivered, read
-            }
-          : null;
+        const lastMessage = {
+          text: chat.lastMessage || "",
+          type: chat.lastMessageType || "Text",
+          createdAt: chat.lastMessageAt,
+        };
 
         return {
           chatId: chat?._id,
           type: chat?.type,
           chatName,
           chatImage,
-          lastMessage,
-          unreadCount: cp?.unreadCount,
+          unreadCount: cp?.unreadCount || "0",
           isPinned: cp?.isPinned,
           isArchived: cp.isArchived,
           isMuted: cp.isMuted,
-          lastMessageType: chat?.lastMessageType || "text",
-          lastReadMessageId: cp?.lastReadMessageId,
+          lastMessage: lastMessage?.text,
+          lastMessageType: lastMessage?.type || "text",
+          lastMessageAt: lastMessage?.createdAt || Date.now(),
         };
       })
       .filter(Boolean);
@@ -316,25 +314,25 @@ export const getAllChatsByUserIDPage = async (
           chatImage = otherUser?.avatar || "/default-avatar.png";
         }
 
-        const lastMessage = chat.lastMessage
-          ? {
-              text: chat?.lastMessage || "",
-              createdAt: chat?.lastActivity || "",
-            }
-          : null;
+        // Last message details
+        const lastMessage = {
+          text: chat.lastMessage || "",
+          type: chat.lastMessageType || "Text",
+          createdAt: chat.lastMessageAt,
+        };
 
         return {
           chatId: chat?._id,
           type: chat?.type,
           chatName,
           chatImage,
-          lastMessage,
-          unreadCount: cp?.unreadCount,
+          unreadCount: cp?.unreadCount || "0",
           isPinned: cp?.isPinned,
           isArchived: cp.isArchived,
           isMuted: cp.isMuted,
-          lastMessageType: chat?.lastMessageType || "text",
-          lastReadMessageId: cp?.lastReadMessageId || "undefined",
+          lastMessage: lastMessage?.text,
+          lastMessageType: lastMessage?.type || "text",
+          lastMessageAt: lastMessage?.createdAt || Date.now(),
         };
       })
       .filter(Boolean);

@@ -5,12 +5,14 @@ export interface Chat {
   type: "group" | "private";
   chatName: string;
   chatImage: string;
-  lastMessage: string | null;
   unreadCount: number;
   isPinned: boolean;
   pinnedAt?: string; // ISO timestamp when pinned
   isArchived: boolean;
   isMuted: boolean;
+  lastMessage: string | null;
+  lastMessageType: boolean;
+  lastMessageAt: string;
 }
 
 export interface IChat {
@@ -20,7 +22,7 @@ export interface IChat {
   avatar?: string;
   chatAvatar?: string;
   lastMessage?: string;
-  lastMessageTime?: string;
+  lastMessageAt?: string;
   lastMessageType?: string;
   unreadCount: number;
   participants?: string[];
