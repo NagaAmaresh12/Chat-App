@@ -4,20 +4,21 @@
 
 import { createSlice } from "@reduxjs/toolkit";
 import {
-  rehydrateAuth,
+  fetchUserProfile,
   sendOTP,
   verifyOTP,
 } from "@/features/auth/authThunks.ts";
-import type { AuthState } from "@/types/authTypes";
+import type { AuthState } from "@/types/authTypes.ts";
 import { toast } from "sonner";
 
 const initialState: AuthState = {
   id: null,
   username: null,
   email: "",
+  avatar: "",
+  bio: null,
+  isOnline: null,
   otpSent: false,
-  accessToken: null,
-  refreshToken: null,
   status: "idle",
   error: null,
 };
@@ -26,22 +27,17 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    // logout: (state) => {
-    //   state.id = null;
-    //   state.user = null;
-    //   state.accessToken = null;
-    //   state.refreshToken = null;
-    //   state.otpSent = false;
-    //   state.status = "idle";
-    //   state.error = null;
-    //   Cookies.remove("accessToken");
-    //   Cookies.remove("refreshToken");
-    // },
-
     setOtpSent: (state) => {
       state.otpSent = true;
     },
-
+    clearAuthStateData: (state) => {
+      state.id = null;
+      state.username = null;
+      state.email = null;
+      state.bio = null;
+      state.isOnline = null;
+      state.avatar = null;
+    },
     // ✅ NEW: Reset OTP state (for back button)
     resetOtpState: (state) => {
       state.otpSent = false;
@@ -87,22 +83,18 @@ const authSlice = createSlice({
       })
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.status = "succeeded";
-        const { id, username, email, accessToken } = action.payload;
-        console.log({ id, username, email, accessToken });
+        const { id, username, email, bio, isOnline, avatar } = action.payload;
+        console.log({ id, username, email, bio, isOnline, avatar });
 
         state.error = null;
-        // state.otpSent = false; // Reset after successful verification
         state.id = id;
         state.username = username;
         state.email = email;
-        state.accessToken = accessToken;
+        state.bio = bio;
+        state.isOnline = isOnline as string;
+        state.avatar = avatar as string;
 
         toast.success("Logged In Successfully !!!");
-        // state.user = action.payload?.user;
-        // state.accessToken = action.payload?.accessToken;
-        // state.refreshToken = action.payload?.refreshToken || null;
-
-        // toast.success("Login successful!");
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.status = "failed";
@@ -113,29 +105,35 @@ const authSlice = createSlice({
 
         toast.error(errorMessage || "Failed to Login. Please Try again ...");
       })
-
-      // 🔹 Rehydrate Auth
-      .addCase(rehydrateAuth.pending, (state) => {
+      // 🔹 Fetch current user
+      .addCase(fetchUserProfile.pending, (state) => {
         state.status = "loading";
       })
-      .addCase(rehydrateAuth.fulfilled, (state, action) => {
+      .addCase(fetchUserProfile.fulfilled, (state, action) => {
+        console.log("fetchUserProfile action at userSlice", {
+          payload: action.payload,
+        });
+        const id = action.payload.id;
+        const email = action.payload.email;
+        const username = action.payload.username;
+        const bio = action.payload.bio as string;
+        const isOnline = action.payload.isOnline as string;
+        const avatar = action.payload.avatar as string;
         state.status = "succeeded";
-        state.id = action.payload.id;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken || null;
+        state.id = id;
+        state.username = username;
+        state.email = email;
+        state.bio = bio;
+        state.isOnline = isOnline;
+        state.avatar = avatar;
       })
-      .addCase(rehydrateAuth.rejected, (state) => {
+      .addCase(fetchUserProfile.rejected, (state, action) => {
         state.status = "failed";
-        state.id = null;
-        state.user = null;
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.otpSent = false;
+        state.error = action.payload || "Failed to fetch user profile";
       });
   },
 });
 
-export const { logout, isLoading, setOtpSent, resetOtpState } =
+export const { isLoading, setOtpSent, resetOtpState, clearAuthStateData } =
   authSlice.actions;
 export default authSlice.reducer;

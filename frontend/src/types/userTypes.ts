@@ -1,10 +1,10 @@
 export interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  bio?: string;
-  isOnline?: "online" | "offline";
-  avatar?: string;
+  id: string | null;
+  username: string | null;
+  email: string | null;
+  bio?: string | null;
+  isOnline?: "online" | "offline" | null;
+  avatar?: string | null;
 }
 
 export interface UserState {

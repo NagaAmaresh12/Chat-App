@@ -5,14 +5,10 @@ import type {
   SendOTPData,
   VerifyOTPData,
 } from "@/types/authTypes.ts";
-import {
-  clearTokens,
-  setAccessToken,
-  setRefreshToken,
-} from "@/utils/tokenUtils";
-import { logout } from "@/features/auth/authSlice.ts";
+import { clearTokens } from "@/utils/tokenUtils.ts";
 import { toast } from "sonner";
 import { clearUserData } from "@/features/user/userSlice.ts";
+import type { UserProfile } from "@/types/userTypes.ts";
 
 /**
  * 🔹 Send OTP
@@ -56,20 +52,16 @@ export const verifyOTP = createAsyncThunk<
     console.log({ data });
     console.log("====================================");
     // store tokens locally
-    setAccessToken(data?.accessToken);
-    if (data?.refreshToken) setRefreshToken(data?.refreshToken);
 
     // return data in correct AuthResponse shape
     return {
       id: data.id,
-      user: {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-      },
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken || null,
-    };
+      username: data.name, // FIX
+      email: data.email, // FIX
+      bio: data.bio || null,
+      isOnline: data.isOnline || false,
+      avatar: data.avatar || "",
+    } satisfies AuthResponse;
   } catch (err: any) {
     return rejectWithValue(
       err.response?.data?.message || "OTP verification failed"
@@ -77,36 +69,6 @@ export const verifyOTP = createAsyncThunk<
   }
 });
 
-export const rehydrateAuth = createAsyncThunk<
-  AuthResponse,
-  void,
-  { rejectValue: string }
->("auth/rehydrateAuth", async (_, { rejectWithValue }) => {
-  try {
-    const { data } = await axiosInstance.get("/users/auth/refresh-token", {
-      withCredentials: true,
-    });
-    console.log(
-      "============= Send a request for New TOKENS======================="
-    );
-    console.log({ medata: data });
-    console.log("====================================");
-    return {
-      id: data?.data?.id,
-      user: {
-        id: data?.data?.id,
-        name: data?.data?.name,
-        email: data?.data?.email,
-      },
-      accessToken: data?.data?.accessToken,
-      refreshToken: data?.data?.refreshToken || null,
-    };
-  } catch (err: any) {
-    return rejectWithValue(
-      err.response?.data?.message || "Failed to rehydrate"
-    );
-  }
-});
 // No payload needed for logout
 export const logoutUser = createAsyncThunk(
   "auth/logoutUser",
@@ -130,3 +92,21 @@ export const logoutUser = createAsyncThunk(
     }
   }
 );
+
+export const fetchUserProfile = createAsyncThunk<
+  UserProfile,
+  void,
+  { rejectValue: string }
+>("auth/fetchProfile", async (_, { rejectWithValue }) => {
+  try {
+    const { data } = await axiosInstance.get("/users/auth/me");
+    console.log("userData at fetchUserProfile", { data });
+
+    return data?.data;
+  } catch (err: any) {
+    toast.message("Please Login!!!");
+    return rejectWithValue(
+      err.response?.data?.message || "Failed to fetch profile"
+    );
+  }
+});

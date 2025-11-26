@@ -188,7 +188,9 @@ export const verifyOTP = async (req: Request, res: Response) => {
       id: user._id,
       username: user.username,
       email: user.email,
-      accessToken,
+      bio: user.bio,
+      isOnline: user.isOnline,
+      avatar: user.avatar,
     };
 
     return sendSuccess(res, userResponse, "Login successful", 200);
@@ -421,7 +423,15 @@ export const logout = async (req: AuthRequest, res: AuthResponse) => {
     res.clearCookie("refreshToken");
     const key = `otp=${user?.email}`;
     await deleteRedisKey(key);
-    return sendSuccess(res, null, "Logout successful", 200);
+    const data = {
+      id: null,
+      username: null,
+      email: null,
+      bio: null,
+      isOnline: null,
+      avatar: null,
+    };
+    return sendSuccess(res, data, "Logout successful", 200);
   } catch (error) {
     return sendError(res, "Logout failed", 500, error);
   }

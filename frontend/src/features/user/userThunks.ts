@@ -3,23 +3,6 @@ import axiosInstance from "@/lib/axios.ts";
 import type { UserProfile } from "@/types/userTypes.ts";
 import { toast } from "sonner";
 
-export const fetchUserProfile = createAsyncThunk<
-  UserProfile,
-  void,
-  { rejectValue: string }
->("user/fetchProfile", async (_, { rejectWithValue }) => {
-  try {
-    const { data } = await axiosInstance.get("/users/auth/me");
-    console.log("userData at fetchUserProfile", { data });
-
-    return data?.data;
-  } catch (err: any) {
-    toast.message("Please Login!!!");
-    return rejectWithValue(
-      err.response?.data?.message || "Failed to fetch profile"
-    );
-  }
-});
 //fetchUserProfile output:-
 // {
 //     "status": "success",

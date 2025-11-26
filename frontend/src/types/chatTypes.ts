@@ -7,11 +7,11 @@ export interface Chat {
   chatImage: string;
   unreadCount: number;
   isPinned: boolean;
-  pinnedAt?: string; // ISO timestamp when pinned
+  pinnedAt?: string;
   isArchived: boolean;
   isMuted: boolean;
   lastMessage: string | null;
-  lastMessageType: boolean;
+  lastMessageType?: string; // FIXED
   lastMessageAt: string;
 }
 
@@ -30,18 +30,16 @@ export interface IChat {
 }
 
 export interface ChatState {
-  chats: Chat[];
-  // users: User[];
+  chats: Chat[] | null;
   selectedChat: Chat | null;
-  // selectedUser: User | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
-  page: number;
-  limit: number;
-  total: number;
-  hasMore: boolean;
-  remaining: number;
-  totalPages: number;
+  page: number | null;
+  limit: number | null;
+  total: number | null;
+  hasMore: boolean | null;
+  remaining: number | null;
+  totalPages: number | null;
 }
 
 // ============================================================
@@ -72,18 +70,3 @@ export interface IAttachment {
   fileType: string;
   fileSize: number;
 }
-
-// export interface ChatState {
-//   chats: IChat[];
-//   users: any[];
-//   selectedChat: IChat | null;
-//   selectedUser: any | null;
-//   status: "idle" | "loading" | "succeeded" | "failed";
-//   error: string | null;
-//   page: number;
-//   limit: number;
-//   total: number;
-//   hasMore: boolean;
-//   remaining: number;
-//   totalPages: number;
-// }

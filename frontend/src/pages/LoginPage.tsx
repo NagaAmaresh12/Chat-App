@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { sendOTPSchema } from "@/lib/validation/authSchema";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { sendOTP } from "@/features/auth/authThunks";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ export default function LoginPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const { status } = useAppSelector((s) => s.auth);
+  const { status, id } = useAppSelector((state) => state.auth);
 
   const form = useForm<SendOTPData>({
     resolver: zodResolver(sendOTPSchema),
@@ -38,7 +38,9 @@ export default function LoginPage() {
     }
   };
 
-  return (
+  return id ? (
+    <Navigate to={"/app/chats"} />
+  ) : (
     <div className="flex flex-col md:flex-row h-screen w-screen">
       {/* LEFT SIDE */}
       <div className="w-full md:w-1/2 bg-white flex items-center justify-center p-6 sm:p-10 md:p-12 lg:p-16">

@@ -9,14 +9,10 @@ import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    {/* <SidebarProvider> */}
-    <Provider store={store}>
-      <BrowserRouter>
-        <App />
-        <Toaster richColors position="top-right" />
-      </BrowserRouter>
-    </Provider>
-    {/* </SidebarProvider> */}
-  </StrictMode>
+  <Provider store={store}>
+    <BrowserRouter>
+      <App />
+      <Toaster richColors position="top-right" />
+    </BrowserRouter>
+  </Provider>
 );

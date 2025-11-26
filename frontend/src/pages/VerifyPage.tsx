@@ -103,7 +103,7 @@ export default function VerifyPage() {
 
     try {
       await dispatch(verifyOTP(payload)).unwrap();
-      navigate("/home", { replace: true });
+      navigate("/app/chats", { replace: true });
     } catch (err) {
       console.log("OTP verification failed:", err);
     }
@@ -137,13 +137,13 @@ export default function VerifyPage() {
             ))}
           </div>
 
-          <button
+          <Button
             onClick={handleVerify}
             disabled={otp.some((d) => d === "")}
             className="w-full text-black h-12 bg-zinc-100 hover:cursor-pointer"
           >
             Confirm OTP
-          </button>
+          </Button>
         </div>
       </div>
 

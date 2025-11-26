@@ -1,6 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
-  fetchUserProfile,
   // updateUserProfile,
   fetchAllUsers,
   editProfile,
@@ -33,35 +32,6 @@ const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // 🔹 Fetch current user
-      .addCase(fetchUserProfile.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(fetchUserProfile.fulfilled, (state, action) => {
-        console.log("fetchUserProfile action at userSlice", {
-          payload: action.payload,
-        });
-
-        state.status = "succeeded";
-        state.currentUser = action.payload;
-      })
-      .addCase(fetchUserProfile.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload || "Failed to fetch user profile";
-      })
-
-      // // 🔹 Update profile
-      // .addCase(updateUserProfile.pending, (state) => {
-      //   state.status = "loading";
-      // })
-      // .addCase(updateUserProfile.fulfilled, (state, action) => {
-      //   state.status = "succeeded";
-      //   state.currentUser = action.payload;
-      // })
-      // .addCase(updateUserProfile.rejected, (state, action) => {
-      //   state.status = "failed";
-      //   state.error = action.payload || "Failed to update user profile";
-      // })
 
       // 🔹 Fetch all users
       .addCase(fetchAllUsers.pending, (state) => {

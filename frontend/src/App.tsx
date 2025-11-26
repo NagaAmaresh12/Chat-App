@@ -1,16 +1,15 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import AppRoutes from "@/routes/AppRouter.tsx";
-import { rehydrateAuth } from "@/features/auth/authThunks.ts";
 import Loader from "@/components/common/Loader.tsx";
-import { useSocket } from "@/hooks/useSocket.ts";
-import { fetchUserProfile } from "./features/user/userThunks";
+import { fetchUserProfile } from "@/features/auth/authThunks.ts";
+// import { useSocket } from "@/hooks/useSocket.ts";
 
 function App() {
-  const currentUser = useAppSelector((state) => state.user);
+  const currentUser = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
 
-  const { socket } = useSocket(); // ✅ FIXED correct destructuring
+  // const { socket } = useSocket(); // ✅ FIXED correct destructuring
 
   // --- Rehydrate User ---
   useEffect(() => {
@@ -22,12 +21,12 @@ function App() {
     }
   }, [dispatch, currentUser.id]);
 
-  // --- Debug socket status ---
-  useEffect(() => {
-    if (!socket) return;
+  // // --- Debug socket status ---
+  // useEffect(() => {
+  //   if (!socket) return;
 
-    console.log("🔌 Socket connected?", socket.connected);
-  }, [socket]); // ✅ use socket, not user
+  //   console.log("🔌 Socket connected?", socket.connected);
+  // }, [socket]); // ✅ use socket, not user
 
   if (status === "loading") return <Loader />;
 

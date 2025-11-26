@@ -27,5 +27,5 @@ router.get("/verify-token", verifyToken);
 //generate access token for other service
 
 //refresh Token End-Point Needed This would be handled by Middleware just call /me route
-router.get("/refresh-token", refreshToken);
+router.get("/refresh-token", authenticate, refreshToken);
 export default router;

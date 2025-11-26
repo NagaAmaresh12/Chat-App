@@ -60,7 +60,7 @@ const UserDetails = () => {
       {/* Header */}
       <div className="p-4 border-b">
         <h1 className="text-xl font-semibold">
-          Muchhatlu <h2 className="text-sm my-4">(Users)</h2>
+          Muchhatlu <b className="text-sm my-4">(Users)</b>
         </h1>
       </div>
 

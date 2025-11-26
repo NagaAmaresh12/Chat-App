@@ -3,7 +3,7 @@
 // ============================================================
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { ChatState } from "@/types/chatTypes.ts";
+import type { ChatState, Chat } from "@/types/chatTypes.ts";
 import { fetchChatsPage } from "@/features/chat/chatThunks.ts";
 
 const initialState: ChatState = {
@@ -26,55 +26,64 @@ const chatSlice = createSlice({
     setSelectedChat: (state, action) => {
       state.selectedChat = action.payload;
     },
-    // setSelectedUser: (state, action) => {
-    //   state.selectedUser = action.payload;
-    // },
 
-    // Update chat when new message arrives
+    clearChatData: (state) => {
+      state.chats = [];
+      state.page = 1;
+      state.limit = 0;
+      state.remaining = 0;
+      state.selectedChat = null;
+      state.total = 0;
+      state.totalPages = 1;
+      state.hasMore = false;
+    },
+
     updateChatOnNewMessage: (
       state,
       action: PayloadAction<{
         chatId: string;
-        lastMessage: any;
+        lastMessage: {
+          content: string;
+          createdAt: string;
+          messageType: string;
+        };
       }>
     ) => {
+      if (!state.chats) return;
+
       const { chatId, lastMessage } = action.payload;
+
       const chatIndex = state.chats.findIndex((c) => c.chatId === chatId);
+      if (chatIndex === -1) return;
 
-      if (chatIndex !== -1) {
-        const chat = state.chats[chatIndex];
+      const chat = state.chats[chatIndex];
+      if (!chat) return;
 
-        // Update last message and timestamp
-        chat.lastMessage = lastMessage.content;
-        chat.lastMessageTime = lastMessage.createdAt;
-        chat.lastMessageType = lastMessage.messageType;
+      // Update fields
+      chat.lastMessage = lastMessage.content;
+      chat.lastMessageAt = lastMessage.createdAt;
+      chat.lastMessageType = lastMessage.messageType;
 
-        // Move chat to top
-        state.chats.splice(chatIndex, 1);
-        state.chats.unshift(chat);
-      }
+      // Move chat to top
+      state.chats.splice(chatIndex, 1);
+      state.chats.unshift(chat);
     },
 
-    // Increment unread count
     incrementUnreadCount: (state, action: PayloadAction<string>) => {
-      const chatId = action.payload;
-      const chat = state.chats.find((c) => c.chatId === chatId);
+      if (!state.chats) return;
 
-      if (chat) {
-        chat.unreadCount = (chat.unreadCount || 0) + 1;
-      }
+      const chat = state.chats.find((c) => c.chatId === action.payload);
+      if (chat) chat.unreadCount = (chat.unreadCount || 0) + 1;
     },
 
-    // Reset unread count when user opens chat
     resetUnreadCount: (state, action: PayloadAction<string>) => {
-      const chatId = action.payload;
-      const chat = state.chats.find((c) => c.chatId === chatId);
+      if (!state.chats) return;
 
-      if (chat) {
-        chat.unreadCount = 0;
-      }
+      const chat = state.chats.find((c) => c.chatId === action.payload);
+      if (chat) chat.unreadCount = 0;
     },
   },
+
   extraReducers: (builder) => {
     builder
       .addCase(fetchChatsPage.pending, (state) => {
@@ -86,6 +95,7 @@ const chatSlice = createSlice({
         } else {
           state.chats = [...state.chats, ...action.payload.chats];
         }
+
         state.page = action.payload.page;
         state.hasMore = action.payload.hasMore;
         state.status = "succeeded";
@@ -99,10 +109,10 @@ const chatSlice = createSlice({
 
 export const {
   setSelectedChat,
-  setSelectedUser,
   updateChatOnNewMessage,
   incrementUnreadCount,
   resetUnreadCount,
+  clearChatData,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

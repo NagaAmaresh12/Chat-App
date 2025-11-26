@@ -6,19 +6,21 @@
 // }
 
 export interface AuthResponse {
-  id: string;
-  username: string;
-  email: string;
-  accessToken: string;
-  refreshToken?: string;
+  id: string | null;
+  username: string | null;
+  email: string | null;
+  bio: string | null;
+  isOnline?: string | null;
+  avatar?: string | null;
 }
 
 export interface AuthState {
   id: string | null;
-  username: string;
-  email: string;
-  accessToken: string | null;
-  refreshToken: string | null;
+  username: string | null;
+  email: string | null;
+  avatar: string | null;
+  bio: string | null;
+  isOnline: string | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   otpSent?: boolean;
   error: string | null;

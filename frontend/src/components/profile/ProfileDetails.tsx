@@ -39,7 +39,10 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 const ProfileDetails = () => {
-  const user = useAppSelector((state: any) => state.user.currentUser);
+  const { id, username, email, bio, isOnline, avatar } = useAppSelector(
+    (state: any) => state.auth
+  );
+  const user = { id, username, email, bio, isOnline, avatar };
   console.log("from profileDetails:", { user });
   const [newInputData, setnewInputData] = useState({
     username: user?.username || "",
