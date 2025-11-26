@@ -213,9 +213,9 @@ export const me = (req: AuthRequest, res: AuthResponse) => {
     id: user._id,
     username: user.username,
     email: user.email,
-    avatar,
-    isOnline: user?.isOnline,
     bio: user?.bio,
+    isOnline: user?.isOnline,
+    avatar,
   };
   console.log(
     "these two tokens will be exists only if accesstoken is expired, these tokens are from req?.accessToken and req?.refreshToken",

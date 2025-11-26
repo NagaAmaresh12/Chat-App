@@ -3,7 +3,6 @@ import rootReducer from "@/redux/rootReducer.ts";
 
 export const store = configureStore({
   reducer: rootReducer,
-
   devTools: import.meta.env.MODE !== "production",
 });
 

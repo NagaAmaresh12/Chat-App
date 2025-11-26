@@ -1,5 +1,5 @@
 import { logger } from "./utils/logger.js";
-import { app } from "./app.js";
+import { server } from "./app.js";
 import { config } from "dotenv";
 import { AppError } from "./utils/api.error.js";
 
@@ -9,6 +9,6 @@ const PORT = process.env.PORT;
 if (!PORT) {
   throw new AppError("Invalid Port at Socket Service");
 }
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   logger.info(`Socket Server is running on Port${PORT}`);
 });

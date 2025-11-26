@@ -1,6 +1,26 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
+.scrollbar-thin {
+  scrollbar-width: thin; /* Firefox */
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px; /* 👈 control width here (very thin) */
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #a3a3a3; /* gray-400 */
+  border-radius: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-ultra-thin::-webkit-scrollbar {
+  width: 2px;     /* ultra thin */
+}
 
 @custom-variant dark (&:is(.dark *));
 :root {

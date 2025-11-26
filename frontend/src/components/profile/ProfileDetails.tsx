@@ -58,7 +58,9 @@ const ProfileDetails = () => {
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      username: newInputData?.username || "",
+      username:
+        newInputData?.username ||
+        newInputData?.email.split("@")[0].toUpperCase(),
       bio: newInputData?.bio || "",
       email: newInputData?.email || "",
     },

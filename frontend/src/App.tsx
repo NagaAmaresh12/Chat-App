@@ -3,7 +3,9 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import AppRoutes from "@/routes/AppRouter.tsx";
 import Loader from "@/components/common/Loader.tsx";
 import { fetchUserProfile } from "@/features/auth/authThunks.ts";
+import { connectSocket } from "@/services/socket/socketClientFile.ts";
 // import { useSocket } from "@/hooks/useSocket.ts";
+// import { connectSocket } from "./lib/socket";
 
 function App() {
   const currentUser = useAppSelector((state) => state.auth);
@@ -22,11 +24,14 @@ function App() {
   }, [dispatch, currentUser.id]);
 
   // // --- Debug socket status ---
-  // useEffect(() => {
-  //   if (!socket) return;
 
-  //   console.log("🔌 Socket connected?", socket.connected);
-  // }, [socket]); // ✅ use socket, not user
+  useEffect(() => {
+    const socket = connectSocket();
+    console.log("🔌 Socket connected?", socket.connected);
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   if (status === "loading") return <Loader />;
 

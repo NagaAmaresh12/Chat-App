@@ -41,6 +41,16 @@ const messageSlice = createSlice({
   name: "messages",
   initialState,
   reducers: {
+    clearMessageData: (state) => {
+      state.messages = [];
+      state.page = 1;
+      state.limit = 20;
+      state.totalPages = 1;
+      state.totalMessages = 0;
+      state.currentChatId = null;
+      state.hasMore = false;
+      state.typingUsers = {};
+    },
     resetMessages: (state) => {
       state.messages = [];
       state.page = 1;
@@ -56,15 +66,18 @@ const messageSlice = createSlice({
     // Add new real-time message
     addNewMessage: (state, action: PayloadAction<IMessage>) => {
       const newMessage = action.payload;
+      console.log("addNewMessage Payload", newMessage);
 
       // Only add if it's for the current chat and doesn't already exist
-      if (state.currentChatId === newMessage.chatId) {
-        const exists = state.messages.some((msg) => msg._id === newMessage._id);
-        if (!exists) {
-          state.messages.push(newMessage);
-          state.totalMessages += 1;
-        }
-      }
+      // if (state.currentChatId === newMessage.chatId) {
+      // const exists = state.messages.some((msg) => msg._id === newMessage._id);
+      // if (!exists) {
+      state.messages.push(newMessage);
+      state.totalMessages += 1;
+      console.log("Newly Updated State", { messages: state.messages });
+
+      // }
+      // }
     },
 
     // Update typing status
@@ -144,6 +157,7 @@ export const {
   addNewMessage,
   updateTypingStatus,
   clearTypingUsers,
+  clearMessageData,
 } = messageSlice.actions;
 
 export default messageSlice.reducer;

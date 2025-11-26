@@ -1,10 +1,9 @@
 export interface IAttachment {
-  type: string;
   url: string;
   filename: string;
   size: number;
   mimeType: string;
-  _id: string;
+  type: "image" | "video" | "document" | "audio";
 }
 
 export interface ISender {
@@ -25,14 +24,13 @@ export interface IMessage {
   senderId: string;
   content: string;
   messageType: string;
-  attachments: IAttachment[];
+  attachments: IAttachment[] | [];
   isDeleted: boolean;
   readBy: string[];
   deliveredTo: string[];
   reactions: any[];
   createdAt: string;
   updatedAt: string;
-  sender: ISender;
 }
 
 export interface IPaginatedMessageResponse {

@@ -17,8 +17,9 @@ import {
   getMessageDayLabel,
   getDateLabelSortValue,
 } from "@/utils/DateGroupFormate";
-import { socketService } from "@/services/socket/socketService.ts";
+// import { socketService } from "@/services/socket/socketClientFile.ts";
 import TypingIndicator from "@/components/messages/TypingIndicator.tsx";
+import ChatInput from "@/components/chats/ChatInput.tsx";
 
 const MessageDetails = () => {
   const params = useParams<{ chatId: string }>();
@@ -33,6 +34,7 @@ const MessageDetails = () => {
   );
 
   const newChatId = id || null;
+  console.log({ newChatId });
 
   const dispatch = useAppDispatch();
   const { messages, page, hasMore, loading, typingUsers } = useAppSelector(
@@ -52,7 +54,7 @@ const MessageDetails = () => {
 
     // If switching chats → leave old room
     if (prevChatIdRef.current && prevChatIdRef.current !== newChatId) {
-      socketService.leaveChat(prevChatIdRef.current);
+      // socketService.leaveChat(prevChatIdRef.current);
       dispatch(clearTypingUsers(prevChatIdRef.current));
     }
 
@@ -62,7 +64,7 @@ const MessageDetails = () => {
     dispatch(resetUnreadCount(newChatId));
 
     // Join socket room
-    socketService.joinChat(newChatId);
+    // socketService.joinChat(newChatId);
 
     // Load page 1
     dispatch(
@@ -163,11 +165,11 @@ const MessageDetails = () => {
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full bg-amber-200 scrollbar-ultra-thin">
       <div
         ref={messageContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-2 py-2"
+        className="flex-1 overflow-y-auto px-2 py-2 scroll-thin "
       >
         {loading && hasMore && messages.length > 0 && (
           <div className="text-center text-gray-400 py-2 text-sm">
@@ -176,12 +178,12 @@ const MessageDetails = () => {
         )}
 
         {sortedDays.length === 0 && !loading ? (
-          <div className="flex items-center justify-center h-full text-center text-gray-400">
+          <div className="flex items-center justify-center h-full text-center">
             No messages yet. Start the conversation!
           </div>
         ) : (
           sortedDays.map((day) => (
-            <div key={day}>
+            <div key={day} className="scroll-thin">
               {groupedMessages[day].map((msg: IMessage, index: number) => (
                 <MessageItem
                   key={msg._id}
@@ -204,6 +206,9 @@ const MessageDetails = () => {
         {currentTypingUsers.length > 0 && (
           <TypingIndicator users={currentTypingUsers} />
         )}
+      </div>
+      <div className="relative h-fit w-full bg-blue-400 bottom-0 left-0 scroll-thin">
+        <ChatInput chatType={chatType} newChatId={newChatId as string} />
       </div>
     </div>
   );

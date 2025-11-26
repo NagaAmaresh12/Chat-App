@@ -9,6 +9,10 @@ import { clearTokens } from "@/utils/tokenUtils.ts";
 import { toast } from "sonner";
 import { clearUserData } from "@/features/user/userSlice.ts";
 import type { UserProfile } from "@/types/userTypes.ts";
+import { clearChatData } from "@/features/chat/chatSlice.ts";
+import { clearAuthStateData } from "@/features/auth/authSlice.ts";
+import { clearMessageData } from "@/features/message/messageSlice.ts";
+import { success } from "zod";
 
 /**
  * 🔹 Send OTP
@@ -77,11 +81,14 @@ export const logoutUser = createAsyncThunk(
       const res = await axiosInstance.post("/users/auth/logout");
       // Call backend first
 
-      // After successful logout → clear frontend state
-      clearTokens();
-      clearUserData();
-      logout();
-
+      if (res.data.status == "success") {
+        // After successful logout → clear frontend state
+        clearTokens();
+        clearUserData();
+        clearChatData();
+        clearAuthStateData();
+        clearMessageData();
+      }
       if (res.data.status !== "success") {
         return rejectWithValue(res.data.message || "Logout failed");
       }
