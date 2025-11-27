@@ -24,6 +24,7 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { uploadFileThunk } from "@/features/message/messageThunks"; // 👈 new thunk
+import LogoutButton from "@/features/auth/LogoutButton";
 
 const profileSchema = z.object({
   username: z.string().min(1, "Name is required").max(50, "Name too long"),
@@ -122,7 +123,7 @@ const ProfileDetails = () => {
   };
 
   return (
-    <section className="w-1/4 bg-amber-50 p-6 space-y-10">
+    <section className="w-1/4 bg-[#F6F7F8]! p-6 space-y-10">
       {/* Avatar + Status */}
       <div className="flex flex-col items-center gap-4 relative">
         <div className="flex items-center justify-between w-full">
@@ -140,7 +141,7 @@ const ProfileDetails = () => {
             </AvatarFallback>
           </Avatar>
           <div
-            className={`absolute bottom-0 right-0 bg-white p-1 rounded-full shadow-md transition-opacity duration-200 ${
+            className={`absolute bottom-0 right-0  bg-[#F6F7F8]! p-1 rounded-full shadow-md transition-opacity duration-200 ${
               isUploading
                 ? "cursor-not-allowed opacity-100"
                 : "cursor-pointer opacity-0 group-hover:opacity-100"
@@ -148,9 +149,9 @@ const ProfileDetails = () => {
             onClick={handleAvatarClick}
           >
             {isUploading ? (
-              <Loader2 className="w-4 h-4 text-gray-700 animate-spin" />
+              <Loader2 className="w-4 h-4 text-zinc-500! animate-spin" />
             ) : (
-              <Pencil className="w-4 h-4 text-gray-700" />
+              <Pencil className="w-4 h-4 text-zinc-500! " />
             )}
           </div>
           <Input
@@ -162,7 +163,19 @@ const ProfileDetails = () => {
             disabled={isUploading}
           />
         </div>
-        <Badge variant="secondary">{user ? "Active" : "Inactive"}</Badge>
+        <div className="flex items-center justify-center gap-2 ">
+          <div className="h-3! w-3! rounded-full bg-green-500"></div>
+          <Badge
+            variant="secondary"
+            className={`border px-3! py-1! text-zinc-100! ${
+              user
+                ? "border-green-500 bg-green-500/70 "
+                : "border-[#3A6EA5] bg-[#3A6EA5]"
+            }`}
+          >
+            {user ? "Active" : "Inactive"}
+          </Badge>
+        </div>
       </div>
 
       {/* Profile Form */}
@@ -179,6 +192,7 @@ const ProfileDetails = () => {
                     placeholder="Enter your name"
                     {...field}
                     disabled={isUploading}
+                    className="text-sm! text-zinc-500! font-normal tracking-wider"
                   />
                 </FormControl>
                 <FormMessage />
@@ -197,6 +211,7 @@ const ProfileDetails = () => {
                     placeholder="Tell us about yourself"
                     {...field}
                     disabled={isUploading}
+                    className="text-sm! text-zinc-500! font-normal tracking-wider"
                   />
                 </FormControl>
                 <FormMessage />
@@ -215,6 +230,7 @@ const ProfileDetails = () => {
                     placeholder="your.email@gmail.com"
                     {...field}
                     disabled={isUploading}
+                    className="text-sm! text-zinc-500! font-normal tracking-wider"
                   />
                 </FormControl>
                 <FormMessage />
@@ -225,7 +241,7 @@ const ProfileDetails = () => {
           <Button
             type="submit"
             variant="outline"
-            className="mt-4 w-full"
+            className="w-full mt-4 flex items-center justify-center bg-zinc-200! text-[#3A6EA5] shadow gap-3 h-12"
             disabled={isUploading}
           >
             {isUploading ? (
@@ -234,16 +250,18 @@ const ProfileDetails = () => {
                 Saving...
               </>
             ) : (
-              "Save Changes"
+              "Save"
             )}
           </Button>
         </form>
       </Form>
-
+      <div className="h-10 w-full!">
+        <LogoutButton className="bg-zinc-200! w-full hover:text-black! shadow text-zinc-500!" />
+      </div>
       {/* Separator */}
-      <div className="flex items-center gap-2 mt-30">
+      <div className="flex items-center gap-2 mt-10">
         <Separator className="flex-1" />
-        <h1 className="font-semibold text-sm! text-zinc-500">Mucchatlu</h1>
+        <h4 className="font-semibold text-lg! text-[#3A6EA5]!">Mucchatlu</h4>
         <Separator className="flex-1" />
       </div>
     </section>

@@ -57,16 +57,16 @@ const ChatDetails = () => {
   console.log({ chats });
   console.log("====================================");
   return (
-    <section className="h-full w-1/4 border-r bg-background flex flex-col">
+    <section className="h-full w-1/4 border-r  flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b">
-        <h1 className="text-xl font-semibold">
-          Muchhatlu <b className="text-sm my-4">(Chats)</b>
+      <div className="py-8! px-4! border-b">
+        <h1 className="text-[28px]! font-bold text-[#3A6EA5] ">
+          Muchhatlu <span className="text-sm my-4">(Chats)</span>
         </h1>
       </div>
       {/* Search */}
       <div className="relative p-3">
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
         <Input
           placeholder="Search chats..."
           value={search}
@@ -78,13 +78,13 @@ const ChatDetails = () => {
       {/* Tabs */}
       <div className="px-3 pb-2">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 w-full ">
+          <TabsList className="grid grid-cols-3 w-full h-10! bg-transparent!">
             <TabsTrigger
               value="all"
               className={
                 activeTab == "all"
-                  ? "bg-blue-300! text-white! border-none! outline-none!"
-                  : "bg-white! text-gray-700! border-none! outline-none!"
+                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs! w-24!"
+                  : "bg-white! text-zinc-500! hover:border-zinc-500!  border-zinc-200! outline-none! rounded-full! h-8! text-xs!  w-24! "
               }
             >
               All
@@ -93,8 +93,8 @@ const ChatDetails = () => {
               value="groups"
               className={
                 activeTab == "groups"
-                  ? "bg-blue-300! text-white! border-none! outline-none!"
-                  : "bg-white! text-gray-700! border-none! outline-none!"
+                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs!  w-24!"
+                  : "bg-white! text-zinc-500! border-zinc-200! outline-none! rounded-full! h-8! text-xs! hover:border-zinc-500! w-24! "
               }
             >
               Groups
@@ -103,8 +103,8 @@ const ChatDetails = () => {
               value="unread"
               className={
                 activeTab == "unread"
-                  ? "bg-blue-300! text-white! border-none! outline-none!"
-                  : "bg-white! text-gray-700! border-none! outline-none!"
+                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs!  w-24!"
+                  : "bg-white! text-zinc-500! hover:border-zinc-500!  border-zinc-200! outline-none! rounded-full! h-8! text-xs!  w-24! "
               }
             >
               Unread

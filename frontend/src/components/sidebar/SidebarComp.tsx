@@ -19,10 +19,14 @@ const SidebarComp = () => {
   const location = useLocation();
   const { user } = useAppSelector((state) => state.auth);
 
+  const topItems = navItems.slice(0, 3);
+  const bottomItem = navItems[3];
+
   return (
-    <aside className="w-16 h-full flex flex-col items-center justify-between bg-background border-r">
-      <nav className="flex flex-col items-center py-4 space-y-4 w-full">
-        {navItems.map((item) => {
+    <aside className="w-16 h-full flex flex-col items-center border-r">
+      {/* Top Section */}
+      <nav className="flex flex-col items-center py-4 space-y-4 w-full  h-full">
+        {topItems.map((item) => {
           const isActive = location.pathname.startsWith(item.url);
           const Icon = item.icon;
 
@@ -32,22 +36,18 @@ const SidebarComp = () => {
               to={item.url}
               title={item.title}
               className={cn(
-                "flex justify-center items-center w-full h-12 rounded-lg transition-colors",
+                "flex justify-center items-center w-full h-12 rounded-lg transition-colors text-[#3A6EA5]",
                 "hover:bg-accent hover:text-accent-foreground",
                 isActive && "bg-accent text-accent-foreground"
               )}
             >
-              {item && item?.title !== "Profile" ? (
+              {item.title !== "Profile" ? (
                 <Icon className="w-6 h-6" />
               ) : (
                 <Avatar>
-                  <AvatarImage src={item?.url} alt="@shadcn" />
+                  <AvatarImage src={user?.avatar} />
                   <AvatarFallback>
-                    {user ? (
-                      user?.name.charAt(0).toUpperCase()
-                    ) : (
-                      <Icon className="w-6 h-6" />
-                    )}
+                    {user ? user.name.charAt(0).toUpperCase() : "U"}
                   </AvatarFallback>
                 </Avatar>
               )}
@@ -55,6 +55,21 @@ const SidebarComp = () => {
           );
         })}
       </nav>
+
+      {/* Bottom Section (Settings) */}
+      <div className="pb-4 w-full">
+        <Link
+          to={bottomItem.url}
+          title={bottomItem.title}
+          className={cn(
+            "flex justify-center items-center w-full h-12 rounded-lg transition-colors text-[#3A6EA5]",
+            location.pathname.startsWith(bottomItem.url) &&
+              "bg-accent text-accent-foreground"
+          )}
+        >
+          <bottomItem.icon className="w-6 h-6" />
+        </Link>
+      </div>
     </aside>
   );
 };

@@ -28,7 +28,7 @@ const UserInfoPage = () => {
   }
 
   return (
-    <div className="w-full h-screen flex flex-col items-center mt-6 px-4">
+    <div className="w-full h-screen flex flex-col items-center mt-6 px-4 relative z-2">
       {/* Top Banner */}
       <div className="w-full h-62 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-xl shadow-md"></div>
 

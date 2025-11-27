@@ -6,7 +6,7 @@ const Loader = () => {
       {/* Chat bubbles animation */}
       <div className="flex space-x-2 mb-6">
         <motion.span
-          className="w-4 h-4 bg-blue-500! rounded-full"
+          className="w-4 h-4 bg-[#3A6EA5]! rounded-full"
           animate={{
             y: [0, -8, 0],
           }}

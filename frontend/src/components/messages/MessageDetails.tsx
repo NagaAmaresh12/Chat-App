@@ -20,6 +20,7 @@ import {
 // import { socketService } from "@/services/socket/socketClientFile.ts";
 import TypingIndicator from "@/components/messages/TypingIndicator.tsx";
 import ChatInput from "@/components/chats/ChatInput.tsx";
+import ChatInterfaceBgImage from "../chats/ChatInterfaceBgImage";
 
 const MessageDetails = () => {
   const params = useParams<{ chatId: string }>();
@@ -165,7 +166,8 @@ const MessageDetails = () => {
   );
 
   return (
-    <div className="relative flex flex-col h-full bg-amber-200 scrollbar-ultra-thin">
+    <div className=" flex flex-col h-full relative z-1 bg-zinc-200 scrollbar-ultra-thin">
+      <ChatInterfaceBgImage />
       <div
         ref={messageContainerRef}
         onScroll={handleScroll}
@@ -207,7 +209,7 @@ const MessageDetails = () => {
           <TypingIndicator users={currentTypingUsers} />
         )}
       </div>
-      <div className="relative h-fit w-full bg-blue-400 bottom-0 left-0 scroll-thin">
+      <div className="relative  h-fit w-full bg-blue-400 bottom-0 left-0 scroll-thin">
         <ChatInput chatType={chatType} newChatId={newChatId as string} />
       </div>
     </div>

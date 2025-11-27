@@ -32,27 +32,31 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
   return (
     <div
       onClick={handleClick}
-      className="flex items-center p-3 hover:bg-accent cursor-pointer border-b transition-colors"
+      className="flex items-center p-3 hover:bg-[#3A6EA5]/10 cursor-pointer border-b transition-colors"
     >
-      <Avatar className="w-12 h-12 flex-shrink-0">
+      <Avatar className="w-12 h-12  border border-[#3A6EA5]!">
         <AvatarImage src={chat?.chatImage || noImage} />
         <AvatarFallback>
-          {chat.chatName?.charAt(0).toUpperCase() || "?"}
+          <span className="text-zinc-500!">
+            {chat.chatName?.charAt(0).toUpperCase() || "?"}
+          </span>
         </AvatarFallback>
       </Avatar>
 
       <div className="flex-1 ml-3 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="font-semibold truncate">{chat.chatName}</h3>
+          <h3 className="font-semibold truncate text-[#3A6EA5]!">
+            {chat.chatName}
+          </h3>
           {chat.lastMessage && (
-            <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+            <span className="text-xs text-zinc-400! flex-shrink-0 ml-2">
               {getTimeAgo(chat.lastMessageAt)}
             </span>
           )}
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground truncate flex-1">
+          <p className="text-sm text-zinc-500! truncate flex-1">
             {chat.lastMessage || "No messages yet"}
           </p>
 

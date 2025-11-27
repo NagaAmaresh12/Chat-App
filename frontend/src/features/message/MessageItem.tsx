@@ -16,13 +16,13 @@ const MessageItem = ({
   const isOwnMessage = user && msg.senderId === user.id;
 
   return (
-    <div className="w-full ">
+    <div className="w-full relative z-2">
       {/* Day label - only show if specified */}
       {showDayLabel && dayLabel && (
         <div className="flex justify-center my-3">
           <Badge
             variant="secondary"
-            className="text-xs px-3 py-1 bg-gray-700/50 text-gray-300 hover:bg-gray-700/50"
+            className="text-xs px-3 py-1 bg-white text-zinc-400 hover:none text-[10px]"
           >
             {dayLabel}
           </Badge>
@@ -38,12 +38,14 @@ const MessageItem = ({
         <div className="py-1 w-fit max-w-[70%] ">
           <div
             className={`${
-              isOwnMessage ? "bg-blue-600 text-white" : "bg-gray-700 text-white"
+              isOwnMessage
+                ? "bg-blue-600 text-white"
+                : "bg-white text-zinc-500 "
             } rounded-lg px-3 py-2 break-words shadow-md`}
           >
             {/* Sender name for group chats (if not own message) */}
             {!isOwnMessage && msg.sender && (
-              <p className="text-xs font-semibold text-blue-300 mb-1">
+              <p className="text-xs font-semibold text-[#3A6EA5]! mb-1">
                 {msg.sender.username}
               </p>
             )}

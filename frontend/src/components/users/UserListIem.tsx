@@ -13,13 +13,13 @@ const UserListItem = ({ user }: { user: UserProfile }) => {
     <Button
       asChild
       variant="ghost"
-      className="w-full p-0 m-0 bg-transparent bg-red-400 shadow shadow-2xl my-2"
+      className="flex items-center p-3 hover:bg-[#3A6EA5]/10 cursor-pointer border-b transition-colors w-full"
     >
       <NavLink
-        to={user.id}
+        to={user.id!}
         className={({ isActive }) =>
           cn(
-            "flex items-center gap-3 w-[20vw] h-18 rounded-lg cursor-pointer transition-colors px-3 py-2 bg-transparent",
+            "flex items-center gap-3 w-[20vw] h-18  cursor-pointer transition-colors px-3 py-2 bg-transparent",
 
             isActive
               ? "bg-red-500 text-white"
@@ -27,17 +27,22 @@ const UserListItem = ({ user }: { user: UserProfile }) => {
           )
         }
       >
-        <Avatar className="w-12 h-12 bg-transparent">
+        <Avatar className="w-12 h-12 border-[#3A6EA5]! border! bg-transparent!">
           <AvatarImage
             src={user.avatar || "/default-avatar.png"}
-            alt={user.username}
+            alt={user.username!}
+            className="w-12 h-12  "
           />
-          <AvatarFallback>{user.username?.charAt(0)}</AvatarFallback>
+          <AvatarFallback>
+            <span className="text-zinc-500!">{user.username?.charAt(0)}</span>
+          </AvatarFallback>
         </Avatar>
 
-        <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-sm truncate">{user.username}</h4>
-          <p className="text-xs text-gray-200 truncate">
+        <div className="flex-1 ml-3 min-w-0">
+          <h3 className="font-medium text-md! truncate text-[#3A6EA5]!">
+            {user.username}
+          </h3>
+          <p className="text-xs text-zinc-400! py-2! truncate">
             {user.isOnline ? "Active" : "Offline"}
           </p>
         </div>

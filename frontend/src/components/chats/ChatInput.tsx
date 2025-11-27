@@ -358,13 +358,13 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
      UI
   ====================== */
   return (
-    <div className="w-full border-t bg-white px-4 py-3 flex items-center gap-3">
+    <div className="w-full border-t bg-white px-4 py-3 flex items-center gap-3 relative z-2">
       {/* FILE BUTTON */}
       <Button
         variant="ghost"
         size="icon"
         onClick={() => fileRef.current?.click()}
-        className="text-black!"
+        className="text-zinc-500"
       >
         <Paperclip size={22} />
       </Button>
@@ -380,7 +380,7 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
       {/* EMOJI PICKER */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="text-black!">
+          <Button variant="ghost" size="icon" className="text-zinc-500">
             <Smile size={22} />
           </Button>
         </PopoverTrigger>
@@ -415,7 +415,7 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
               variant="ghost"
               size="icon"
               onClick={() => setMediaAttachment(null)}
-              className="text-black!"
+              className="text-zinc-500"
             >
               <Trash2 size={15} />
             </Button>
@@ -458,7 +458,7 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
             variant="ghost"
             size="icon"
             onClick={startRecording}
-            className="text-black!"
+            className="text-zinc-500"
           >
             <Mic size={20} />
           </Button>
@@ -471,7 +471,7 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
               variant="ghost"
               size="icon"
               onClick={isPaused ? resumeRecording : pauseRecording}
-              className="text-black!"
+              className="text-zinc-500"
             >
               {isPaused ? <Play size={20} /> : <Pause size={20} />}
             </Button>
@@ -480,7 +480,7 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
               variant="ghost"
               size="icon"
               onClick={stopRecording}
-              className="text-black!"
+              className="text-zinc-500"
             >
               <StopCircle size={20} />
             </Button>
@@ -489,7 +489,7 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
               variant="destructive"
               size="icon"
               onClick={deleteRecording}
-              className="text-black!"
+              className="text-zinc-500"
             >
               <Trash2 size={18} />
             </Button>
@@ -505,7 +505,7 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
               variant="destructive"
               size="icon"
               onClick={deleteRecording}
-              className="text-black!"
+              className="text-zinc-500"
             >
               <Trash2 size={18} />
             </Button>
@@ -517,7 +517,7 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
           <Button
             size="icon"
             onClick={handleSubmit(onSubmit)}
-            className="text-black!"
+            className="text-zinc-500"
           >
             <Send size={20} />
           </Button>

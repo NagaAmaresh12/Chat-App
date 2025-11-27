@@ -56,11 +56,11 @@ const UserDetails = () => {
   console.log("👤 Users:", allUsers);
 
   return (
-    <section className="h-full w-[30vw] border-r border-zinc-400 px-4 bg-zinc-100 flex flex-col overflow-x-hidden! ">
+    <section className="h-full w-1/4 border-r  flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b">
-        <h1 className="text-xl font-semibold">
-          Muchhatlu <b className="text-sm my-4">(Users)</b>
+      <div className="py-8! px-4! border-b">
+        <h1 className="text-[28px]! font-bold text-[#3A6EA5] ">
+          Muchhatlu <span className="text-sm my-4">(Users)</span>
         </h1>
       </div>
 
@@ -81,17 +81,23 @@ const UserDetails = () => {
           value={activeTab}
           onValueChange={(val) => setActiveTab(val as any)}
         >
-          <TabsList className="grid grid-cols-3 w-full gap-2">
+          <TabsList className="grid grid-cols-3 w-full h-10! bg-transparent!">
             <TabsTrigger
               value="all"
-              className={activeTab === "all" ? "bg-blue-400 text-blue-900" : ""}
+              className={
+                activeTab == "all"
+                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs! w-24!"
+                  : "bg-white! text-zinc-500! hover:border-zinc-500!  border-zinc-200! outline-none! rounded-full! h-8! text-xs!  w-24! "
+              }
             >
               All
             </TabsTrigger>
             <TabsTrigger
               value="online"
               className={
-                activeTab === "online" ? "bg-blue-400 text-blue-900" : ""
+                activeTab == "online"
+                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs!  w-24!"
+                  : "bg-white! text-zinc-500! border-zinc-200! outline-none! rounded-full! h-8! text-xs! hover:border-zinc-500! w-24! "
               }
             >
               Online
@@ -99,7 +105,9 @@ const UserDetails = () => {
             <TabsTrigger
               value="offline"
               className={
-                activeTab === "offline" ? "bg-blue-400 text-blue-900" : ""
+                activeTab == "offline"
+                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs!  w-24!"
+                  : "bg-white! text-zinc-500! hover:border-zinc-500!  border-zinc-200! outline-none! rounded-full! h-8! text-xs!  w-24! "
               }
             >
               Offline

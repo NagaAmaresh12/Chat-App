@@ -91,7 +91,7 @@ export default function LoginPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full flex items-center justify-center gap-3 h-12"
+              className="w-full flex items-center justify-center bg-zinc-100! gap-3 h-12"
             >
               <FcGoogle size={22} />
               Continue with Google
@@ -99,9 +99,9 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
-
       {/* RIGHT SIDE: Hidden on small screens */}
-      <div className="hidden md:block md:w-1/2 bg-yellow-300"></div>
+      {/* yellow bg-[#ffa812] */}
+      <div className="hidden md:block md:w-1/2 bg-[#3A6EA5]"></div>
     </div>
   );
 }
