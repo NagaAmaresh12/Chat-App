@@ -34,8 +34,8 @@ export function registerMessageEvents(io: Server, socket: Socket) {
       const message = saved.data;
       console.log({ message });
       io.to(payload.chatId).emit("new-message", message);
-    } catch (err) {
-      console.error("Error creating message:", err);
+    } catch (error: any) {
+      console.error("Error creating message:", error.message);
     }
   });
 }

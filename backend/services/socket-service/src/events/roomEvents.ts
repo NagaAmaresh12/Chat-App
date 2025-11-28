@@ -10,6 +10,8 @@ export function registerRoomEvents(io: Server, socket: Socket) {
   // 🔥 Join ALL rooms user belongs to
   // ===============================
   socket.on("join_my_rooms", async () => {
+    console.log("Request Comes to join_my_rooms");
+
     const user = socket.data.user;
     if (!user) return;
 
@@ -25,25 +27,27 @@ export function registerRoomEvents(io: Server, socket: Socket) {
     try {
       console.log(
         "➡️ Fetching all chats from:",
-        `${CHATS_SERVICE}/common/all-chats`
+        `${CHATS_SERVICE}/common/my-chatIds`
       );
 
       // API request to Chat Service to get all user chat IDs
-      const response = await axios.get(`${CHATS_SERVICE}/common/all-chats`, {
+      const response = await axios.get(`${CHATS_SERVICE}/common/my-chatIds`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "x-refresh-token": refreshToken,
         },
         withCredentials: true,
       });
-
-      const chatIds = response.data?.data?.chats || [];
+      console.log("====================================");
+      console.log({ res: response.data.data });
+      console.log("====================================");
+      const chatIds = response.data?.data?.chatIds || [];
 
       console.log("✅ Joining rooms:", chatIds);
 
       chatIds.forEach((chatId: string) => socket.join(chatId));
-    } catch (err) {
-      console.error("❌ Error joining user rooms:", err);
+    } catch (error: any) {
+      console.error("❌ Error joining user rooms:", error.message);
     }
   });
 

@@ -79,8 +79,8 @@ export const connectToRabbitMQ = async (): Promise<void> => {
       console.log("Mail sent successfully:", response);
 
       channel.ack(message); // ✅ acknowledge only on success
-    } catch (error) {
-      console.error("Failed to send mail:", error);
+    } catch (error: any) {
+      console.error("Failed to send mail:", error.message);
       // No ack so message remains in queue
     }
   });

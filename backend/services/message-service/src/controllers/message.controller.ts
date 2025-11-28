@@ -130,8 +130,8 @@ export const createMessage = async (req: Request, res: Response) => {
         },
         { headers: { "x-user-id": senderId } }
       );
-    } catch (err) {
-      console.error("⚠️ Failed to update chat metadata:", err);
+    } catch (error: any) {
+      console.error("⚠️ Failed to update chat metadata:", error.message);
     }
 
     return res.status(201).json({
@@ -139,9 +139,9 @@ export const createMessage = async (req: Request, res: Response) => {
       message: "Message created successfully",
       data: savedMessage,
     });
-  } catch (err: any) {
-    console.error("❌ Create message error:", err);
-    return sendError(res, "Failed to create message", 500, err);
+  } catch (error: any) {
+    console.error("❌ Create message error:", error.message);
+    return sendError(res, "Failed to create message", 500, error.message);
   }
 };
 
@@ -290,8 +290,8 @@ export const getMessagesByChatID = async (
       if (usersMap.size === 0) {
         console.warn("No users resolved successfully for chat:", chatId);
       }
-    } catch (error) {
-      console.error("Error fetching users:", error);
+    } catch (error: any) {
+      console.error("Error fetching users:", error.message);
     }
 
     // ✅ Attach user info to messages
@@ -334,8 +334,8 @@ export const getMessagesByChatID = async (
         hasPrevious,
       },
     });
-  } catch (error) {
-    console.error("Get messages error:", error);
+  } catch (error: any) {
+    console.error("Get messages error:", error.message);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -416,8 +416,8 @@ export const updateMessage = async (
       message: "Message updated successfully",
       data: message,
     });
-  } catch (error) {
-    console.error("Update message error:", error);
+  } catch (error: any) {
+    console.error("Update message error:", error.message);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -618,8 +618,8 @@ export const forwardMessage = async (
         messages: forwardedMessages,
       },
     });
-  } catch (error) {
-    console.error("Forward message error:", error);
+  } catch (error: any) {
+    console.error("Forward message error:", error.message);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -681,8 +681,8 @@ export const markAsRead = async (req: AuthenticatedRequest, res: Response) => {
         ? `${result.modifiedCount} message(s) marked as read`
         : "No unread messages to update",
     });
-  } catch (error) {
-    console.error("Mark as read error:", error);
+  } catch (error: any) {
+    console.error("Mark as read error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -755,9 +755,9 @@ export const addReaction = async (req: AuthenticatedRequest, res: Response) => {
       { reactions: message.reactions },
       "Reaction added successfully"
     );
-  } catch (error) {
-    console.error("❌ Add reaction error:", error);
-    return sendError(res, "Internal server error", 500, error);
+  } catch (error: any) {
+    console.error("❌ Add reaction error:", error.message);
+    return sendError(res, "Internal server error", 500, error.message);
   }
 };
 
@@ -829,8 +829,8 @@ export const removeReaction = async (
         reactions: updatedMessage?.reactions || [],
       },
     });
-  } catch (error) {
-    console.error("Remove reaction error:", error);
+  } catch (error: any) {
+    console.error("Remove reaction error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -1126,8 +1126,8 @@ export const bulkDeleteMessages = async (
         totalRequested: messageIds.length,
       },
     });
-  } catch (error) {
-    console.error("Bulk delete error:", error);
+  } catch (error: any) {
+    console.error("Bulk delete error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Internal server error",

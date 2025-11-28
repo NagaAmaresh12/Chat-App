@@ -11,6 +11,7 @@ import { fetchChatsPage } from "@/features/chat/chatThunks";
 import ChatListItem from "@/components/chats/ChatListItem";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useLocation } from "react-router-dom";
+import { join_my_rooms } from "@/services/socket/events/roomEvents";
 
 const PAGE_LIMIT = 20;
 
@@ -38,6 +39,7 @@ const ChatDetails = () => {
   useEffect(() => {
     if (!chats || chats.length === 0) {
       dispatch(fetchChatsPage({ page: 1, limit: PAGE_LIMIT }));
+      join_my_rooms();
     }
   }, [dispatch, chats]);
 

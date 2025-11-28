@@ -51,8 +51,8 @@ axiosInstance.interceptors.response.use(
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosInstance(originalRequest);
-      } catch (refreshError) {
-        console.error("Token refresh failed:", refreshError);
+      } catch (error: any) {
+        console.error("Token refresh failed:", error.message);
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
       }

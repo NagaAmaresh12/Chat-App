@@ -330,8 +330,8 @@ export default function ChatInput({ chatType, newChatId }: ChatItemProps) {
             type: "audio",
           };
         }
-      } catch (err) {
-        console.error("Audio upload failed", err);
+      } catch (error: any) {
+        console.error("Audio upload failed", error.message);
       }
     }
 

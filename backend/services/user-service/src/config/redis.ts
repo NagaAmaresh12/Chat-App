@@ -24,8 +24,8 @@ export const connectToRedis = async () => {
   try {
     await redisClient.connect();
     console.log("✅ Redis connected successfully");
-  } catch (error) {
-    console.error("❌ Redis connection failed:", error);
+  } catch (error: any) {
+    console.error("❌ Redis connection failed:", error.message);
     process.exit(1); // Exit the app if Redis fails
   }
 };
@@ -48,4 +48,3 @@ export const getRedisValue = async (key: string): Promise<string | null> => {
 export const deleteRedisKey = async (key: string) => {
   await redisClient.del(key);
 };
-

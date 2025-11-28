@@ -40,8 +40,8 @@ export const fetchUserDetails = async (
 
     const responses = await Promise.all(userPromises); //All requests fired at once.
     return responses.map((res) => res.data?.data).filter(Boolean); //[ { name: "John", id: "123" }, { name: "Ava", id: "456" }, undefined, null ], if api call failed or didn't return any data, we get values likes undefined or null, so we want to select only values which are correct, That's why we use Boolean here
-  } catch (error) {
-    console.error("Error fetching user details:", error);
+  } catch (error: any) {
+    console.error("Error fetching user details:", error.message);
     return [];
   }
 };
@@ -195,8 +195,8 @@ export const createNewPrivateChat = async (req: AuthRequest, res: Response) => {
       "Chat created successfully",
       200
     );
-  } catch (error) {
-    console.error("Error creating private chat:", error);
+  } catch (error: any) {
+    console.error("Error creating private chat:", error.message);
     return sendError(res, "Failed to create chat", 500, error);
   }
 };
@@ -282,8 +282,8 @@ export const getPrivateChatsByUserID = async (
       "private chats retrieved successfully",
       200
     );
-  } catch (error) {
-    console.error("Error getting private chats:", error);
+  } catch (error: any) {
+    console.error("Error getting private chats:", error.message);
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };
@@ -364,8 +364,8 @@ export const getPrivateChatByChatID = async (
     };
 
     return sendSuccess(res, responseData, "Chat retrieved successfully");
-  } catch (error) {
-    console.error("Error getting private chat:", error);
+  } catch (error: any) {
+    console.error("Error getting private chat:", error.message);
     return sendError(res, "Failed to retrieve chat", 500, error);
   }
 };
@@ -393,8 +393,8 @@ const populateChatWithMinimalUserData = async (
           timeout: 5000,
         });
         return response.data.data;
-      } catch (error) {
-        console.error(`Error fetching user ${userId}:`, error);
+      } catch (error: any) {
+        console.error(`Error fetching user ${userId}:`, error.message);
         // Return fallback user data
         return {
           _id: userId,
@@ -428,8 +428,8 @@ const populateChatWithMinimalUserData = async (
       ...chat.toObject(),
       participants: populatedParticipants,
     };
-  } catch (error) {
-    console.error("Error populating chat with user data:", error);
+  } catch (error: any) {
+    console.error("Error populating chat with user data:", error.message);
     // Return chat with fallback user data
     const fallbackParticipants = chat.participants.map((participant: any) => ({
       ...participant.toObject(),
@@ -526,8 +526,8 @@ export const getPrivateChatByChatIDAlternative = async (
       "Chat retrieved successfully",
       200
     );
-  } catch (error) {
-    console.error("Error getting private chat:", error);
+  } catch (error: any) {
+    console.error("Error getting private chat:", error.message);
     return sendError(res, "Failed to retrieve chat", 500, error);
   }
 };
@@ -598,8 +598,8 @@ export const editPrivateChatByChatID = async (
       "Chat settings updated successfully",
       200
     );
-  } catch (error) {
-    console.error("Error editing private chat:", error);
+  } catch (error: any) {
+    console.error("Error editing private chat:", error.message);
     return sendError(res, "Failed to update chat settings", 500, error);
   }
 };
@@ -657,8 +657,8 @@ export const deletePrivateChatByChatID = async (
     );
 
     return sendSuccess(res, "Chat deleted successfully");
-  } catch (error) {
-    console.error("Error deleting private chat:", error);
+  } catch (error: any) {
+    console.error("Error deleting private chat:", error.message);
     return sendError(res, "Failed to delete chat", 500, error);
   }
 };

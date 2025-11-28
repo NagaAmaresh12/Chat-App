@@ -120,8 +120,8 @@ export const getArchivedChatsByUserID = async (
       "Chats retrieved successfully",
       200
     );
-  } catch (error) {
-    console.error("Error getting chats:", error);
+  } catch (error: any) {
+    console.error("Error getting chats:", error.message);
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };
@@ -228,8 +228,8 @@ export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
       "Chats retrieved successfully",
       200
     );
-  } catch (error) {
-    console.error("Error getting chats:", error);
+  } catch (error: any) {
+    console.error("Error getting chats:", error.message);
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };
@@ -254,7 +254,9 @@ export const getAllChatIdsByUserID = async (
       isArchived: { $ne: true },
     }).sort({ isPinned: -1, updatedAt: -1 });
 
-    const chatIds = chatParticipants.map((cp) => cp.chatId);
+    const rawChatIds = chatParticipants.map((cp) => cp.chatId);
+    console.log({ rawChatIds });
+    const chatIds = rawChatIds.map((id) => id.toString());
     console.log({ chatIds });
 
     return sendSuccess(
@@ -265,8 +267,8 @@ export const getAllChatIdsByUserID = async (
       "ChatIds retrieved successfully",
       200
     );
-  } catch (error) {
-    console.error("Error getting chats:", error);
+  } catch (error: any) {
+    console.error("Error getting chats:", error.message);
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };
@@ -406,8 +408,8 @@ export const getAllChatsByUserIDPage = async (
       "Chats retrieved successfully",
       200
     );
-  } catch (error) {
-    console.error("Error getting chats:", error);
+  } catch (error: any) {
+    console.error("Error getting chats:", error.message);
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };

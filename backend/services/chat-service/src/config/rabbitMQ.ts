@@ -87,8 +87,8 @@ export const publishToMailQueue = async (
     });
 
     return true;
-  } catch (error) {
-    console.error("❌ Failed to publish message to queue:", error);
+  } catch (error: any) {
+    console.error("❌ Failed to publish message to queue:", error.message);
     return false;
   }
 };

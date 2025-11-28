@@ -103,7 +103,7 @@ const ProfileDetails = () => {
       if (fileInputRef.current) fileInputRef.current.value = "";
       setPreviewUrl(null);
     } catch (error: any) {
-      console.error("Profile update failed:", error);
+      console.error("Profile update failed:", error.message);
       toast.error(error?.message || "Failed to update profile");
     } finally {
       setIsUploading(false);

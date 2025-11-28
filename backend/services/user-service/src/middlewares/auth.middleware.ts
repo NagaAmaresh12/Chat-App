@@ -70,8 +70,8 @@ export const authenticate = async (
     }
 
     return sendError(res, "No valid authentication token found", 401);
-  } catch (error) {
-    console.error("AUTH MIDDLEWARE ERROR => ", error);
+  } catch (error: any) {
+    console.error("AUTH MIDDLEWARE ERROR => ", error.message);
     return sendError(res, "Authentication failed", 500);
   }
 };

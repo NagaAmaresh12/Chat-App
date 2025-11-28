@@ -41,8 +41,8 @@ export const connectToRabbitMQ = async (): Promise<void> => {
 
     channel = await connection.createChannel();
     console.log("✅ Channel created");
-  } catch (err) {
-    console.error("❌ Failed to connect to RabbitMQ", err);
+  } catch (error: any) {
+    console.error("❌ Failed to connect to RabbitMQ", error.message);
     throw new AppError("RabbitMQ connection failed", 500);
   }
 };
@@ -87,8 +87,8 @@ export const publishToMailQueue = async (
     });
 
     return true;
-  } catch (error) {
-    console.error("❌ Failed to publish message to queue:", error);
+  } catch (error: any) {
+    console.error("❌ Failed to publish message to queue:", error.message);
     return false;
   }
 };

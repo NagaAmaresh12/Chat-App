@@ -6,6 +6,9 @@ import { io, Socket } from "socket.io-client";
 // Define your event types (incoming + outgoing)
 interface ClientToServerEvents {
   "send-message": (data: SendMessagePayload) => void;
+  "join-chat": (data: { chatId: string }) => void;
+  join_my_rooms: () => void;
+  "leave-chat": (data: { chatId: string }) => void;
 }
 
 interface ServerToClientEvents {
@@ -15,7 +18,6 @@ interface ServerToClientEvents {
     data: IMessage;
   }) => void;
 }
-
 // Socket instance type with full TS support
 export type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 

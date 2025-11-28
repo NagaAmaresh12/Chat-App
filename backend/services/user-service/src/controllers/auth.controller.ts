@@ -328,8 +328,8 @@ export const verifyToken = (req: AuthRequest, res: Response) => {
         avatar: req?.user?.avatar,
       },
     });
-  } catch (err) {
-    console.error("Verify token error:", err);
+  } catch (error: any) {
+    console.error("Verify token error:", error.message);
     return res
       .status(500)
       .json({ status: "error", message: "Internal server error" });

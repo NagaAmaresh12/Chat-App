@@ -94,9 +94,9 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
       "Fetched Users Successfully",
       200
     );
-  } catch (error) {
-    console.error("❌ getAllUsers error:", error);
-    return sendError(res, "Failed to fetch users", 500, error);
+  } catch (error: any) {
+    console.error("❌ getAllUsers error:", error.message);
+    return sendError(res, "Failed to fetch users", 500, error.message);
   }
 };
 export const getAllUsersPage = async (req: AuthRequest, res: Response) => {
@@ -171,9 +171,9 @@ export const getAllUsersPage = async (req: AuthRequest, res: Response) => {
       "Fetched users successfully",
       200
     );
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    return sendError(res, "Failed to fetch users", 500, error);
+  } catch (error: any) {
+    console.error("Error fetching users:", error.message);
+    return sendError(res, "Failed to fetch users", 500, error.message);
   }
 };
 
@@ -307,8 +307,8 @@ export const getUsersByBatch = async (req: AuthRequest, res: Response) => {
       count: users.length,
       users: safeUsers,
     });
-  } catch (error) {
-    console.error("Error in getUsersByBatch:", error);
+  } catch (error: any) {
+    console.error("Error in getUsersByBatch:", error.message);
     return sendError(res, "Something went wrong while fetching users.", 500);
   }
 };
@@ -355,8 +355,8 @@ export const updateUserByID = async (req: AuthRequest, res: Response) => {
       "User updated successfully",
       200
     );
-  } catch (error) {
-    console.error("Error updating user:", error);
-    return sendError(res, "Internal server error", 500, error);
+  } catch (error: any) {
+    console.error("Error updating user:", error.message);
+    return sendError(res, "Internal server error", 500, error.message);
   }
 };

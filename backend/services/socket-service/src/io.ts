@@ -15,7 +15,7 @@ export function initSocketServer(httpServer: any) {
   // Authentication middleware
   io.use((socket, next) => {
     const cookieHeader = socket.request.headers.cookie;
-    console.log({ cookieHeader });
+    // console.log({ cookieHeader });
 
     const tokens = extractTokenFromCookie(cookieHeader);
     const accessToken = tokens?.accessToken;

@@ -12,8 +12,8 @@ const LogoutButton = ({ className }: { className: string }) => {
       await dispatch(logoutUser()).unwrap(); // ⬅ wait for API
 
       navigate("/login");
-    } catch (err) {
-      console.error("Logout failed:", err);
+    } catch (error: any) {
+      console.error("Logout failed:", error.message);
     }
   };
 
