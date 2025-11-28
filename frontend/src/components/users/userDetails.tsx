@@ -62,9 +62,16 @@ const UserDetails = () => {
 
   return (
     <section
-      className={`h-full ${
-        isMobile && pathname == "/app/users" ? " w-full! " : "w-0!"
-      }border-r  flex flex-col`}
+      className={`
+    h-full border-r flex flex-col
+    ${
+      isMobile
+        ? pathname.startsWith("/app/users/")
+          ? "w-0! overflow-hidden"
+          : "w-full"
+        : "w-[22vw]"
+    }
+  `}
     >
       {/* Header */}
       <div className="py-8! px-4! border-b">

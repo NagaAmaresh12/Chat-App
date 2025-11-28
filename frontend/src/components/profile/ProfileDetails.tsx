@@ -127,7 +127,7 @@ const ProfileDetails = () => {
   return (
     <section
       className={`h-full ${
-        isMobile ? "w-full" : "w-1/3"
+        isMobile ? "w-full" : "w-[22vw]"
       } border-r   bg-[#F6F7F8]! p-6 space-y-10`}
     >
       {/* Avatar + Status */}

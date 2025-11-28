@@ -22,25 +22,25 @@ export function sendMessage(payload: SendMessagePayload) {
     reactions: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-
-    sender: {
-      // _id: payload.sender._id,
-      // username: payload.sender.username,
-      // email: payload.sender.email,
-      // bio: payload.sender.bio,
-      // avatar: payload.sender.avatar,
-      // displayname:payload.sender.displayname,
-      // blockedUsers:payload.sender.blockedUsers,
-      // isOnline:payload.sender.isOnline,
-      _id: payload.id!,
-      username: "osgsbs",
-      email: "osgsbs",
-      bio: "osgsbs",
-      avatar: "osgsbs",
-      displayname: "osgsbs",
-      blockedUsers: [],
-      isOnline: true,
-    },
+    sender: {},
+    // sender: {
+    //   // _id: payload.sender._id,
+    //   // username: payload.sender.username,
+    //   // email: payload.sender.email,
+    //   // bio: payload.sender.bio,
+    //   // avatar: payload.sender.avatar,
+    //   // displayname:payload.sender.displayname,
+    //   // blockedUsers:payload.sender.blockedUsers,
+    //   // isOnline:payload.sender.isOnline,
+    //   _id: payload.id!,
+    //   username: "osgsbs",
+    //   email: "osgsbs",
+    //   bio: "osgsbs",
+    //   avatar: "osgsbs",
+    //   displayname: "osgsbs",
+    //   blockedUsers: [],
+    //   isOnline: true,
+    // },
   };
   console.log("Sending message payload", payload);
   // Update Redux immediately (optimistic UI)
@@ -51,19 +51,20 @@ export function sendMessage(payload: SendMessagePayload) {
 // Subscribe to new messages from the server
 export function subscribeToNewMessages(handler: (msg: IMessage) => void) {
   const socket = getSocket();
-  if (!socket) return () => {}; // safety check
+  if (!socket) return () => {};
 
-  // Wrapped handler to extract `data` from backend response
   const wrappedHandler = (serverData: {
     success: boolean;
     message: string;
     data: IMessage;
   }) => {
-    handler(serverData.data);
+    console.log("📩 Received new message:", serverData);
+    handler(serverData.data); // pass data only
   };
 
   socket.on("new-message", wrappedHandler);
 
-  // Cleanup function
-  return () => socket.off("new-message", wrappedHandler);
+  return () => {
+    socket.off("new-message", wrappedHandler); // remove EXACT handler
+  };
 }

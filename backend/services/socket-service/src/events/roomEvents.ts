@@ -29,19 +29,22 @@ export function registerRoomEvents(io: Server, socket: Socket) {
         "➡️ Fetching all chats from:",
         `${CHATS_SERVICE}/common/my-chatIds`
       );
+      console.log({ userId: socket.data.user.userId });
 
       // API request to Chat Service to get all user chat IDs
       const response = await axios.get(`${CHATS_SERVICE}/common/my-chatIds`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "x-refresh-token": refreshToken,
+          "x-user-id": socket.data.user.userId,
         },
         withCredentials: true,
       });
       console.log("====================================");
-      console.log({ res: response.data.data });
+      console.log("FULL RESPONSE:", JSON.stringify(response.data, null, 2));
+
       console.log("====================================");
-      const chatIds = response.data?.data?.chatIds || [];
+      const chatIds = response.data?.data?.chatIds || "not found";
 
       console.log("✅ Joining rooms:", chatIds);
 

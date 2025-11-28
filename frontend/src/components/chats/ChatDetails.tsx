@@ -66,10 +66,12 @@ const ChatDetails = () => {
   return (
     <section
       className={`h-full ${
-        (isMobile && pathname.startsWith("/app/chats/group")) ||
-        pathname.startsWith("/app/chats/private")
-          ? " w-0! "
-          : "w-1/4"
+        isMobile
+          ? pathname.startsWith("/app/chats/group") ||
+            pathname.startsWith("/app/chats/private")
+            ? " w-0! "
+            : "w-full"
+          : "w-[22vw]"
       }border-r  flex flex-col`}
     >
       {/* Header */}

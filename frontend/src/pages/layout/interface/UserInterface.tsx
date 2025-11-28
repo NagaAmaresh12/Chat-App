@@ -1,7 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import UserPlaceholder from "@/pages/layout/placeholder/MessagePlaceholder";
 import UserDetails from "@/components/users/UserDetails.tsx";
-import ChatInterfaceBgImage from "@/components/chats/ChatInterfaceBgImage";
 import { useIsMobile } from "@/hooks/useMobile";
 
 const UserInterface = () => {

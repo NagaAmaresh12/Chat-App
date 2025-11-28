@@ -31,7 +31,7 @@ export interface IMessage {
   reactions: any[];
   createdAt: string;
   updatedAt: string;
-  sender: ISender[];
+  sender: ISender | object;
 }
 export interface ISender {
   _id: string;
