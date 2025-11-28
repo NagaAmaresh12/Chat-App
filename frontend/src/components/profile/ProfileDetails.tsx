@@ -25,6 +25,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { uploadFileThunk } from "@/features/message/messageThunks"; // 👈 new thunk
 import LogoutButton from "@/features/auth/LogoutButton";
+import { useIsMobile } from "@/hooks/useMobile";
 
 const profileSchema = z.object({
   username: z.string().min(1, "Name is required").max(50, "Name too long"),
@@ -43,6 +44,7 @@ const ProfileDetails = () => {
   const { id, username, email, bio, isOnline, avatar } = useAppSelector(
     (state: any) => state.auth
   );
+  const isMobile = useIsMobile(); // true on mobile, false on desktop
   const user = { id, username, email, bio, isOnline, avatar };
   console.log("from profileDetails:", { user });
   const [newInputData, setnewInputData] = useState({
@@ -123,7 +125,11 @@ const ProfileDetails = () => {
   };
 
   return (
-    <section className="w-1/4 bg-[#F6F7F8]! p-6 space-y-10">
+    <section
+      className={`h-full ${
+        isMobile ? "w-full" : "w-1/3"
+      } border-r   bg-[#F6F7F8]! p-6 space-y-10`}
+    >
       {/* Avatar + Status */}
       <div className="flex flex-col items-center gap-4 relative">
         <div className="flex items-center justify-between w-full">
@@ -170,7 +176,7 @@ const ProfileDetails = () => {
             className={`border px-3! py-1! text-zinc-100! ${
               user
                 ? "border-green-500 bg-green-500/70 "
-                : "border-[#3A6EA5] bg-[#3A6EA5]"
+                : "border-custom-bg-1 bg-custom-bg-1"
             }`}
           >
             {user ? "Active" : "Inactive"}
@@ -241,7 +247,7 @@ const ProfileDetails = () => {
           <Button
             type="submit"
             variant="outline"
-            className="w-full mt-4 flex items-center justify-center bg-zinc-200! text-[#3A6EA5] shadow gap-3 h-12"
+            className="w-full mt-4 flex items-center justify-center bg-zinc-200! text-custom-bg-1 shadow gap-3 h-12"
             disabled={isUploading}
           >
             {isUploading ? (
@@ -261,7 +267,7 @@ const ProfileDetails = () => {
       {/* Separator */}
       <div className="flex items-center gap-2 mt-10">
         <Separator className="flex-1" />
-        <h4 className="font-semibold text-lg! text-[#3A6EA5]!">Mucchatlu</h4>
+        <h4 className="font-semibold text-lg! text-custom-bg-1!">Mucchatlu</h4>
         <Separator className="flex-1" />
       </div>
     </section>

@@ -148,7 +148,7 @@ export default function VerifyPage() {
       </div>
 
       {/* RIGHT SIDE */}
-      <div className="hidden md:block md:w-1/2 bg-yellow-300"></div>
+      <div className="hidden md:block md:w-1/2 bg-custom-bg-1"></div>
     </div>
   );
 }

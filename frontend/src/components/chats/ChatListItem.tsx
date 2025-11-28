@@ -32,9 +32,9 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
   return (
     <div
       onClick={handleClick}
-      className="flex items-center p-3 hover:bg-[#3A6EA5]/10 cursor-pointer border-b transition-colors"
+      className="flex items-center p-3 hover:bg-custom-bg-1/10 cursor-pointer border-b transition-colors"
     >
-      <Avatar className="w-12 h-12  border border-[#3A6EA5]!">
+      <Avatar className="w-12 h-12  border border-custom-bg-1!">
         <AvatarImage src={chat?.chatImage || noImage} />
         <AvatarFallback>
           <span className="text-zinc-500!">
@@ -45,7 +45,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ chat }) => {
 
       <div className="flex-1 ml-3 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="font-semibold truncate text-[#3A6EA5]!">
+          <h3 className="font-semibold truncate text-custom-bg-1!">
             {chat.chatName}
           </h3>
           {chat.lastMessage && (

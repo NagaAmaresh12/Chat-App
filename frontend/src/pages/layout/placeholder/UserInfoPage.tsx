@@ -28,13 +28,13 @@ const UserInfoPage = () => {
   }
 
   return (
-    <div className="w-full h-screen flex flex-col items-center mt-6 px-4 relative z-2">
+    <div className="w-full h-screen flex flex-col items-center mt-6 px-4 relative z-2 ">
       {/* Top Banner */}
-      <div className="w-full h-62 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-xl shadow-md"></div>
+      <div className="w-full h-62 bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-xl shadow-md"></div>
 
       {/* Avatar */}
       <div className="-mt-12">
-        <Avatar className="w-[10vw] h-[10vw] min-w-[80px] min-h-[80px] max-w-[130px] max-h-[130px] border-4 border-white shadow-lg">
+        <Avatar className=" min-w-20 min-h-20 max-w-[130px] max-h-[130px] border-4 border-white shadow-lg">
           <AvatarImage src={user.avatar} alt={user.username} />
           <AvatarFallback className="text-xl bg-gray-200">
             {user.username?.charAt(0).toUpperCase()}
@@ -60,8 +60,8 @@ const UserInfoPage = () => {
         <CardContent className="space-y-4 py-6">
           {/* Email */}
           <div>
-            <Label className="text-gray-500 text-sm">Email</Label>
-            <p className="text-lg font-medium">{user.email}</p>
+            <Label className="text-gray-500 text-sm ">Email</Label>
+            <p className="text-lg font-medium break-all">{user.email} </p>
           </div>
 
           {/* Bio */}

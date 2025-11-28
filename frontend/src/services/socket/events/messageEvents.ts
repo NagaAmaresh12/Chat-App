@@ -20,8 +20,27 @@ export function sendMessage(payload: SendMessagePayload) {
     readBy: [],
     deliveredTo: [],
     reactions: [],
-    createdAt: String(Date.now()),
-    updatedAt: String(Date.now()),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+
+    sender: {
+      // _id: payload.sender._id,
+      // username: payload.sender.username,
+      // email: payload.sender.email,
+      // bio: payload.sender.bio,
+      // avatar: payload.sender.avatar,
+      // displayname:payload.sender.displayname,
+      // blockedUsers:payload.sender.blockedUsers,
+      // isOnline:payload.sender.isOnline,
+      _id: payload.id!,
+      username: "osgsbs",
+      email: "osgsbs",
+      bio: "osgsbs",
+      avatar: "osgsbs",
+      displayname: "osgsbs",
+      blockedUsers: [],
+      isOnline: true,
+    },
   };
   console.log("Sending message payload", payload);
   // Update Redux immediately (optimistic UI)

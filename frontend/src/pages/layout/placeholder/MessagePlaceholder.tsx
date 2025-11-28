@@ -25,7 +25,7 @@ const UserPlaceholder = () => {
         </div>
         <div
           className="flex absolute items-center justify-center gap-5
-bg-linear-to-r from-[#3A6EA5] to-[#FD047C]
+bg-linear-to-r from-custom-bg-1 to-[#FD047C]
 rounded-3xl px-10 py-2 text-xl text-white"
         >
           <span>

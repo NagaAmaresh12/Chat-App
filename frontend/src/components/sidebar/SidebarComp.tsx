@@ -36,18 +36,20 @@ const SidebarComp = () => {
               to={item.url}
               title={item.title}
               className={cn(
-                "flex justify-center items-center w-full h-12 rounded-lg transition-colors text-[#3A6EA5]",
+                "flex justify-center items-center w-full h-12 rounded-lg transition-colors text-custom-bg-1",
                 "hover:bg-accent hover:text-accent-foreground",
                 isActive && "bg-accent text-accent-foreground"
               )}
             >
               {item.title !== "Profile" ? (
-                <Icon className="w-6 h-6" />
+                <Icon className="w-6 h-6 text-custom-bg-1" />
               ) : (
                 <Avatar>
                   <AvatarImage src={user?.avatar} />
                   <AvatarFallback>
-                    {user ? user.name.charAt(0).toUpperCase() : "U"}
+                    <span className="text-custom-bg-1">
+                      {user ? user.name.charAt(0).toUpperCase() : "U"}
+                    </span>
                   </AvatarFallback>
                 </Avatar>
               )}
@@ -62,12 +64,12 @@ const SidebarComp = () => {
           to={bottomItem.url}
           title={bottomItem.title}
           className={cn(
-            "flex justify-center items-center w-full h-12 rounded-lg transition-colors text-[#3A6EA5]",
+            "flex justify-center items-center w-full h-12 rounded-lg transition-colors text-custom-bg-1",
             location.pathname.startsWith(bottomItem.url) &&
               "bg-accent text-accent-foreground"
           )}
         >
-          <bottomItem.icon className="w-6 h-6" />
+          <bottomItem.icon className="w-6 h-6 text-custom-bg-1" />
         </Link>
       </div>
     </aside>

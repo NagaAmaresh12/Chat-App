@@ -18,6 +18,7 @@ import {
   getArchivedChatsByUserID,
   getAllChatsByUserID,
   getAllChatsByUserIDPage,
+  getAllChatIdsByUserID,
 } from "./common.controller.js";
 
 export {
@@ -36,4 +37,5 @@ export {
   removeMemberInGroupChat,
   getAllChatsByUserID,
   getAllChatsByUserIDPage,
+  getAllChatIdsByUserID,
 };

@@ -31,8 +31,18 @@ export interface IMessage {
   reactions: any[];
   createdAt: string;
   updatedAt: string;
+  sender: ISender[];
 }
-
+export interface ISender {
+  _id: string;
+  username: string;
+  email: string;
+  bio: string;
+  displayname: string;
+  avatar: string;
+  isOnline: boolean;
+  blockedUsers: string[] | null;
+}
 export interface IPaginatedMessageResponse {
   messages: IMessage[];
   page: number;

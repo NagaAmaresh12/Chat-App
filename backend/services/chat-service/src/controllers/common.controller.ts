@@ -233,6 +233,43 @@ export const getAllChatsByUserID = async (req: AuthRequest, res: Response) => {
     return sendError(res, "Failed to retrieve chats", 500, error);
   }
 };
+export const getAllChatIdsByUserID = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  const userId = req?.headers["x-user-id"];
+  const token =
+    req?.cookies?.accessToken ||
+    req?.cookies?.refreshToken ||
+    (req?.headers?.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : undefined);
+  const refreshToken =
+    req?.body?.refreshToken || req?.headers["x-refresh-token"];
+
+  try {
+    // 1️⃣ Get all chat participants for the user
+    const chatParticipants = await ChatParticipant.find({
+      userId,
+      isArchived: { $ne: true },
+    }).sort({ isPinned: -1, updatedAt: -1 });
+
+    const chatIds = chatParticipants.map((cp) => cp.chatId);
+    console.log({ chatIds });
+
+    return sendSuccess(
+      res,
+      {
+        chatIds,
+      },
+      "ChatIds retrieved successfully",
+      200
+    );
+  } catch (error) {
+    console.error("Error getting chats:", error);
+    return sendError(res, "Failed to retrieve chats", 500, error);
+  }
+};
 
 //Testing
 export const getAllChatsByUserIDPage = async (

@@ -166,7 +166,9 @@ const MessageDetails = () => {
   );
 
   return (
-    <div className=" flex flex-col h-full relative z-1 bg-zinc-200 scrollbar-ultra-thin">
+    <div
+      className={`flex flex-col h-full w-full relative z-1 bg-zinc-200 scrollbar-ultra-thin`}
+    >
       <ChatInterfaceBgImage />
       <div
         ref={messageContainerRef}

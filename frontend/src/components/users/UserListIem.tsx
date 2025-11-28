@@ -13,7 +13,7 @@ const UserListItem = ({ user }: { user: UserProfile }) => {
     <Button
       asChild
       variant="ghost"
-      className="flex items-center p-3 hover:bg-[#3A6EA5]/10 cursor-pointer border-b transition-colors w-full"
+      className="flex items-center p-3 hover:bg-custom-bg-1/10 cursor-pointer border-b transition-colors w-full"
     >
       <NavLink
         to={user.id!}
@@ -27,7 +27,7 @@ const UserListItem = ({ user }: { user: UserProfile }) => {
           )
         }
       >
-        <Avatar className="w-12 h-12 border-[#3A6EA5]! border! bg-transparent!">
+        <Avatar className="w-12 h-12 border-custom-bg-1! border! bg-transparent!">
           <AvatarImage
             src={user.avatar || "/default-avatar.png"}
             alt={user.username!}
@@ -39,7 +39,7 @@ const UserListItem = ({ user }: { user: UserProfile }) => {
         </Avatar>
 
         <div className="flex-1 ml-3 min-w-0">
-          <h3 className="font-medium text-md! truncate text-[#3A6EA5]!">
+          <h3 className="font-medium text-md! truncate text-custom-bg-1!">
             {user.username}
           </h3>
           <p className="text-xs text-zinc-400! py-2! truncate">

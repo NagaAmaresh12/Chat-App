@@ -9,6 +9,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchChatsPage } from "@/features/chat/chatThunks";
 import ChatListItem from "@/components/chats/ChatListItem";
+import { useIsMobile } from "@/hooks/useMobile";
+import { useLocation } from "react-router-dom";
 
 const PAGE_LIMIT = 20;
 
@@ -21,6 +23,9 @@ interface Chat {
 }
 
 const ChatDetails = () => {
+  const { pathname } = useLocation();
+
+  const isMobile = useIsMobile(); // true on mobile, false on desktop
   const dispatch = useAppDispatch();
   const { chats, loading, page, hasMore } = useAppSelector(
     (state: any) => state.chat
@@ -57,10 +62,17 @@ const ChatDetails = () => {
   console.log({ chats });
   console.log("====================================");
   return (
-    <section className="h-full w-1/4 border-r  flex flex-col">
+    <section
+      className={`h-full ${
+        (isMobile && pathname.startsWith("/app/chats/group")) ||
+        pathname.startsWith("/app/chats/private")
+          ? " w-0! "
+          : "w-1/4"
+      }border-r  flex flex-col`}
+    >
       {/* Header */}
       <div className="py-8! px-4! border-b">
-        <h1 className="text-[28px]! font-bold text-[#3A6EA5] ">
+        <h1 className="text-[28px]! font-bold text-custom-bg-1! ">
           Muchhatlu <span className="text-sm my-4">(Chats)</span>
         </h1>
       </div>
@@ -78,12 +90,12 @@ const ChatDetails = () => {
       {/* Tabs */}
       <div className="px-3 pb-2">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 w-full h-10! bg-transparent!">
+          <TabsList className="grid grid-cols-3 gap-3 w-full h-10! bg-transparent!">
             <TabsTrigger
               value="all"
               className={
                 activeTab == "all"
-                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs! w-24!"
+                  ? "bg-custom-bg-1! text-white! border-none! outline-none! rounded-full! h-8! text-xs! w-24!"
                   : "bg-white! text-zinc-500! hover:border-zinc-500!  border-zinc-200! outline-none! rounded-full! h-8! text-xs!  w-24! "
               }
             >
@@ -93,7 +105,7 @@ const ChatDetails = () => {
               value="groups"
               className={
                 activeTab == "groups"
-                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs!  w-24!"
+                  ? "bg-custom-bg-1! text-white! border-none! outline-none! rounded-full! h-8! text-xs!  w-24!"
                   : "bg-white! text-zinc-500! border-zinc-200! outline-none! rounded-full! h-8! text-xs! hover:border-zinc-500! w-24! "
               }
             >
@@ -103,7 +115,7 @@ const ChatDetails = () => {
               value="unread"
               className={
                 activeTab == "unread"
-                  ? "bg-[#3A6EA5]! text-white! border-none! outline-none! rounded-full! h-8! text-xs!  w-24!"
+                  ? "bg-custom-bg-1! text-white! border-none! outline-none! rounded-full! h-8! text-xs!  w-24!"
                   : "bg-white! text-zinc-500! hover:border-zinc-500!  border-zinc-200! outline-none! rounded-full! h-8! text-xs!  w-24! "
               }
             >

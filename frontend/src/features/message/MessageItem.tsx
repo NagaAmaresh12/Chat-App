@@ -12,8 +12,17 @@ const MessageItem = ({
   showDayLabel?: boolean;
   dayLabel?: string;
 }) => {
-  const { user } = useAppSelector((state) => state.auth);
-  const isOwnMessage = user && msg.senderId === user.id;
+  console.log({ msg, username: msg.sender.username });
+
+  const { id } = useAppSelector((state) => state.auth);
+  const isOwnMessage = id && msg.senderId === id;
+  const createdAt = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    second: undefined, // explicitly remove seconds
+  }).format(new Date(msg.createdAt));
+  console.log({ createdAt });
 
   return (
     <div className="w-full relative z-2">
@@ -39,26 +48,22 @@ const MessageItem = ({
           <div
             className={`${
               isOwnMessage
-                ? "bg-blue-600 text-white"
+                ? "bg-custom-bg-1 text-white"
                 : "bg-white text-zinc-500 "
             } rounded-lg px-3 py-2 break-words shadow-md`}
           >
             {/* Sender name for group chats (if not own message) */}
             {!isOwnMessage && msg.sender && (
-              <p className="text-xs font-semibold text-[#3A6EA5]! mb-1">
-                {msg.sender.username}
+              <p className="text-xs font-semibold text-custom-bg-1! mb-1">
+                {msg?.sender?.username || "Unkown"}
               </p>
             )}
 
             <p className="text-sm">{msg.content}</p>
 
             {/* Timestamp */}
-            <span className="text-[10px] text-gray-300 float-right ml-2 mt-2">
-              {new Date(msg.createdAt).toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })}
+            <span className="text-[10px] text-zinc-500! float-right   ml-2 mt-2">
+              {createdAt}
             </span>
           </div>
 

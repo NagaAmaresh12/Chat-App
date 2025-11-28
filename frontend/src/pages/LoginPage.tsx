@@ -101,7 +101,7 @@ export default function LoginPage() {
       </div>
       {/* RIGHT SIDE: Hidden on small screens */}
       {/* yellow bg-[#ffa812] */}
-      <div className="hidden md:block md:w-1/2 bg-[#3A6EA5]"></div>
+      <div className="hidden md:block md:w-1/2 bg-custom-bg-1"></div>
     </div>
   );
 }
