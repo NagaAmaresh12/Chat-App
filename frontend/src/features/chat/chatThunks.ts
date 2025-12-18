@@ -40,3 +40,54 @@ export const fetchChatsPage = createAsyncThunk<
     );
   }
 });
+
+interface CreateChatArgs {
+  chatType: "private" | "group";
+  userId: string;
+  currentUserId: string; // logged-in user
+}
+
+export const createNewChat = createAsyncThunk(
+  "chat/createNewChat",
+  async (
+    { chatType, userId, currentUserId }: CreateChatArgs,
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axiosInstance.post(`/chats/${chatType}-chat/new`, {
+        participantId: userId,
+      });
+
+      const chat = response.data.data.chat;
+      console.log({ chat });
+
+      // 🔄 Transform API chat → store chat shape
+      const otherParticipant = chat.participants.find(
+        (p: any) => p.user._id !== currentUserId
+      );
+
+      const transformedChat = {
+        chatId: chat._id,
+        type: chat.type,
+        chatName:
+          chat.type === "private"
+            ? otherParticipant?.user?.username || "Chat"
+            : chat.chatName || "Group",
+        chatImage: otherParticipant?.user?.avatar || "/default-avatar.png",
+        unreadCount: "0",
+        isPinned: false,
+        isArchived: false,
+        isMuted: false,
+        lastMessage: "",
+        lastMessageType: "Text",
+        lastMessageAt: Date.now(),
+      };
+
+      return transformedChat;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create chat"
+      );
+    }
+  }
+);

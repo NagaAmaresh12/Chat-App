@@ -4,7 +4,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ChatState, Chat } from "@/types/chatTypes.ts";
-import { fetchChatsPage } from "@/features/chat/chatThunks.ts";
+import { createNewChat, fetchChatsPage } from "@/features/chat/chatThunks.ts";
 
 const initialState: ChatState = {
   chats: [],
@@ -106,6 +106,15 @@ const chatSlice = createSlice({
       .addCase(fetchChatsPage.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload as string;
+      })
+      .addCase(createNewChat.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(createNewChat.fulfilled, (state, action) => {
+        state.chats.unshift(action.payload); // add chat to top
+      })
+      .addCase(createNewChat.rejected, (state, action) => {
+        state.loading = false;
       });
   },
 });

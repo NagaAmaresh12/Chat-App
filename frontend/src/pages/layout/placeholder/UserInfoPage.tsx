@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAppSelector } from "@/redux/hooks.ts";
 import {
   Avatar,
@@ -8,16 +8,26 @@ import {
 import { Badge } from "@/components/ui/badge.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Card, CardContent } from "@/components/ui/card.tsx";
+import { Button } from "@/components/ui/button";
+import { BsChatDots } from "react-icons/bs";
+import { BsChatDotsFill } from "react-icons/bs";
+import { RiChatNewLine } from "react-icons/ri";
+import { FiMessageCircle } from "react-icons/fi";
+import { MdChat } from "react-icons/md";
+import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
 
 const UserInfoPage = () => {
+  const navigate = useNavigate();
   const { userId } = useParams<string>();
 
   // get all users from redux
   const { allUsers } = useAppSelector((state: any) => state.user);
+  const { allChats } = useAppSelector((state: any) => state.chat);
   console.log("is Users exists", { allUsers });
 
   // find user by id
   const user = allUsers?.find((u: any) => u.id === userId);
+  console.log({ user });
 
   if (!user) {
     return (
@@ -26,7 +36,26 @@ const UserInfoPage = () => {
       </div>
     );
   }
-
+  const startChat = () => {
+    //get the newUser id
+    //check does chat exists before
+    if (allChats) {
+      const isExists = allChats.find(
+        (chat: any) => chat.chatName == user.userName
+      );
+      console.log("does chat exists", { isExists });
+      if (isExists) {
+        return;
+      } else {
+        //create new chat
+      }
+    } else {
+      //return no chats found
+      console.log("No chats founds", { allChats });
+    }
+    //redirect user to /app/chats/:chatId
+    navigate(`/app/chats/${user.userId}`);
+  };
   return (
     <div className="w-full h-screen flex flex-col items-center mt-6 px-4 relative z-2 ">
       {/* Top Banner */}
@@ -55,8 +84,22 @@ const UserInfoPage = () => {
         </Badge>
       </div>
 
+      <div className="flex sm-flex-row md-flex-col h-[4vw] w-1/2 sm-w-full justify-between items-center border px-2 rounded-2xl my-10">
+        {" "}
+        <p className="text-zinc-400! break-all">
+          Start a new Conversation...Let's Ping
+        </p>
+        <Button
+          variant={"secondary"}
+          className="bg-custom-bg-1! px-2 m-2 text-white rounded-full! h-8 w-24!"
+          onClick={startChat}
+        >
+          Ping <BsChatDots />
+        </Button>
+      </div>
+
       {/* Detailed Info Card */}
-      <Card className="w-full max-w-xl mt-6 shadow-sm border border-gray-200">
+      <Card className="w-full max-w-2xl mt-6 shadow-sm border border-gray-200">
         <CardContent className="space-y-4 py-6">
           {/* Email */}
           <div>
