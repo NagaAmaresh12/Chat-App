@@ -92,8 +92,11 @@ const chatSlice = createSlice({
       .addCase(fetchChatsPage.fulfilled, (state, action) => {
         if (action.payload.page === 1) {
           state.chats = action.payload.chats;
+          // } else {
+          //   state.chats.push(...action.payload.chats) ;
+          // }
         } else {
-          state.chats = [...state.chats, ...action.payload.chats];
+          state.chats = [...action.payload.chats];
         }
 
         state.page = action.payload.page;

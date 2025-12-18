@@ -1,7 +1,6 @@
 // ========== ChatDetails.tsx with react-virtuoso ==========
 // npm install react-virtuoso
 
-import { useEffect, useState } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -12,6 +11,7 @@ import ChatListItem from "@/components/chats/ChatListItem";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useLocation } from "react-router-dom";
 import { join_my_rooms } from "@/services/socket/events/roomEvents";
+import { useEffect, useRef, useState } from "react";
 
 const PAGE_LIMIT = 20;
 
@@ -34,14 +34,28 @@ const ChatDetails = () => {
 
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
+  const initialFetchDone = useRef(false);
 
   // Initial fetch
+  // useEffect(() => {
+  //   if (!chats || chats.length === 0) {
+  //     dispatch(fetchChatsPage({ page: 1, limit: PAGE_LIMIT }));
+  //     join_my_rooms();
+  //   }
+  // }, [dispatch, chats]);
   useEffect(() => {
-    if (!chats || chats.length === 0) {
-      dispatch(fetchChatsPage({ page: 1, limit: PAGE_LIMIT }));
-      join_my_rooms();
-    }
-  }, [dispatch, chats]);
+    if (initialFetchDone.current) return;
+
+    initialFetchDone.current = true;
+    dispatch(fetchChatsPage({ page: 1, limit: PAGE_LIMIT }));
+    join_my_rooms();
+  }, [dispatch]);
+  const loadMore = () => {
+    if (loading) return;
+    if (!hasMore) return;
+
+    dispatch(fetchChatsPage({ page: page + 1, limit: PAGE_LIMIT }));
+  };
 
   // Filter chats
   const filteredChats = (chats || []).filter((chat: Chat) =>
@@ -54,12 +68,6 @@ const ChatDetails = () => {
     return true;
   });
 
-  // Load more function
-  const loadMore = () => {
-    if (!loading && hasMore) {
-      dispatch(fetchChatsPage({ page: page + 1, limit: PAGE_LIMIT })).unwrap();
-    }
-  };
   console.log("====================================");
   console.log({ chats });
   console.log("====================================");
@@ -139,9 +147,9 @@ const ChatDetails = () => {
           <Virtuoso
             data={filteredByTab}
             endReached={loadMore}
-            overscan={200}
+            increaseViewportBy={200}
             itemContent={(index, chat) => (
-              <ChatListItem key={chat?.chatId} chat={chat} />
+              <ChatListItem key={chat.chatId} chat={chat} />
             )}
             components={{
               Footer: () =>

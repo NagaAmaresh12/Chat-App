@@ -14,8 +14,8 @@ config();
 const app = express();
 // //config
 connectDB();
-connectToRedis();
-connectToRabbitMQ();
+// connectToRedis();
+// connectToRabbitMQ();
 // //middlewares  == These below two are essential to receive the data or payload and parse them when client sends the data to server through "json" body make sure you enable this
 // Increase payload limit
 app.use(express.json({ limit: "10mb" }));

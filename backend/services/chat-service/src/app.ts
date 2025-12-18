@@ -17,8 +17,8 @@ const app = express();
 //config
 
 connectDB();
-connectToRedis();
-connectToRabbitMQ();
+// connectToRedis();
+// connectToRabbitMQ();
 
 //middlewares
 app.use(express.json());
